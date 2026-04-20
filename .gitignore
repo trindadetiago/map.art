@@ -1,0 +1,17 @@
+node_modules
+.next
+dist
+out
+.DS_Store
+.env
+.env.local
+*.log
+.turbo
+coverage
+.pnpm-store
+
+# project data
+data/
+*.png
+!**/debug/**/*.png
+!**/docs/**/*.png

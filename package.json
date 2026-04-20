@@ -1,0 +1,28 @@
+{
+  "name": "map-art",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @mapart/web dev",
+    "build": "pnpm -r build",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "render": "tsx packages/renderer/bin/cli.ts",
+    "generate": "tsx packages/models/bin/cli.ts",
+    "storage": "tsx packages/storage/bin/cli.ts",
+    "tiles": "tsx packages/tiles/bin/cli.ts",
+    "db": "tsx packages/db/bin/cli.ts",
+    "db:generate": "pnpm --filter @mapart/db exec drizzle-kit generate",
+    "db:migrate": "tsx packages/db/bin/cli.ts migrate"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.9.0"
+  }
+}

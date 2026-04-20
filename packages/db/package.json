@@ -1,0 +1,35 @@
+{
+  "name": "@mapart/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./repos": "./src/repos/index.ts",
+    "./debug": "./debug/Panel.tsx"
+  },
+  "bin": {
+    "mapart-db": "./bin/cli.ts"
+  },
+  "scripts": {
+    "cli": "tsx bin/cli.ts",
+    "drizzle": "drizzle-kit"
+  },
+  "dependencies": {
+    "@mapart/env": "workspace:*",
+    "commander": "^12.1.0",
+    "drizzle-orm": "^0.36.4",
+    "postgres": "^3.4.5"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "drizzle-kit": "^0.28.1"
+  }
+}

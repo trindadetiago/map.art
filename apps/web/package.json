@@ -1,0 +1,33 @@
+{
+  "name": "@mapart/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "3d-tiles-renderer": "^0.4.8",
+    "@mapart/db": "workspace:*",
+    "@mapart/env": "workspace:*",
+    "@mapart/models": "workspace:*",
+    "@mapart/renderer": "workspace:*",
+    "@mapart/shared": "workspace:*",
+    "@mapart/storage": "workspace:*",
+    "@mapart/tiles": "workspace:*",
+    "leaflet": "^1.9.4",
+    "next": "^15.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.33.5",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.12",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.169.0"
+  }
+}
