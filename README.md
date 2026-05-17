@@ -11,6 +11,7 @@ Pixel-art map tool.
 - `db` - projects, tiles, models
 - `env` - typed env
 - `models` - image models
+- `pipeline` - orchestrates models, renderer, storage
 - `renderer` - tile render
 - `shared` - shared types
 - `storage` - file storage
