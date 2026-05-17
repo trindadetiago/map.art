@@ -9,9 +9,11 @@ out
 .turbo
 coverage
 .pnpm-store
+*.tsbuildinfo
 
 # project data
 data/
 *.png
 !**/debug/**/*.png
 !**/docs/**/*.png
+.venv/

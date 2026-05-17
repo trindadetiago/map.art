@@ -47,6 +47,13 @@ const tools: {
       'Web-mercator tile math. Visualize which (x, y) tiles cover a bbox or circle at a given zoom.',
     status: 'ready',
   },
+  {
+    slug: 'pipeline',
+    title: 'pipeline',
+    description:
+      'Generation-strategy research. Phase 1 renders N tiles; Phase 2 runs a strategy over them and stitches.',
+    status: 'wip',
+  },
 ];
 
 export default function DebugIndex() {

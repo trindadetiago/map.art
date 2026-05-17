@@ -10,6 +10,7 @@ const config: NextConfig = {
     '@mapart/storage',
     '@mapart/tiles',
     '@mapart/db',
+    '@mapart/pipeline',
     '3d-tiles-renderer',
     'three',
   ],

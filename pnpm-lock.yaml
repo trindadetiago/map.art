@@ -35,6 +35,9 @@ importers:
       '@mapart/models':
         specifier: workspace:*
         version: link:../../packages/models
+      '@mapart/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       '@mapart/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
@@ -125,6 +128,31 @@ importers:
       commander:
         specifier: ^12.1.0
         version: 12.1.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      sharp:
+        specifier: ^0.33.5
+        version: 0.33.5
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+
+  packages/pipeline:
+    dependencies:
+      '@mapart/models':
+        specifier: workspace:*
+        version: link:../models
+      '@mapart/renderer':
+        specifier: workspace:*
+        version: link:../renderer
+      '@mapart/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@mapart/storage':
+        specifier: workspace:*
+        version: link:../storage
       react:
         specifier: ^19.0.0
         version: 19.2.5

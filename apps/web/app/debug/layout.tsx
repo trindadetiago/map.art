@@ -58,6 +58,9 @@ export default function DebugLayout({ children }: { children: ReactNode }) {
           <li>
             <Link href="/debug/tiles">tiles</Link>
           </li>
+          <li>
+            <Link href="/debug/pipeline">pipeline</Link>
+          </li>
         </ul>
       </aside>
       <main style={{ padding: 32 }}>{children}</main>
