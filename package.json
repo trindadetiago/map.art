@@ -7,6 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "run-setup": "bash scripts/setup.sh",
     "dev": "pnpm --filter @mapart/web dev",
     "build": "pnpm -r build",
     "lint": "biome check .",
@@ -17,12 +18,18 @@
     "tiles": "tsx packages/tiles/bin/cli.ts",
     "db": "tsx packages/db/bin/cli.ts",
     "db:generate": "pnpm --filter @mapart/db exec drizzle-kit generate",
-    "db:migrate": "tsx packages/db/bin/cli.ts migrate"
+    "db:migrate": "tsx packages/db/bin/cli.ts migrate",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc,css}": ["biome check --write --no-errors-on-unmatched"]
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "typescript": "^5.6.3",
+    "@types/node": "^22.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "tsx": "^4.19.2",
-    "@types/node": "^22.9.0"
+    "typescript": "^5.6.3"
   }
 }
