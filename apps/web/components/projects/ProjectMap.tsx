@@ -743,6 +743,15 @@ function setupScene(
         textureLoader.load(
           url,
           (tex) => {
+            // Entry may have been dropped (by a later setTileImages,
+            // rebuildTopology, or dispose) before the texture finished
+            // loading. In that case the material has already been
+            // disposed — throw the texture away instead of leaking it
+            // into a dead material.
+            if (tileImagesMap.get(k) !== entry) {
+              tex.dispose();
+              return;
+            }
             tex.colorSpace = SRGBColorSpace;
             tex.flipY = true;
             entry.texture = tex;
