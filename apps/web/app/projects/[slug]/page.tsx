@@ -1,9 +1,8 @@
-import { ProjectEditor } from '@/components/projects/ProjectEditor';
-import { TileStudio } from '@/components/projects/TileStudio';
+import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
 import type { SavedTile } from '@/components/projects/TileRenderer';
 import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
-import { getModel, type ModelName } from '@mapart/models';
+import { type ModelName, getModel } from '@mapart/models';
 import { getStorage } from '@mapart/storage';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
@@ -331,7 +330,7 @@ export default async function ProjectDetailPage({
           </section>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <ProjectEditor
+          <ProjectWorkspace
             projectId={project.id}
             apiKey={env.googleMapsApiKey ?? ''}
             tiles={tiles}
@@ -340,20 +339,10 @@ export default async function ProjectDetailPage({
             initialPitch={project.cameraPitch}
             initialYaw={project.cameraYaw}
             initialTileWorldMeters={project.tileWorldMeters}
+            initialTilePixelSize={project.tilePixelSize}
             initialGridSide={currentGridSide(tiles)}
             saveAction={saveAction}
             reseedTilesAction={reseedTilesAction}
-          />
-          <TileStudio
-            apiKey={env.googleMapsApiKey ?? ''}
-            projectId={project.id}
-            tiles={tiles}
-            centerLat={project.centerLat}
-            centerLng={project.centerLng}
-            cameraPitch={project.cameraPitch}
-            cameraYaw={project.cameraYaw}
-            tileWorldMeters={project.tileWorldMeters}
-            tilePixelSize={project.tilePixelSize}
             saveTileAction={saveTileAction}
             listTilesAction={listTilesAction}
             generateTileAction={generateTileAction}
@@ -368,10 +357,10 @@ export default async function ProjectDetailPage({
 
 function currentGridSide(tiles: ReadonlyArray<{ col: number; row: number }>): number {
   if (tiles.length === 0) return 1;
-  let minC = Infinity;
-  let maxC = -Infinity;
-  let minR = Infinity;
-  let maxR = -Infinity;
+  let minC = Number.POSITIVE_INFINITY;
+  let maxC = Number.NEGATIVE_INFINITY;
+  let minR = Number.POSITIVE_INFINITY;
+  let maxR = Number.NEGATIVE_INFINITY;
   for (const t of tiles) {
     if (t.col < minC) minC = t.col;
     if (t.col > maxC) maxC = t.col;
