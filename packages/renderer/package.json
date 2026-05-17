@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./debug": "./debug/Panel.tsx"
+    "./debug": "./debug/Panel.tsx",
+    "./debug/Scene": "./debug/Scene.tsx"
   },
   "bin": {
     "mapart-render": "./bin/cli.ts"

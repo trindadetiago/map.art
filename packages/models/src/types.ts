@@ -25,4 +25,10 @@ export interface ModelClient {
   generate(params: GenerateParams): Promise<GenerateResult>;
 }
 
-export type ModelName = 'stub' | 'nano-banana' | 'nano-banana-pro' | 'gemini-3.1-flash-image';
+export type ModelName =
+  | 'stub'
+  | 'nano-banana'
+  | 'nano-banana-pro'
+  | 'gemini-3.1-flash-image'
+  | 'gpt-image-1'
+  | 'gpt-image-1.5';
