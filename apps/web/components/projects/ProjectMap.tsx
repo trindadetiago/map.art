@@ -752,6 +752,14 @@ function setupScene(
           undefined,
           (err) => {
             console.warn(`[map] failed to load tile image ${url}`, err);
+            // Bail if our entry is no longer the live one — a later
+            // setTileImages (replace or drop) or dispose() already handled
+            // cleanup for these resources.
+            if (tileImagesMap.get(k) !== entry) return;
+            imageGroup.remove(mesh);
+            mesh.geometry.dispose();
+            material.dispose();
+            tileImagesMap.delete(k);
           },
         );
       }
