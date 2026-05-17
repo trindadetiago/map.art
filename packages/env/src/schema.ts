@@ -20,6 +20,10 @@ export const SCHEMA = {
     envKey: 'GEMINI_API_KEY',
     description: 'Google AI Studio key for Gemini 2.5 Flash Image (nano-banana).',
   },
+  openaiApiKey: {
+    envKey: 'OPENAI_API_KEY',
+    description: 'OpenAI API key for gpt-image-1 (image-to-image editing).',
+  },
   databaseUrl: {
     envKey: 'DATABASE_URL',
     description: 'Postgres connection string. Optional until DB work starts.',

@@ -39,6 +39,7 @@ export interface ProjectEditorProps {
   initialPitch: number;
   initialYaw: number;
   initialTileWorldMeters: number;
+  initialGridSide: number;
   saveAction: (
     id: string,
     patch: {
@@ -49,6 +50,10 @@ export interface ProjectEditorProps {
       tileWorldMeters: number;
     },
   ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  reseedTilesAction: (
+    id: string,
+    side: number,
+  ) => Promise<{ ok: true; count: number } | { ok: false; error: string }>;
 }
 
 export function ProjectEditor({
@@ -60,17 +65,20 @@ export function ProjectEditor({
   initialPitch,
   initialYaw,
   initialTileWorldMeters,
+  initialGridSide,
   saveAction,
+  reseedTilesAction,
 }: ProjectEditorProps) {
   const [centerLat, setCenterLat] = useState(initialCenterLat);
   const [centerLng, setCenterLng] = useState(initialCenterLng);
   const [pitch, setPitch] = useState(initialPitch);
   const [yaw, setYaw] = useState(initialYaw);
   const [tileWorldMeters, setTileWorldMeters] = useState(initialTileWorldMeters);
+  const [gridSide, setGridSide] = useState(initialGridSide);
   const [viewZoom, setViewZoom] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panZ, setPanZ] = useState(0);
-  const clampZoom = (v: number) => Math.max(0.25, Math.min(8, v));
+  const clampZoom = (v: number) => Math.max(0.005, Math.min(256, v));
 
   const [saved, setSaved] = useState({
     centerLat: initialCenterLat,
@@ -78,8 +86,10 @@ export function ProjectEditor({
     pitch: initialPitch,
     yaw: initialYaw,
     tileWorldMeters: initialTileWorldMeters,
+    gridSide: initialGridSide,
   });
   const [pending, startTransition] = useTransition();
+  const [reseedPending, startReseedTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
 
@@ -102,7 +112,7 @@ export function ProjectEditor({
         tileWorldMeters,
       });
       if (result.ok) {
-        setSaved({ centerLat, centerLng, pitch, yaw, tileWorldMeters });
+        setSaved((s) => ({ ...s, centerLat, centerLng, pitch, yaw, tileWorldMeters }));
         setJustSaved(true);
       } else {
         setError(result.error);
@@ -121,6 +131,29 @@ export function ProjectEditor({
     setViewZoom(1);
     setError(null);
     setJustSaved(false);
+  };
+
+  const gridDirty = gridSide !== saved.gridSide;
+
+  const onApplyGrid = () => {
+    if (!gridDirty) return;
+    if (gridSide < saved.gridSide) {
+      const lost = saved.gridSide * saved.gridSide - gridSide * gridSide;
+      const ok = window.confirm(
+        `Shrinking from ${saved.gridSide}×${saved.gridSide} to ${gridSide}×${gridSide} will delete ${lost} tile(s) and any generated versions on them. Continue?`,
+      );
+      if (!ok) return;
+    }
+    setError(null);
+    setJustSaved(false);
+    startReseedTransition(async () => {
+      const result = await reseedTilesAction(projectId, gridSide);
+      if (result.ok) {
+        setSaved((s) => ({ ...s, gridSide }));
+      } else {
+        setError(result.error);
+      }
+    });
   };
 
   return (
@@ -212,6 +245,55 @@ export function ProjectEditor({
         </button>
         <button type="button" onClick={onSave} disabled={!dirty || pending} style={primaryBtn}>
           {pending ? 'saving…' : 'save'}
+        </button>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+          gap: 16,
+          alignItems: 'end',
+          marginTop: 8,
+          padding: 16,
+          background: '#fff',
+          border: '1px solid #e5e5e5',
+          borderRadius: 8,
+        }}
+      >
+        <Slider
+          label="grid side"
+          min={1}
+          max={201}
+          step={1}
+          value={gridSide}
+          onChange={(v) => setGridSide(Math.round(v))}
+        />
+        <span
+          style={{
+            fontSize: 11,
+            opacity: 0.6,
+            alignSelf: 'center',
+            maxWidth: 240,
+            fontFamily: 'monospace',
+          }}
+        >
+          {gridSide}×{gridSide} = {gridSide * gridSide} tiles
+          {gridDirty && (
+            <span style={{ display: 'block', opacity: 0.7 }}>
+              {gridSide < saved.gridSide
+                ? `shrinking from ${saved.gridSide}×${saved.gridSide} — destructive`
+                : `growing from ${saved.gridSide}×${saved.gridSide}`}
+            </span>
+          )}
+        </span>
+        <button
+          type="button"
+          onClick={onApplyGrid}
+          disabled={!gridDirty || reseedPending}
+          style={primaryBtn}
+        >
+          {reseedPending ? 'applying…' : 'apply grid'}
         </button>
       </div>
 

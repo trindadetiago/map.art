@@ -20,6 +20,13 @@ import {
 export interface SceneHandle {
   capture: () => string | null;
   isReady: () => boolean;
+  /**
+   * Resolves once the TilesRenderer's download + parse queues have been idle
+   * for `settleMs` (default 500ms), or rejects after `timeoutMs`
+   * (default 15000ms). Useful for automated capture loops that need to wait
+   * for streaming to quiesce before grabbing a frame.
+   */
+  waitForSettled: (opts?: { settleMs?: number; timeoutMs?: number }) => Promise<void>;
 }
 
 export interface SceneProps {
@@ -51,6 +58,7 @@ export const Scene = forwardRef<SceneHandle, SceneProps>(function Scene({ apiKey
     () => ({
       capture: () => state.current?.capture() ?? null,
       isReady: () => state.current?.isReady() ?? false,
+      waitForSettled: (opts) => state.current?.waitForSettled(opts) ?? Promise.resolve(),
     }),
     [],
   );
@@ -73,6 +81,7 @@ interface SceneState {
   updateParams: (p: RenderParams) => void;
   capture: () => string | null;
   isReady: () => boolean;
+  waitForSettled: (opts?: { settleMs?: number; timeoutMs?: number }) => Promise<void>;
   dispose: () => void;
 }
 
@@ -154,10 +163,52 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
     },
     capture() {
       renderer.render(scene, camera);
-      return renderer.domElement.toDataURL('image/png');
+      // Export at logical (CSS) size, not the HiDPI backing-store size.
+      // The backing canvas is devicePixelRatio× larger; stitchTiles uses
+      // tilePixelSize as the step, so exporting at full DPR would make every
+      // tile overlap in the composite on Retina displays.
+      const canvas = renderer.domElement;
+      const logicalSize = Math.round(canvas.width / renderer.getPixelRatio());
+      const offscreen = document.createElement('canvas');
+      offscreen.width = logicalSize;
+      offscreen.height = logicalSize;
+      offscreen.getContext('2d')?.drawImage(canvas, 0, 0, logicalSize, logicalSize);
+      return offscreen.toDataURL('image/png');
     },
     isReady() {
       return contentLoaded;
+    },
+    waitForSettled(opts) {
+      const settleMs = opts?.settleMs ?? 500;
+      const timeoutMs = opts?.timeoutMs ?? 15000;
+      return new Promise<void>((resolve, reject) => {
+        const started = Date.now();
+        let idleSince: number | null = null;
+        const poll = () => {
+          if (disposed) {
+            reject(new Error('Scene.waitForSettled: disposed'));
+            return;
+          }
+          const downloading = tiles.downloadQueue?.running ?? false;
+          const parsing = tiles.parseQueue?.running ?? false;
+          const now = Date.now();
+          if (!downloading && !parsing) {
+            if (idleSince === null) idleSince = now;
+            if (now - idleSince >= settleMs) {
+              resolve();
+              return;
+            }
+          } else {
+            idleSince = null;
+          }
+          if (now - started >= timeoutMs) {
+            reject(new Error(`Scene.waitForSettled: timeout after ${timeoutMs}ms`));
+            return;
+          }
+          setTimeout(poll, 100);
+        };
+        poll();
+      });
     },
     dispose() {
       disposed = true;
