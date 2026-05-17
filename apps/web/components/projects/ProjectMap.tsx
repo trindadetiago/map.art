@@ -511,7 +511,7 @@ function setupScene(
       if (i === undefined) {
         imageGroup.remove(img.mesh);
         img.mesh.geometry.dispose();
-        img.texture.dispose();
+        if (img.texture) img.texture.dispose();
         img.material.dispose();
         tileImagesMap.delete(k);
         continue;
@@ -716,7 +716,7 @@ function setupScene(
         if (s.has(k) && s.get(k) === img.url) continue;
         imageGroup.remove(img.mesh);
         img.mesh.geometry.dispose();
-        img.texture.dispose();
+        if (img.texture) img.texture.dispose();
         img.material.dispose();
         tileImagesMap.delete(k);
       }
