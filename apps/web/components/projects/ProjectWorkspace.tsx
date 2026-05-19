@@ -328,6 +328,14 @@ export function ProjectWorkspace({
     done: 0,
     total: 0,
   });
+  const [hovered, setHovered] = useState<{
+    col: number;
+    row: number;
+    x: number;
+    y: number;
+    screenSize: number;
+  } | null>(null);
+  const [showOriginal, setShowOriginal] = useState<Set<string>>(() => new Set());
 
   const refresh = useCallback(async () => {
     try {
@@ -369,33 +377,45 @@ export function ProjectWorkspace({
       try {
         const scene = sceneRef.current;
         if (!scene) throw new Error('capture scene not ready');
-        const params = renderParamsForTile(project, col, row);
-        setActiveParams(params);
-        await new Promise<void>((r) => requestAnimationFrame(() => r()));
-        await scene.waitForSettled({ settleMs: 600, timeoutMs: 20000 }).catch((e) => {
-          console.warn(`[studio] settle warning at (${col},${row})`, e);
-        });
-        const dataUrl = scene.capture();
-        if (!dataUrl) throw new Error(`capture returned null at (${col},${row})`);
-        const blob = await (await fetch(dataUrl)).blob();
-        const fd = new FormData();
-        fd.append('projectId', projectId);
-        fd.append('col', String(col));
-        fd.append('row', String(row));
-        fd.append('png', blob, `${col}_${row}.png`);
-        const renderRes = await saveTileAction(fd);
-        if (!renderRes.ok) throw new Error(`render save failed: ${renderRes.error}`);
-        const renderedUrl = `${renderRes.url}${renderRes.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
-        setSavedRendered((m) => {
-          const next = new Map(m);
-          next.set(k, {
-            col: renderRes.col,
-            row: renderRes.row,
-            url: renderRes.url,
-            filename: renderRes.filename,
+
+        // Capture-and-save: re-cameras the off-screen Scene to (c, r), waits for
+        // 3D Tiles to settle, captures, saves to storage, and updates
+        // savedRendered. Returns the storage URL and the data URL (the latter
+        // only needed for the target tile — we feed it into the hybrid canvas).
+        const localRendered = new Map(savedRendered);
+        const captureAndSave = async (
+          c: number,
+          r: number,
+        ): Promise<{ url: string; dataUrl: string }> => {
+          const params = renderParamsForTile(project, c, r);
+          setActiveParams(params);
+          await new Promise<void>((res) => requestAnimationFrame(() => res()));
+          await scene.waitForSettled({ settleMs: 600, timeoutMs: 20000 }).catch((e) => {
+            console.warn(`[studio] settle warning at (${c},${r})`, e);
           });
-          return next;
-        });
+          const dataUrl = scene.capture();
+          if (!dataUrl) throw new Error(`capture returned null at (${c},${r})`);
+          const blob = await (await fetch(dataUrl)).blob();
+          const fd = new FormData();
+          fd.append('projectId', projectId);
+          fd.append('col', String(c));
+          fd.append('row', String(r));
+          fd.append('png', blob, `${c}_${r}.png`);
+          const rr = await saveTileAction(fd);
+          if (!rr.ok) throw new Error(`render save failed at (${c},${r}): ${rr.error}`);
+          const tile = { col: rr.col, row: rr.row, url: rr.url, filename: rr.filename };
+          localRendered.set(keyOf(c, r), tile);
+          setSavedRendered((m) => {
+            const next = new Map(m);
+            next.set(keyOf(c, r), tile);
+            return next;
+          });
+          return { url: rr.url, dataUrl };
+        };
+
+        // 1) Render the target tile.
+        const targetCap = await captureAndSave(col, row);
+        const renderedUrl = `${targetCap.url}${targetCap.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
 
         if (opts?.skipGenerate) {
           setStatus(k, { phase: 'done', renderedUrl, ts: Date.now() });
@@ -403,26 +423,52 @@ export function ProjectWorkspace({
         }
 
         setStatus(k, { phase: 'generating', renderedUrl, ts: Date.now() });
-        type NeighborEntry = {
-          dc: number;
-          dr: number;
-          url: string;
-          kind: 'generated' | 'rendered';
-        };
-        const neighbors: NeighborEntry[] = NEIGHBOR_OFFSETS.flatMap(({ dc, dr }) => {
-          const nk = keyOf(col + dc, row + dr);
-          const gen = savedGenerated.get(nk);
-          if (gen) return [{ dc, dr, url: gen.url, kind: 'generated' }] as NeighborEntry[];
-          const ren = savedRendered.get(nk);
-          if (ren) return [{ dc, dr, url: ren.url, kind: 'rendered' }] as NeighborEntry[];
-          return [] as NeighborEntry[];
-        });
-        const hasGenerated = neighbors.some((n) => n.kind === 'generated');
-        const canInfill =
-          modelName.startsWith('gpt-image') && (hasGenerated || neighbors.length >= 4);
+
+        // 2) Build the neighbor context. Prefer generated > rendered. If a
+        //    neighbor in-grid has neither, render it now — black slots throw
+        //    off the model's scale, so we never want them.
+        const canInfill = modelName.startsWith('gpt-image');
+        const neighbors: Array<{ dc: number; dr: number; url: string }> = [];
+        if (canInfill) {
+          const inGrid = new Set(tiles.map((t) => keyOf(t.col, t.row)));
+          for (const { dc, dr } of NEIGHBOR_OFFSETS) {
+            const nc = col + dc;
+            const nr = row + dr;
+            const nk = keyOf(nc, nr);
+            const gen = savedGenerated.get(nk);
+            if (gen) {
+              neighbors.push({ dc, dr, url: gen.url });
+              continue;
+            }
+            const ren = localRendered.get(nk);
+            if (ren) {
+              neighbors.push({ dc, dr, url: ren.url });
+              continue;
+            }
+            if (!inGrid.has(nk)) continue; // edge — leave slot empty (rare)
+            setStatus(nk, { phase: 'rendering', ts: Date.now() });
+            try {
+              const neighCap = await captureAndSave(nc, nr);
+              setStatus(nk, {
+                phase: 'done',
+                renderedUrl: `${neighCap.url}?v=${Date.now()}`,
+                ts: Date.now(),
+              });
+              neighbors.push({ dc, dr, url: neighCap.url });
+            } catch (e) {
+              console.warn('[studio] neighbor capture failed', { nc, nr, e });
+              setStatus(nk, {
+                phase: 'error',
+                error: e instanceof Error ? e.message : String(e),
+                ts: Date.now(),
+              });
+            }
+          }
+        }
+
         let genRes: { ok: true; url: string; filename: string } | { ok: false; error: string };
         if (canInfill) {
-          const { hybrid, mask, slotSize } = await buildInfillInputs(dataUrl, neighbors);
+          const { hybrid, mask, slotSize } = await buildInfillInputs(targetCap.dataUrl, neighbors);
           const ifd = new FormData();
           ifd.append('projectId', projectId);
           ifd.append('col', String(col));
@@ -465,6 +511,7 @@ export function ProjectWorkspace({
       prompt,
       modelName,
       setStatus,
+      tiles,
     ],
   );
 
@@ -489,9 +536,14 @@ export function ProjectWorkspace({
 
   const tileImages = useMemo<Map<string, string>>(() => {
     const m = new Map<string, string>();
-    for (const [k, t] of savedGenerated) m.set(k, t.url);
+    for (const [k, t] of savedGenerated) {
+      // "see original" overrides: swap in the rendered URL for tiles the user
+      // has toggled. Falls through to generated otherwise.
+      const overrideKey = showOriginal.has(k) ? savedRendered.get(k)?.url : undefined;
+      m.set(k, overrideKey ?? t.url);
+    }
     return m;
-  }, [savedGenerated]);
+  }, [savedGenerated, savedRendered, showOriginal]);
 
   const runBulk = useCallback(
     async (mode: 'missing-generated' | 'missing-rendered' | 'all') => {
@@ -577,21 +629,90 @@ export function ProjectWorkspace({
         }}
         onZoomFactor={(factor) => setViewZoom((v) => clampZoom(v * factor))}
         onTileClick={onTileClick}
+        onTileHover={(col, row, x, y, screenSize) => {
+          if (col == null || row == null) setHovered(null);
+          else setHovered({ col, row, x, y, screenSize });
+        }}
         tileStates={tileStates}
         tileImages={tileImages}
         height={640}
         overlay={
-          <Minimap
-            centerLat={centerLat}
-            centerLng={centerLng}
-            initialZoom={15}
-            minZoom={10}
-            maxZoom={19}
-            onCenterChange={(lat, lng) => {
-              setCenterLat(lat);
-              setCenterLng(lng);
-            }}
-          />
+          <>
+            <Minimap
+              centerLat={centerLat}
+              centerLng={centerLng}
+              initialZoom={15}
+              minZoom={10}
+              maxZoom={19}
+              onCenterChange={(lat, lng) => {
+                setCenterLat(lat);
+                setCenterLng(lng);
+              }}
+            />
+            {hovered &&
+              hovered.screenSize >= 90 &&
+              (() => {
+                const k = keyOf(hovered.col, hovered.row);
+                const hasGenerated = savedGenerated.has(k);
+                const hasRendered = savedRendered.has(k);
+                if (!hasGenerated && !hasRendered) return null;
+                const isShowingOriginal = showOriginal.has(k);
+                // Scale toolbar with tile screen size, clamped so it stays legible
+                // and never grows too large.
+                const fontSize = Math.max(9, Math.min(14, hovered.screenSize * 0.07));
+                const padY = Math.max(2, Math.min(6, hovered.screenSize * 0.025));
+                const padX = padY * 2;
+                const gap = Math.max(2, Math.min(6, hovered.screenSize * 0.02));
+                const inset = Math.max(3, Math.min(8, hovered.screenSize * 0.03));
+                const btn: React.CSSProperties = {
+                  ...hoverBtn,
+                  fontSize,
+                  padding: `${padY}px ${padX}px`,
+                };
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: hovered.x,
+                      top: hovered.y,
+                      transform: `translate(calc(-100% - ${inset}px), ${inset}px)`,
+                      display: 'flex',
+                      gap,
+                      pointerEvents: 'none',
+                      zIndex: 20,
+                    }}
+                  >
+                    {hasGenerated && hasRendered && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowOriginal((s) => {
+                            const next = new Set(s);
+                            if (next.has(k)) next.delete(k);
+                            else next.add(k);
+                            return next;
+                          });
+                        }}
+                        style={{ ...btn, pointerEvents: 'auto' }}
+                      >
+                        {isShowingOriginal ? 'see generated' : 'see original'}
+                      </button>
+                    )}
+                    {hasRendered && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void renderAndGenerate(hovered.col, hovered.row);
+                        }}
+                        style={{ ...btn, pointerEvents: 'auto' }}
+                      >
+                        regenerate
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+          </>
         }
       />
 
@@ -959,6 +1080,17 @@ const thumb = {
   objectFit: 'cover' as const,
   border: '1px solid #eee',
   borderRadius: 2,
+};
+const hoverBtn = {
+  padding: '4px 8px',
+  fontSize: 11,
+  border: '1px solid rgba(255,255,255,0.3)',
+  background: 'rgba(0,0,0,0.75)',
+  color: '#fff',
+  borderRadius: 3,
+  cursor: 'pointer',
+  fontFamily: 'monospace' as const,
+  whiteSpace: 'nowrap' as const,
 };
 
 function legendChip(state: TileVisualState): React.CSSProperties {

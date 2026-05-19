@@ -22,12 +22,13 @@ import {
   MeshBasicMaterial,
   OrthographicCamera,
   Raycaster,
-  Scene as ThreeScene,
   SRGBColorSpace,
   type Texture,
   TextureLoader,
+  Scene as ThreeScene,
   Uint32BufferAttribute,
   Vector2,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 
@@ -63,6 +64,17 @@ export interface ProjectMapProps {
   onPanDelta?: (dx: number, dz: number) => void;
   onZoomFactor?: (factor: number) => void;
   onTileClick?: (col: number, row: number) => void;
+  /** Fires while the cursor hovers a tile (col=null when leaving / dragging). Coords are
+   *  canvas-relative; (x, y) is the projected screen position of the tile's top-right corner.
+   *  `screenSize` is the rough on-screen size of the tile in px (longest edge), so callers
+   *  can scale or hide UI when the tile is too small to interact with. */
+  onTileHover?: (
+    col: number | null,
+    row: number | null,
+    x: number,
+    y: number,
+    screenSize: number,
+  ) => void;
   /** Per-tile visual state keyed by `${col},${row}`. Unlisted tiles render as 'idle'. */
   tileStates?: ReadonlyMap<string, TileVisualState>;
   /** Per-tile image URL keyed by `${col},${row}`. Painted over the colour fill for tiles
@@ -106,6 +118,7 @@ export function ProjectMap({
   onPanDelta,
   onZoomFactor,
   onTileClick,
+  onTileHover,
   tileStates,
   tileImages,
 }: ProjectMapProps) {
@@ -125,6 +138,7 @@ export function ProjectMap({
   const onPanRef = useRef(onPanDelta);
   const onZoomRef = useRef(onZoomFactor);
   const onTileClickRef = useRef(onTileClick);
+  const onTileHoverRef = useRef(onTileHover);
   useEffect(() => {
     onPanRef.current = onPanDelta;
   });
@@ -134,6 +148,9 @@ export function ProjectMap({
   useEffect(() => {
     onTileClickRef.current = onTileClick;
   });
+  useEffect(() => {
+    onTileHoverRef.current = onTileHover;
+  });
 
   useEffect(() => {
     if (!containerRef.current || !apiKey || tiles.length === 0) return;
@@ -142,6 +159,7 @@ export function ProjectMap({
       onPanDelta: (dx, dz) => onPanRef.current?.(dx, dz),
       onZoomFactor: (factor) => onZoomRef.current?.(factor),
       onTileClick: (col, row) => onTileClickRef.current?.(col, row),
+      onTileHover: (col, row, x, y, s) => onTileHoverRef.current?.(col, row, x, y, s),
     });
     sceneRef.current = handle;
     return () => {
@@ -205,6 +223,13 @@ interface InputCallbacks {
   onPanDelta: (dxMeters: number, dzMeters: number) => void;
   onZoomFactor: (factor: number) => void;
   onTileClick: (col: number, row: number) => void;
+  onTileHover: (
+    col: number | null,
+    row: number | null,
+    x: number,
+    y: number,
+    screenSize: number,
+  ) => void;
 }
 
 function setupScene(
@@ -522,21 +547,27 @@ function setupScene(
 
   function updateImageGeometry(mesh: Mesh, i: number): void {
     if (!fillMesh) return;
-    const fa = (fillMesh.geometry.getAttribute('position') as BufferAttribute).array as Float32Array;
+    const fa = (fillMesh.geometry.getAttribute('position') as BufferAttribute)
+      .array as Float32Array;
     const vo = i * 12;
     const verts = new Float32Array([
-      fa[vo + 0]!, fa[vo + 1]!, fa[vo + 2]!,
-      fa[vo + 3]!, fa[vo + 4]!, fa[vo + 5]!,
-      fa[vo + 6]!, fa[vo + 7]!, fa[vo + 8]!,
-      fa[vo + 9]!, fa[vo + 10]!, fa[vo + 11]!,
+      fa[vo + 0]!,
+      fa[vo + 1]!,
+      fa[vo + 2]!,
+      fa[vo + 3]!,
+      fa[vo + 4]!,
+      fa[vo + 5]!,
+      fa[vo + 6]!,
+      fa[vo + 7]!,
+      fa[vo + 8]!,
+      fa[vo + 9]!,
+      fa[vo + 10]!,
+      fa[vo + 11]!,
     ]);
     mesh.geometry.dispose();
     const g = new BufferGeometry();
     g.setAttribute('position', new BufferAttribute(verts, 3));
-    g.setAttribute(
-      'uv',
-      new BufferAttribute(new Float32Array([0, 1, 1, 1, 1, 0, 0, 0]), 2),
-    );
+    g.setAttribute('uv', new BufferAttribute(new Float32Array([0, 1, 1, 1, 1, 0, 0, 0]), 2));
     g.setIndex([0, 1, 2, 0, 2, 3]);
     mesh.geometry = g;
   }
@@ -555,6 +586,7 @@ function setupScene(
     const frustumSize = (currentExtent * 1.15) / params.viewZoom;
     updateFrustum(frustumSize);
     positionCamera(params.pitch, params.yaw, frustumSize, params.panX, params.panZ);
+    if (hoveredTile) emitHover();
   }
 
   const ro = new ResizeObserver(() => {
@@ -574,6 +606,69 @@ function setupScene(
   let downY = 0;
   let activePointer: number | null = null;
   const CLICK_PX_THRESHOLD = 5; // squared distance below this treated as a click, not a drag
+  const raycaster = new Raycaster();
+  const ndc = new Vector2();
+  const projVec = new Vector3();
+  let hoveredTile: { col: number; row: number } | null = null;
+
+  /** Project the 4 corners of a tile to canvas-relative screen coords. Returns the
+   *  top-right anchor (visually upper-right in screen space) plus the longest screen
+   *  edge so callers can size overlay UI proportionally to the tile. */
+  function projectTileScreen(
+    col: number,
+    row: number,
+  ): { x: number; y: number; screenSize: number } | null {
+    if (!fillMesh) return null;
+    const tileIndex = tileIndexMap.get(keyOf(col, row));
+    if (tileIndex === undefined) return null;
+    const positions = (fillMesh.geometry.getAttribute('position') as BufferAttribute)
+      .array as Float32Array;
+    const vo = tileIndex * 12;
+    const w = canvas.clientWidth || 1;
+    const h = canvas.clientHeight || 1;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    let bestX = 0;
+    let bestY = 0;
+    let minSx = Number.POSITIVE_INFINITY;
+    let maxSx = Number.NEGATIVE_INFINITY;
+    let minSy = Number.POSITIVE_INFINITY;
+    let maxSy = Number.NEGATIVE_INFINITY;
+    for (let v = 0; v < 4; v++) {
+      const off = vo + v * 3;
+      projVec.set(positions[off]!, positions[off + 1]!, positions[off + 2]!);
+      projVec.project(camera);
+      const sx = (projVec.x * 0.5 + 0.5) * w;
+      const sy = (1 - (projVec.y * 0.5 + 0.5)) * h;
+      if (sx < minSx) minSx = sx;
+      if (sx > maxSx) maxSx = sx;
+      if (sy < minSy) minSy = sy;
+      if (sy > maxSy) maxSy = sy;
+      const score = sx - sy;
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = sx;
+        bestY = sy;
+      }
+    }
+    const screenSize = Math.max(maxSx - minSx, maxSy - minSy);
+    return { x: bestX, y: bestY, screenSize };
+  }
+
+  function emitHover(): void {
+    if (!hoveredTile) {
+      callbacks.onTileHover(null, null, 0, 0, 0);
+      return;
+    }
+    const p = projectTileScreen(hoveredTile.col, hoveredTile.row);
+    if (!p) return;
+    callbacks.onTileHover(hoveredTile.col, hoveredTile.row, p.x, p.y, p.screenSize);
+  }
+
+  function clearHover(): void {
+    if (!hoveredTile) return;
+    hoveredTile = null;
+    callbacks.onTileHover(null, null, 0, 0, 0);
+  }
 
   const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
@@ -585,9 +680,34 @@ function setupScene(
     downY = e.clientY;
     canvas.setPointerCapture(e.pointerId);
     canvas.style.cursor = 'grabbing';
+    clearHover();
   };
   const onPointerMove = (e: PointerEvent) => {
-    if (!isDragging || e.pointerId !== activePointer) return;
+    if (!isDragging || e.pointerId !== activePointer) {
+      if (!isDragging) {
+        const rect = canvas.getBoundingClientRect();
+        const xCanvas = e.clientX - rect.left;
+        const yCanvas = e.clientY - rect.top;
+        ndc.x = (xCanvas / rect.width) * 2 - 1;
+        ndc.y = -((yCanvas / rect.height) * 2 - 1);
+        raycaster.setFromCamera(ndc, camera);
+        if (fillMesh) {
+          const hits = raycaster.intersectObject(fillMesh, false);
+          const first = hits[0];
+          if (first && first.faceIndex != null) {
+            const tileIndex = Math.floor(first.faceIndex / 2);
+            const tile = tilesArray[tileIndex];
+            if (tile) {
+              hoveredTile = { col: tile.col, row: tile.row };
+              emitHover();
+              return;
+            }
+          }
+        }
+        clearHover();
+      }
+      return;
+    }
     const dpxX = e.clientX - lastX;
     const dpxY = e.clientY - lastY;
     lastX = e.clientX;
@@ -613,8 +733,6 @@ function setupScene(
     const dz = dragMetersRight * rightZ + dragMetersForward * forwardZ;
     callbacks.onPanDelta(dx, dz);
   };
-  const raycaster = new Raycaster();
-  const ndc = new Vector2();
   const onPointerUp = (e: PointerEvent) => {
     if (e.pointerId !== activePointer) return;
     isDragging = false;
