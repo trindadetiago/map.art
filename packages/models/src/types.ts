@@ -17,6 +17,9 @@ export interface GenerateMetadata {
 
 export interface GenerateResult {
   image: Buffer;
+  /** The model's untouched response bytes, before any adapter-side normalisation
+   *  (resize, format conversion). Useful for diagnosing scale/aspect issues. */
+  rawImage?: Buffer;
   metadata: GenerateMetadata;
 }
 
