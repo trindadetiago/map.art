@@ -45,6 +45,13 @@ async function saveTileAction(
     const buf = Buffer.from(await pngBlob.arrayBuffer());
     const key = renderedTileKey(projectId, col, row);
     await getStorage().put(key, buf);
+    await repos.createTileVersionAndSetCurrent({
+      projectId,
+      col,
+      row,
+      source: 'rendered',
+      storageKey: key,
+    });
     return {
       ok: true,
       col,
@@ -82,6 +89,16 @@ async function generateTileAction(
     const result = await model.generate({ input, prompt });
     const key = generatedTileKey(projectId, col, row);
     await storage.put(key, result.image);
+    await repos.createTileVersionAndSetCurrent({
+      projectId,
+      col,
+      row,
+      source: 'generated',
+      storageKey: key,
+      modelId: modelName,
+      prompt,
+      referenceStorageKey: renderedKey,
+    });
     return { ok: true, url: storageUrl(key), filename: `${col}_${row}.png` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -146,25 +163,50 @@ async function generateTileInfillAction(
     await storage.put(`${debugBase}_hybrid.png`, hybridBuf);
     await storage.put(`${debugBase}_mask.png`, maskBuf);
 
+    // Persist each of the 9 input slots as its own PNG (top-left → bottom-right,
+    // so the centre tile is index 4). Lets the operator drop these into a manual
+    // test rig outside this codebase. Lives at `<debugBase>_tiles/<idx>.png`.
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const idx = r * 3 + c;
+        const slot = await sharp(hybridBuf)
+          .extract({ left: c * slotSize, top: r * slotSize, width: slotSize, height: slotSize })
+          .png()
+          .toBuffer();
+        await storage.put(`${debugBase}_tiles/${idx}.png`, slot);
+      }
+    }
+
     const apiKey = env.openaiApiKey;
     const model = getModel(modelName, apiKey ? { apiKey } : {});
     const result = await model.generate({ input: hybridBuf, mask: maskBuf, prompt });
 
-    const rawMeta = await sharp(result.image).metadata();
     const hybridMeta = await sharp(hybridBuf).metadata();
     const hybridW = hybridMeta.width ?? 1024;
     const hybridH = hybridMeta.height ?? 1024;
-    console.log(
-      `[infill] tile (${col},${row}) — sent ${hybridW}×${hybridH} (slot=${slotSize}), model returned ${rawMeta.width}×${rawMeta.height}`,
-    );
+    // _raw.png = post-resize (matches hybrid dims, used by the crop math).
+    // _raw_native.png = exactly what OpenAI returned, before our adapter touches it.
     await storage.put(`${debugBase}_raw.png`, result.image);
+    if (result.rawImage) {
+      await storage.put(`${debugBase}_raw_native.png`, result.rawImage);
+      const nativeMeta = await sharp(result.rawImage).metadata();
+      console.log(
+        `[infill] tile (${col},${row}) — sent ${hybridW}×${hybridH} (slot=${slotSize}), model native ${nativeMeta.width}×${nativeMeta.height}, post-resize ${hybridW}×${hybridH}`,
+      );
+    } else {
+      const rawMeta = await sharp(result.image).metadata();
+      console.log(
+        `[infill] tile (${col},${row}) — sent ${hybridW}×${hybridH} (slot=${slotSize}), model returned ${rawMeta.width}×${rawMeta.height}`,
+      );
+    }
 
     // Crop at the SAME coords we used to draw the rendered tile into the
     // hybrid canvas. If the model output isn't already at hybrid dims, scale
     // it to hybrid dims first so the slot coords line up — but normally the
     // adapter has already resized to input dims, so this is a no-op.
+    const resultMeta = await sharp(result.image).metadata();
     const normalized =
-      rawMeta.width === hybridW && rawMeta.height === hybridH
+      resultMeta.width === hybridW && resultMeta.height === hybridH
         ? result.image
         : await sharp(result.image).resize(hybridW, hybridH, { fit: 'fill' }).png().toBuffer();
 
@@ -185,6 +227,16 @@ async function generateTileInfillAction(
 
     const key = generatedTileKey(projectId, col, row);
     await storage.put(key, cropped);
+    await repos.createTileVersionAndSetCurrent({
+      projectId,
+      col,
+      row,
+      source: 'generated',
+      storageKey: key,
+      modelId: modelName,
+      prompt,
+      referenceStorageKey: renderedTileKey(projectId, col, row),
+    });
     return { ok: true, url: storageUrl(key), filename: `${col}_${row}.png` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

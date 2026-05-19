@@ -27,5 +27,15 @@
       "trailingCommas": "all",
       "arrowParentheses": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "include": ["apps/web/components/projects/ProjectMap.tsx"],
+      "linter": {
+        "rules": {
+          "style": { "noNonNullAssertion": "off" }
+        }
+      }
+    }
+  ]
 }
