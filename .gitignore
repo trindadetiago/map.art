@@ -12,8 +12,6 @@ coverage
 *.tsbuildinfo
 
 # project data
-data/
-*.png
 !**/debug/**/*.png
 !**/docs/**/*.png
 .venv/

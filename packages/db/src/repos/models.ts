@@ -60,6 +60,20 @@ export async function seedDefaultModels(): Promise<number> {
       notes: 'Newer Flash variant — speed/quality sweet spot.',
       active: false,
     },
+    {
+      id: 'gpt-image-1',
+      kind: 'edit',
+      endpoint: 'openai:gpt-image-1',
+      notes: 'OpenAI gpt-image-1, supports masked edits (infill).',
+      active: false,
+    },
+    {
+      id: 'gpt-image-1.5',
+      kind: 'edit',
+      endpoint: 'openai:gpt-image-1.5',
+      notes: 'OpenAI gpt-image-1.5, supports masked edits (infill).',
+      active: false,
+    },
   ];
   for (const m of defaults) {
     await upsertModel(m);

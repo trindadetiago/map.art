@@ -103,6 +103,7 @@ export class OpenAIImageModel implements ModelClient {
 
     return {
       image,
+      rawImage: raw,
       metadata: {
         model: this.name,
         prompt: params.prompt,
