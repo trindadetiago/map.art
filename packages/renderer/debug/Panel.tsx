@@ -78,7 +78,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
   const [lng, setLng] = useState(-34.861);
   const [pitch, setPitch] = useState(30);
   const [yaw, setYaw] = useState(45);
-  const [size, setSize] = useState(512);
+  const [size, setSize] = useState(1024);
   const [zoom, setZoom] = useState(18);
 
   const liveParams: RenderParams = { center: { lat, lng }, pitch, yaw, size, zoom };
@@ -88,7 +88,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
   const [batchParams, setBatchParams] = useState<RenderParams | null>(null);
   const activeParams = batchParams ?? liveParams;
 
-  const [sampleN, setSampleN] = useState(3);
+  const [sampleN, setSampleN] = useState(50);
   const [sampleSeed, setSampleSeed] = useState(42);
   const [sampleTileWorldMeters, setSampleTileWorldMeters] = useState(150);
   const [sampleRunning, setSampleRunning] = useState(false);
