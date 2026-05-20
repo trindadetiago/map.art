@@ -1,0 +1,14 @@
+{
+  "scene_id": "seed42_n50_1779308635275__sample20",
+  "tile_id": "c-1_r0",
+  "col": -1,
+  "row": 0,
+  "src_relpath": "data/renderer/samples/seed42_n50_1779308635275/sample20/c-1_r0.png",
+  "src_size": [1024, 1024],
+  "target_size": [1024, 1024],
+  "model": "gpt-image-2",
+  "output_size": "1024x1024",
+  "prompt": "Convert this aerial isometric city render into a 16-bit isometric pixel-art image in the style of SimCity 2000, RollerCoaster Tycoon 2, and Theme Hospital. Late-1990s simulation game aesthetic: limited saturated palette, crisp aliased pixel edges, simple flat shading with a single top-left light direction. Use the satellite content visible in the input as the strict source \u2014 every building, road, intersection, tree, water surface, and open lot in your output must correspond 1:1 to the input. Do not add, remove, relocate, resize, or invent anything. If unsure about a detail, prefer the input over your own priors. Treat low-poly artifacts as cues about real-world content, not features to copy: blocky tree shapes are trees (round pixel-art crowns), shimmering surfaces are water (flat color + 2-pixel checkerboard), stretched facades are buildings (clean rectangular pixel-art walls).",
+  "duration_ms": 73921,
+  "generated_at": "2026-05-20T21:41:34.427038Z"
+}
