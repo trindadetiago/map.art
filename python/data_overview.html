@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>map.art — v01 training data overview</title>
+<style>
+  :root {
+    --bg: #0e1014;
+    --surface: #161a22;
+    --surface-2: #1c2230;
+    --border: #2a3142;
+    --text: #e6e9ef;
+    --text-dim: #9aa3b2;
+    --accent: #6ee7b7;
+    --accent-2: #7dd3fc;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --rendered: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  /* hero */
+  .hero { padding: 32px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .eyebrow { color: var(--accent); font-family: "SF Mono", Menlo, monospace; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 2px; }
+  h1 { margin: 8px 0 12px; font-size: 48px; font-weight: 700; letter-spacing: -0.02em; }
+  .lede { color: var(--text-dim); font-size: 17px; max-width: 760px; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 36px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; }
+  .stat-n { font-size: 32px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .stat-l { color: var(--text-dim); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 1px; margin-top: 6px; }
+  .stat-arrow { color: var(--text-dim); font-size: 24px; text-align: center; align-self: center; }
+
+  /* pipeline */
+  .pipeline { display: flex; gap: 8px; flex-wrap: wrap; margin: 36px 0 48px; }
+  .step { background: var(--surface-2); padding: 10px 16px; border-radius: 999px;
+    border: 1px solid var(--border); font-size: 13px; }
+  .step b { color: var(--accent-2); font-family: "SF Mono", Menlo, monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1px; margin-right: 6px; }
+  .step.done { border-color: rgba(110, 231, 183, 0.4); }
+  .step.todo { opacity: 0.55; }
+  .arr { color: var(--text-dim); align-self: center; font-size: 16px; }
+
+  /* sections */
+  section { margin: 64px 0; scroll-margin-top: 24px; }
+  section h2 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  section .meta { color: var(--text-dim); font-family: "SF Mono", Menlo, monospace; font-size: 12px;
+    margin-bottom: 16px; }
+  section p { color: var(--text); max-width: 760px; }
+  section p.dim { color: var(--text-dim); }
+  code { background: var(--surface); border: 1px solid var(--border); padding: 1px 7px;
+    border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, monospace; }
+
+  /* cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; margin-top: 20px; }
+  .card h3 { margin: 0 0 4px; font-size: 17px; }
+  .card .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 16px;
+    font-family: "SF Mono", Menlo, monospace; }
+
+  /* image grids */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pair figure { margin: 0; }
+  .pair figcaption { color: var(--text-dim); font-size: 12px;
+    font-family: "SF Mono", Menlo, monospace; margin-bottom: 6px; }
+  .pair img, .grid8 img, .flip-row img { width: 100%; height: auto; display: block;
+    border-radius: 8px; background: #000; border: 1px solid var(--border); }
+  .grid8 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+  .grid8 figure { margin: 0; text-align: center; }
+  .grid8 figcaption { color: var(--text-dim); font-size: 11px;
+    font-family: "SF Mono", Menlo, monospace; margin-top: 6px; }
+  .flip-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+
+  /* badges */
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px;
+    font-family: "SF Mono", Menlo, monospace; text-transform: uppercase; letter-spacing: 1px;
+    margin-right: 6px; vertical-align: middle; }
+  .b-keep  { background: rgba(110, 231, 183, 0.15); color: var(--accent); border: 1px solid rgba(110, 231, 183, 0.35); }
+  .b-drop  { background: rgba(248, 113, 113, 0.13); color: var(--bad);    border: 1px solid rgba(248, 113, 113, 0.35); }
+  .b-warn  { background: rgba(251, 191, 36, 0.12);  color: var(--warn);   border: 1px solid rgba(251, 191, 36, 0.35); }
+  .b-info  { background: rgba(125, 211, 252, 0.12); color: var(--accent-2); border: 1px solid rgba(125, 211, 252, 0.35); }
+
+  /* legend */
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--text-dim);
+    font-size: 12px; margin-top: 12px; }
+  .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px;
+    margin-right: 6px; vertical-align: middle; border: 1px solid var(--border); }
+  .sw-render  { background: linear-gradient(135deg, #2b3954, #4a5d7f); }
+  .sw-target  { background: linear-gradient(135deg, #845ec2, #d65db1); }
+  .sw-outline { background: var(--rendered); }
+
+  /* manifest table */
+  .manifest { font-family: "SF Mono", Menlo, monospace; font-size: 12px; color: var(--text-dim);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; white-space: pre; }
+  .manifest .head { color: var(--accent-2); }
+
+  footer { color: var(--text-dim); font-size: 13px; margin-top: 96px;
+    padding-top: 24px; border-top: 1px solid var(--border); }
+  footer a { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">map.art · v01 training data</div>
+    <h1>From satellite to pixel art, in six steps.</h1>
+    <p class="lede">
+      We're building a fine-tuned image model that turns 3D-rendered isometric city tiles into 16-bit
+      pixel art. This page walks through every kind of data the pipeline produces and why each one matters,
+      using actual examples from <code>python/training/v01/</code>.
+    </p>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-n">450</div><div class="stat-l">raw renders</div></div>
+      <div class="stat-arrow">→</div>
+      <div class="stat"><div class="stat-n">122</div><div class="stat-l">stylized pairs</div></div>
+      <div class="stat-arrow">→</div>
+      <div class="stat"><div class="stat-n">1696</div><div class="stat-l">training examples</div></div>
+    </div>
+  </header>
+
+  <div class="pipeline">
+    <div class="step done"><b>1</b> render</div>
+    <div class="arr">→</div>
+    <div class="step done"><b>2</b> stylize</div>
+    <div class="arr">→</div>
+    <div class="step done"><b>3</b> cull</div>
+    <div class="arr">→</div>
+    <div class="step done"><b>4</b> mask‑augment</div>
+    <div class="arr">→</div>
+    <div class="step done"><b>5</b> flip</div>
+    <div class="arr">→</div>
+    <div class="step todo"><b>6</b> oxen.ai LoRA</div>
+  </div>
+
+  <!-- 1. RENDER -->
+  <section>
+    <h2>1 · Raw renders</h2>
+    <div class="meta">data/renderer/samples/seed42_n50_1779308635275/sample*/c*_r*.png  ·  450 tiles  ·  1024×1024</div>
+    <p>
+      Captured from a Three.js scene streaming Google Photorealistic 3D Tiles, with an orthographic
+      isometric camera. 50 random center points in the João Pessoa bounding box, each with a 3×3
+      neighbourhood of tiles (so neighbour-aware infill training has the data it needs later).
+      These are the <em>inputs</em> to everything downstream.
+    </p>
+    <div class="card">
+      <h3>Example: <code>sample0 / c-1_r-1</code></h3>
+      <div class="sub">picked from the renderer harness with seed 42</div>
+      <img src="training/v01/seed42_n50_1779308635275__sample0/c-1_r-1/source.png" loading="lazy" alt="raw render" />
+    </div>
+  </section>
+
+  <!-- 2. STYLIZE -->
+  <section>
+    <h2>2 · Stylized targets <span class="badge b-info">gpt-image-2</span></h2>
+    <div class="meta">python/training/v01/{scene}/{tile}/target.png  ·  122 pairs  ·  1024×1024</div>
+    <p>
+      Each raw render is fed to OpenAI's <code>gpt-image-2</code> (medium / auto quality) with a
+      detailed pixel-art prompt — SimCity 2000 / RollerCoaster Tycoon 2 / Theme Hospital aesthetic.
+      The output is our <strong>ground truth</strong>: what the fine-tuned model should learn to produce.
+      Saved alongside its source so every training example is an aligned pair.
+    </p>
+    <div class="card">
+      <h3>Pair: <code>sample0 / c-1_r-1</code></h3>
+      <div class="sub">source (left) → target (right)</div>
+      <div class="pair">
+        <figure>
+          <figcaption>source · 3D render</figcaption>
+          <img src="training/v01/seed42_n50_1779308635275__sample0/c-1_r-1/source.png" loading="lazy" alt="render" />
+        </figure>
+        <figure>
+          <figcaption>target · gpt-image-2 stylized</figcaption>
+          <img src="training/v01/seed42_n50_1779308635275__sample0/c-1_r-1/target.png" loading="lazy" alt="stylized" />
+        </figure>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:14px;">
+      We're using these gpt-image-2 outputs as <em>ground truth</em> because they're already publishable.
+      The point of fine-tuning is not to do better than gpt-image-2 stylistically — it's to get the same
+      output style from a model we can self-host, run cheaply, and (most importantly) condition with masks.
+    </p>
+  </section>
+
+  <!-- 3. CULL -->
+  <section>
+    <h2>3 · Cull <span class="badge b-keep">106 kept</span><span class="badge b-drop">16 dropped</span></h2>
+    <div class="meta">python/training/v01/_keep.json  ·  manual review via python/cull.py</div>
+    <p>
+      Not every gpt-image-2 output is clean. Some have hallucinated buildings, smearing, off-palette
+      colours, or geometry that drifts from the source. We reviewed all 122 pairs side-by-side in a
+      Streamlit app and tagged each <strong>keep</strong> or <strong>drop</strong>. Only kept pairs flow downstream.
+    </p>
+    <div class="card">
+      <h3><span class="badge b-keep">kept</span> <code>sample0 / c-1_r-1</code></h3>
+      <div class="sub">faithful geometry, clean palette, no hallucinations</div>
+      <div class="pair">
+        <figure><figcaption>source</figcaption>
+          <img src="training/v01/seed42_n50_1779308635275__sample0/c-1_r-1/source.png" loading="lazy" alt="" />
+        </figure>
+        <figure><figcaption>target</figcaption>
+          <img src="training/v01/seed42_n50_1779308635275__sample0/c-1_r-1/target.png" loading="lazy" alt="" />
+        </figure>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-drop">dropped</span> <code>sample1 / c1_r-1</code></h3>
+      <div class="sub">example of a pair we filtered out — quality issues that would poison training</div>
+      <div class="pair">
+        <figure><figcaption>source</figcaption>
+          <img src="training/v01/seed42_n50_1779308635275__sample1/c1_r-1/source.png" loading="lazy" alt="" />
+        </figure>
+        <figure><figcaption>target</figcaption>
+          <img src="training/v01/seed42_n50_1779308635275__sample1/c1_r-1/target.png" loading="lazy" alt="" />
+        </figure>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:14px;">
+      87% pass rate is above Andy Coenen's <a href="https://cannoneyed.com/projects/isometric-nyc" style="color:var(--accent-2)">Isometric NYC</a> 40-pair recipe.
+      The cull file is the single source of truth for what counts as "training data" in v01.
+    </p>
+  </section>
+
+  <!-- 4. MASK AUGMENT -->
+  <section>
+    <h2>4 · Mask augmentation <span class="badge b-info">Andy Coenen's scheme</span></h2>
+    <div class="meta">python/training/v01/_augmented/{scene}/{tile}/*.png  ·  848 examples</div>
+    <p>
+      Here's the trick that makes a tile map seamless. We can't just train "render → pixel art" — at
+      inference time, tiles need to fit alongside their already-generated neighbours without visible
+      seams. So we synthesise the inference scenario: take each kept pair and produce <strong>8 hybrid
+      input variants</strong> where part of the image is already in pixel art (the "neighbour context")
+      and the rest is still the raw 3D render with a <strong>1-pixel red outline</strong> marking the
+      region to convert.
+    </p>
+    <div class="legend">
+      <span><span class="sw sw-target"></span> stylized (context the model preserves)</span>
+      <span><span class="sw sw-render"></span> rendered (region to convert)</span>
+      <span><span class="sw sw-outline"></span> 1-px outline marking the boundary</span>
+    </div>
+    <div class="card">
+      <h3>All 8 variants for <code>sample0 / c-1_r-1</code></h3>
+      <div class="sub">target for every variant is the same full stylized image; only the input changes</div>
+      <div class="grid8">
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/half_L.png" loading="lazy" alt="" /><figcaption>half_L</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/half_R.png" loading="lazy" alt="" /><figcaption>half_R</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/half_T.png" loading="lazy" alt="" /><figcaption>half_T</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/half_B.png" loading="lazy" alt="" /><figcaption>half_B</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/quad_TL.png" loading="lazy" alt="" /><figcaption>quad_TL</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/quad_TR.png" loading="lazy" alt="" /><figcaption>quad_TR</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/quad_BL.png" loading="lazy" alt="" /><figcaption>quad_BL</figcaption></figure>
+        <figure><img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/quad_BR.png" loading="lazy" alt="" /><figcaption>quad_BR</figcaption></figure>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:14px;">
+      4 half-tile variants (one side rendered, the other stylized) + 4 quadrant variants (one corner
+      rendered, the other three stylized) = 8 variants × 106 kept pairs = <strong>848 examples</strong>.
+      The model learns to follow the red outline and produce a fully-stylized result that respects the
+      surrounding context.
+    </p>
+  </section>
+
+  <!-- 5. FLIP -->
+  <section>
+    <h2>5 · Horizontal flip <span class="badge b-info">free 2×</span></h2>
+    <div class="meta">python/training/v01/_augmented/.../*_flip.png  ·  +848 examples → 1696 total</div>
+    <p>
+      Doubling the dataset for free. Every (input, target) pair gets a horizontally-mirrored twin —
+      both images flipped together so they stay consistent. The isometric light direction flips from
+      top-left to top-right, which is still a valid choice. We skip rotations because they'd break
+      isometric camera conventions.
+    </p>
+    <div class="card">
+      <h3>Original vs flip — <code>half_R</code> variant</h3>
+      <div class="sub">notice the red outline mirrors too; geometry and lighting flip together</div>
+      <div class="flip-row">
+        <figure>
+          <figcaption>half_R · original</figcaption>
+          <img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/half_R.png" loading="lazy" alt="" />
+        </figure>
+        <figure>
+          <figcaption>half_R · flipped</figcaption>
+          <img src="training/v01/_augmented/seed42_n50_1779308635275__sample0/c-1_r-1/half_R_flip.png" loading="lazy" alt="" />
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. MANIFEST -->
+  <section>
+    <h2>6 · Manifest — what goes to oxen.ai</h2>
+    <div class="meta">python/training/v01/_augmented/manifest.csv  ·  1696 rows</div>
+    <p>
+      One CSV row per training example. Each row points at a hybrid input PNG, the prompt with the
+      rare-token style trigger <code>&lt;mapart isometric pixel art&gt;</code>, and the matching target PNG.
+      This is the file we upload to <a href="https://oxen.ai" style="color:var(--accent-2)">oxen.ai</a>
+      together with the referenced images.
+    </p>
+    <div class="manifest"><span class="head">input_path,prompt,target_path</span>
+python/training/v01/_augmented/.../sample0/c-1_r-1/half_L.png,"Fill in the outlined section…","…/c-1_r-1/target.png"
+python/training/v01/_augmented/.../sample0/c-1_r-1/half_R.png,"Fill in the outlined section…","…/c-1_r-1/target.png"
+python/training/v01/_augmented/.../sample0/c-1_r-1/half_T.png,"Fill in the outlined section…","…/c-1_r-1/target.png"
+…
+python/training/v01/_augmented/.../sample20/c0_r0/quad_BR_flip.png,"Fill in the outlined section…","…/c0_r0/target_flip.png"</div>
+    <div class="card" style="margin-top:18px;">
+      <h3>The prompt (same for every row)</h3>
+      <p style="margin:0;color:var(--text-dim);font-family:'SF Mono',Menlo,monospace;font-size:13px;line-height:1.55;">
+        Fill in the outlined section with the missing pixels corresponding to the
+        <span style="color:var(--accent)">&lt;mapart isometric pixel art&gt;</span> style, removing the border
+        and exactly following the shape/style/structure of the surrounding image.
+      </p>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section>
+    <h2>Why this shape of data?</h2>
+    <p>
+      Three things had to be true for the final model to work:
+    </p>
+    <ol style="max-width: 760px; color: var(--text); padding-left: 20px;">
+      <li><strong>Style consistency</strong> across many independent tile generations.
+        gpt-image-2 gives this through the prompt; the LoRA inherits it by training on its outputs.</li>
+      <li><strong>Seam-free tiling</strong> in production. The 8-variant mask scheme is what teaches
+        the model to extend an existing pixel-art region into a rendered region — i.e. infill neighbours
+        cleanly.</li>
+      <li><strong>Cheap, self-hostable inference</strong>. gpt-image-2 is too slow and pricey at the
+        scale of a real map (thousands of tiles). A Qwen Image Edit LoRA on oxen.ai can serve at a
+        fraction of the cost.</li>
+    </ol>
+    <p class="dim" style="margin-top: 12px;">
+      Reference: Andy Coenen's <a href="https://cannoneyed.com/projects/isometric-nyc" style="color:var(--accent-2)">Isometric NYC</a> used
+      <strong>40 pairs</strong>, <strong>$12</strong>, and <strong>~4 hours</strong> on oxen.ai with this
+      same recipe and shipped a finished map of Manhattan. We have 106 kept pairs and 1696 training
+      examples — comfortably above his bar.
+    </p>
+  </section>
+
+  <footer>
+    Generated from <code>python/data_overview.html</code>. All images are loaded from the repo;
+    open this file directly in a browser to view. Numbers here describe the v01 dataset as of the
+    most recent run of <code>cull.py</code> + <code>augment.py</code> + <code>flip.py</code>.
+  </footer>
+</div>
+</body>
+</html>
