@@ -19,3 +19,7 @@ coverage
 # Augmented training data — deterministically reproducible from
 # python/training/v01/_keep.json + python/augment.py.
 python/training/*/_augmented/
+
+# Oxen.ai upload bundle — flat hard-link mirror of _augmented/, generated
+# by python/bundle_for_oxen.py just before pushing to hub.oxen.ai.
+python/training/*/_oxen_upload/
