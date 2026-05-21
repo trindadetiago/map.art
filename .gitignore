@@ -15,3 +15,7 @@ coverage
 !**/debug/**/*.png
 !**/docs/**/*.png
 .venv/
+
+# Augmented training data — deterministically reproducible from
+# python/training/v01/_keep.json + python/augment.py.
+python/training/*/_augmented/
