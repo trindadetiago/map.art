@@ -1,0 +1,1075 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>map.art — pesquisa de modelos de imagem</title>
+    <style>
+      :root {
+        --bg: #f7f5ef;
+        --panel: #ffffff;
+        --ink: #14110d;
+        --ink-soft: #3f3a32;
+        --muted: #7a7368;
+        --line: #e7e2d4;
+        --line-strong: #d8d2c1;
+        --tint: #f0ece1;
+        --accent: #2563eb;
+        --good: #15803d;
+        --warn: #b45309;
+        --bad: #b91c1c;
+
+        --shadow-xs: 0 1px 2px rgba(20, 17, 13, 0.04);
+        --shadow-sm: 0 1px 2px rgba(20, 17, 13, 0.04), 0 2px 6px rgba(20, 17, 13, 0.04);
+        --shadow-md: 0 1px 2px rgba(20, 17, 13, 0.04), 0 8px 24px rgba(20, 17, 13, 0.06);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; color: var(--ink); }
+      body {
+        font: 15px/1.6 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 56px 28px 96px;
+        background: var(--bg);
+      }
+      h1 {
+        font-size: 36px;
+        font-weight: 700;
+        margin: 0 0 6px;
+        letter-spacing: -0.025em;
+        background: linear-gradient(180deg, #14110d 0%, #4a443b 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 56px 0 14px;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line), transparent);
+        margin-left: 4px;
+      }
+      h3 {
+        font-size: 15.5px;
+        font-weight: 650;
+        margin: 14px 0 8px;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      h4 { font-size: 14px; font-weight: 650; margin: 14px 0 6px; color: var(--ink); }
+      p { margin: 6px 0; color: var(--ink-soft); }
+      .lede { color: var(--muted); margin-bottom: 32px; font-size: 16px; max-width: 760px; }
+      strong { color: var(--ink); font-weight: 650; }
+      em { font-style: italic; color: var(--ink-soft); }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      .meta-row {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin: 0 0 8px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .meta-row span strong { color: var(--ink-soft); font-weight: 650; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+      @media (max-width: 880px) {
+        .two-col, .three-col { grid-template-columns: 1fr; }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px 22px 18px;
+        box-shadow: var(--shadow-xs);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .card:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+        border-color: var(--line-strong);
+      }
+      .card h3 { margin-top: 4px; }
+      .summary { color: var(--ink-soft); margin: 6px 0 0; font-size: 14.5px; }
+      .card.flat { border-style: dashed; background: transparent; }
+      .card.flat:hover { transform: none; box-shadow: none; }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px 3px 9px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        background: var(--tint);
+        color: var(--ink-soft);
+        border: 1px solid var(--line);
+      }
+      .tag::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .tag.good::before { background: #15803d; }
+      .tag.warn::before { background: #b45309; }
+      .tag.bad::before  { background: #b91c1c; }
+      .tag.info::before { background: #2563eb; }
+
+      ul, ol { padding-left: 20px; margin: 6px 0; color: var(--ink-soft); }
+      li { margin: 4px 0; }
+      code {
+        background: var(--tint);
+        padding: 1.5px 6px;
+        border-radius: 5px;
+        font: 12.5px/1.4 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #4a443b;
+        border: 1px solid #e6e0cf;
+      }
+      pre {
+        background: linear-gradient(180deg, #1a1815 0%, #14110d 100%);
+        color: #eaeaea;
+        padding: 16px 18px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font: 12.5px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #0a0907;
+        margin: 12px 0;
+      }
+      pre .k { color: #fcd34d; }
+      pre .s { color: #86efac; }
+      pre .c { color: #807a70; font-style: italic; }
+
+      .ref-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+        margin: 10px 0;
+      }
+      .ref-table th, .ref-table td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        color: var(--ink-soft);
+      }
+      .ref-table th {
+        font-weight: 650;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      .ref-table td code { font-size: 11.5px; }
+      .ref-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+      .ref-table tbody tr.highlight td { background: #fffbed; }
+      .ref-table tbody tr.highlight td:first-child { border-left: 3px solid #d4a017; padding-left: 12px; }
+
+      .star { color: #b8860b; font-size: 0.85em; vertical-align: super; }
+      .check { color: var(--good); font-weight: 700; }
+      .cross { color: var(--bad); font-weight: 700; }
+      .partial { color: var(--warn); font-weight: 700; }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        background: #f5f8ff;
+        padding: 14px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 14px 0;
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+      .callout.warn { border-color: var(--warn); background: #fff8ef; }
+      .callout.bad  { border-color: var(--bad);  background: #fef3f3; }
+      .callout.good { border-color: var(--good); background: #f0fdf4; }
+      .callout strong { color: var(--ink); }
+      .callout p { margin: 4px 0; color: var(--ink-soft); }
+
+      .next-up {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin: 8px 0;
+        box-shadow: var(--shadow-xs);
+      }
+      .next-up .num {
+        font-weight: 700;
+        color: var(--muted);
+        font-size: 13px;
+        background: var(--tint);
+        border-radius: 6px;
+        padding: 3px 0;
+        text-align: center;
+        line-height: 1;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .next-up h4 { margin: 0 0 4px; font-size: 14.5px; font-weight: 650; }
+      .next-up p { margin: 0; font-size: 13.5px; }
+      .next-up .when {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-top: 4px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .price-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11.5px;
+        font-weight: 650;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        background: var(--tint);
+        color: var(--ink-soft);
+        border: 1px solid #e6e0cf;
+      }
+      .price-pill.cheap { background: #ecfdf5; border-color: #bbf7d0; color: #166534; }
+      .price-pill.mid   { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+      .price-pill.high  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+
+      .scenario-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 14px;
+      }
+      @media (max-width: 760px) {
+        .scenario-grid { grid-template-columns: 1fr; }
+      }
+      .scenario {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .scenario h4 {
+        margin: 0 0 8px;
+        font-size: 13.5px;
+        font-weight: 650;
+        color: var(--ink);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .scenario h4 .volume {
+        font-size: 11.5px;
+        color: var(--muted);
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .scenario .row {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 12.5px;
+        align-items: baseline;
+        border-bottom: 1px dashed var(--line);
+      }
+      .scenario .row:last-child { border-bottom: none; }
+      .scenario .row .label { color: var(--ink-soft); }
+      .scenario .row .num { font-variant-numeric: tabular-nums; font-weight: 600; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+      .scenario .row.total { font-weight: 700; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); border-bottom: none; }
+      .scenario .row.total .label { color: var(--ink); }
+      .scenario .row.total .num { color: var(--ink); font-size: 13px; }
+      .scenario .savings { color: var(--good); font-size: 12px; margin-top: 6px; font-weight: 600; text-align: right; }
+
+      .sources-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .sources-block h4 {
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 0 0 8px;
+        font-weight: 650;
+      }
+      .sources-block ul { padding-left: 16px; margin: 0; }
+      .sources-block li { font-size: 13px; margin: 3px 0; }
+      .sources-block li a { color: var(--accent); }
+
+      .toc {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin: 0 0 32px;
+        font-size: 13.5px;
+        box-shadow: var(--shadow-xs);
+      }
+      .toc h4 { margin: 0 0 8px; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 650; }
+      .toc ol { columns: 2; column-gap: 28px; padding-left: 18px; margin: 0; }
+      @media (max-width: 660px) { .toc ol { columns: 1; } }
+      .toc li { margin: 2px 0; color: var(--ink-soft); }
+      .toc li a { color: var(--ink-soft); }
+      .toc li a:hover { color: var(--accent); }
+
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>map.art — pesquisa de modelos de imagem</h1>
+    <p class="lede">
+      Landscape de modelos de geração/edição de imagem, focado em
+      <strong>qual base model usar pra fine-tune da LoRA</strong> e
+      <strong>onde hostar o serviço HTTP</strong> que vai servir o pipeline de stylize.
+      Pareado com o sketch de arquitetura em <a href="architecture.html"><code>architecture.html</code></a>.
+    </p>
+    <div class="meta-row">
+      <span><strong>data:</strong> 22/maio/2026 (refresh)</span>
+      <span><strong>original:</strong> 17/maio/2026</span>
+      <span><strong>método:</strong> 4 agentes paralelos cobrindo Alibaba, ByteDance, outros labs, hosting</span>
+      <span><strong>ref:</strong> <code>origin/main @ c3be71b</code></span>
+    </div>
+
+    <div class="toc">
+      <h4>Neste documento</h4>
+      <ol>
+        <li><a href="#tldr">TL;DR — o que mudou</a></li>
+        <li><a href="#contexto">Contexto do produto</a></li>
+        <li><a href="#eixo1">Eixo 1 — Qual base model pra LoRA</a></li>
+        <li><a href="#eixo2">Eixo 2 — Onde hostar o serviço</a></li>
+        <li><a href="#custos">Cenários de custo</a></li>
+        <li><a href="#plano">Plano de implementação</a></li>
+        <li><a href="#riscos">Riscos e tradeoffs</a></li>
+        <li><a href="#fontes">Fontes</a></li>
+      </ol>
+    </div>
+
+    <div class="callout good">
+      <p><strong>Mudança de foco desde 17/mai.</strong> A pergunta não é mais <em>"qual modelo chinês é mais barato pra chamar via API?"</em> — agora é <em>"qual o melhor base model pra fazer LoRA, e onde rodar o serviço?"</em>. Custo passa a ser <strong>per-image servido</strong> (base + LoRA hot-swap) ao invés de list price de endpoint pronto.</p>
+    </div>
+
+    <!-- ========================= TL;DR ========================= -->
+    <h2 id="tldr">TL;DR — o que mudou desde 17/maio</h2>
+
+    <table class="ref-table">
+      <thead>
+        <tr>
+          <th>Eixo</th>
+          <th>Status 17/mai</th>
+          <th>Status 22/mai</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Base model pra LoRA</strong></td>
+          <td>Qwen-Image-Edit-Plus 2509 (set/2025)</td>
+          <td><strong>Qwen-Image-Edit-2511</strong> (23/dez/2025) — refresh oficial, LoRA-compat. Ou esperar <strong>Qwen-Image-2.0</strong> (10/fev/2026, 7B unified) pro próximo ciclo.</td>
+        </tr>
+        <tr>
+          <td><strong>Trainer hospedado</strong></td>
+          <td>"tem que self-host"</td>
+          <td><strong>fal.ai oficial:</strong> <code>qwen-image-edit-2511-trainer</code> ($4/1k steps), <code>qwen-image-edit-plus-trainer</code></td>
+        </tr>
+        <tr>
+          <td><strong>Inference com LoRA hospedado</strong></td>
+          <td>"tem que rodar Replicate ou self-host"</td>
+          <td><strong>fal.ai:</strong> <code>qwen-image-edit-plus-lora</code> — passa LoRA URL via <code>loras: [{path}]</code>, $0.03/MP</td>
+        </tr>
+        <tr>
+          <td><strong>Inpaint mais barato (sem LoRA)</strong></td>
+          <td>Qwen-Image-Edit <code>/inpaint</code> — $0.03/MP</td>
+          <td><strong>Z-Image-Turbo <code>/inpaint</code></strong> — <span class="price-pill cheap">$0.005/MP</span> (saiu inpaint nativo + variante LoRA-inpaint na fal)</td>
+        </tr>
+        <tr>
+          <td><strong>Novos competidores</strong></td>
+          <td>n/a</td>
+          <td><strong>Step1X-Edit v1p2</strong> (StepFun, open + LoRA em 24GB), <strong>Lance</strong> (ByteDance, Apache 2.0, 21/mai/2026), <strong>GLM-Image</strong> (Z.AI cruzou pra edit), <strong>LongCat-Image-Edit</strong> (Meituan, open + training code)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <p><strong>Recomendação consolidada:</strong></p>
+      <ol>
+        <li><strong>Treinar <code>v01.safetensors</code> em cima de Qwen-Image-Edit-2511</strong> via fal.ai trainer.</li>
+        <li><strong>Servir via <code>fal-ai/qwen-image-edit-plus-lora</code></strong> passando <code>loras: [{path}]</code> — zero ops, $0.03/MP.</li>
+        <li><strong>Migrar pra Modal H100</strong> quando volume passar ~50k imgs/mês (5× mais barato a quente).</li>
+        <li><strong>Manter Z-Image-Turbo como tier "cheap"</strong> pra restyle sem máscara — $0.005/MP é o piso absoluto.</li>
+        <li><strong>Planejar migração pra Qwen-Image-2.0</strong> Q3/2026 — 3× mais barato pra self-host, beats FLUX em benchmarks, fal já tem trainer compatível.</li>
+      </ol>
+    </div>
+
+    <!-- ========================= CONTEXTO ========================= -->
+    <h2 id="contexto">Contexto do produto</h2>
+    <p>
+      Calibração necessária pra ler a pesquisa. Tudo abaixo é do <a href="architecture.html"><code>architecture.html</code></a> (commit <code>c3be71b arc</code>) sincronizado com o estado de <code>origin/main</code>.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <span class="tag info">pipeline</span>
+        <h3>Mesmo contrato de generate</h3>
+        <p class="summary">
+          PNG do tile + prompt + máscara opcional → PNG editado. Continua o <code>GenerateParams</code> de <code>packages/models/src/types.ts</code>:
+        </p>
+<pre><span class="k">interface</span> <span class="s">GenerateParams</span> {
+  <span class="k">input</span>: Buffer;       <span class="c">// PNG do tile</span>
+  <span class="k">prompt</span>: <span class="s">string</span>;
+  <span class="k">reference</span>?: Buffer;
+  <span class="k">mask</span>?: Buffer;       <span class="c">// inpaint opcional</span>
+  <span class="k">seed</span>?: <span class="s">number</span>;
+}</pre>
+      </div>
+
+      <div class="card">
+        <span class="tag info">direção SaaS</span>
+        <h3>Modelo atrás de HTTP estável</h3>
+        <p class="summary">
+          Worker 1 (render) → Worker 2 (stylize, orquestra) → <strong>nosso serviço de modelo</strong> via <code>POST /edit { image, mask?, prompt, seed } → png</code>. Onde o serviço roda muda — o contrato não.
+        </p>
+        <p class="summary">
+          Postgres como queue (<code>graphile-worker</code>). Blob storage (S3/R2/GCS).
+        </p>
+      </div>
+
+      <div class="card">
+        <span class="tag info">dataset</span>
+        <h3>v01 — JP isométrico</h3>
+        <p class="summary">
+          <code>python/training/v01/</code> — <strong>1696 exemplos</strong> (106 pairs × 8 mask variants × 2 flips).
+          Subido pro oxen.ai como <code>trindadetiago/mapart-isometric-v01</code>.
+        </p>
+        <p class="summary">
+          Trigger phrase: <code>&lt;mapart isometric pixel art&gt;</code>.
+        </p>
+      </div>
+
+      <div class="card">
+        <span class="tag info">hosting plan</span>
+        <h3>v1 fal/Replicate · later self-host</h3>
+        <p class="summary">
+          Architecture.html lista "v1: Replicate / Modal" e "later: self-host H100". Esta pesquisa <strong>refina</strong>: fal.ai supera Replicate pra início (endpoint c/ LoRA pronto). Modal vira a migração natural quando volume justificar.
+        </p>
+      </div>
+    </div>
+
+    <!-- ========================= EIXO 1 ========================= -->
+    <h2 id="eixo1">Eixo 1 — Qual base model pra LoRA?</h2>
+
+    <h3>Família Qwen (Alibaba/Tongyi) — a casa que vocês escolheram</h3>
+    <div class="card flat">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Lançamento</th>
+            <th>Params</th>
+            <th>License</th>
+            <th>Trainer hospedado</th>
+            <th>Endpoint c/ LoRA</th>
+            <th>$/MP</th>
+            <th>Mask</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Qwen-Image-Edit-Plus 2509</td>
+            <td>set/2025</td>
+            <td>20B MMDiT</td>
+            <td>Apache 2.0</td>
+            <td>fal <code>plus-trainer</code></td>
+            <td><code>qwen-image-edit-plus-lora</code></td>
+            <td class="num"><span class="price-pill mid">$0.030</span></td>
+            <td><span class="check">✓</span></td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Qwen-Image-Edit-2511</strong> <span class="star">★</span></td>
+            <td><strong>23/dez/2025</strong></td>
+            <td>20B MMDiT</td>
+            <td>Apache 2.0</td>
+            <td>fal <code>2511-trainer</code> ($4/1k steps)</td>
+            <td><code>qwen-image-edit-2511</code></td>
+            <td class="num"><span class="price-pill mid">$0.030</span></td>
+            <td><span class="check">✓</span></td>
+          </tr>
+          <tr>
+            <td>Qwen-Image-2512</td>
+            <td>31/dez/2025</td>
+            <td>20B MMDiT</td>
+            <td>Apache 2.0</td>
+            <td>(mesmos trainers)</td>
+            <td>Replicate <code>qwen/qwen-image-2512</code></td>
+            <td class="num"><span class="price-pill mid">~$0.030</span></td>
+            <td><span class="check">✓</span></td>
+          </tr>
+          <tr>
+            <td><strong>Qwen-Image-2.0</strong> 🔮</td>
+            <td>10/fev/2026</td>
+            <td><strong>7B unified</strong></td>
+            <td>Apache 2.0</td>
+            <td>fal <code>plus-trainer</code> (compat)</td>
+            <td><code>qwen-image-2/edit</code></td>
+            <td class="num"><span class="price-pill mid">$0.035</span> std / <span class="price-pill high">$0.075</span> Pro</td>
+            <td><span class="check">✓</span></td>
+          </tr>
+          <tr>
+            <td>Qwen-Image-Layered</td>
+            <td>início 2026</td>
+            <td>7B variante</td>
+            <td>Apache 2.0</td>
+            <td>fal <code>layered-trainer</code></td>
+            <td>layered endpoint</td>
+            <td class="num"><span class="price-pill mid">$0.05</span></td>
+            <td>layer masks (RGBA)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <strong>Veredito:</strong> <strong>2511 é a jogada AGORA</strong> — é o que o <code>architecture.html</code> já referencia, tem trainer oficial fal, suporte LoRA maduro, mask nativa, $0.03/MP servido. <strong>Qwen-Image-2.0 é o próximo passo</strong> (Q3/2026): 7B significa 3× mais barato pra self-host, beats FLUX 12B em DPG-Bench, #1 LMArena edit, mesmos trainers servem. O <code>plus-trainer</code> é forward-compat — a receita de LoRA migra.
+    </p>
+
+    <h3 style="margin-top:32px">Z-Image (Tongyi-MAI, irmão menor do Qwen) — tier "cheap"</h3>
+    <div class="card flat">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Lançamento</th>
+            <th>Params</th>
+            <th>License</th>
+            <th>$/MP fal</th>
+            <th>Mask</th>
+            <th>LoRA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td><strong>Z-Image-Turbo</strong></td>
+            <td>nov/2025</td>
+            <td>6B distilled</td>
+            <td>Apache 2.0</td>
+            <td class="num"><span class="price-pill cheap">$0.005</span></td>
+            <td><span class="check">✓</span> <code>/inpaint</code></td>
+            <td><span class="check">✓</span> <code>/inpaint/lora</code></td>
+          </tr>
+          <tr>
+            <td>Z-Image Base</td>
+            <td>27/jan/2026</td>
+            <td>6B</td>
+            <td>Apache 2.0</td>
+            <td class="num"><span class="price-pill cheap">$0.010</span></td>
+            <td><span class="check">✓</span></td>
+            <td>parcial</td>
+          </tr>
+          <tr>
+            <td>Z-Image i2L</td>
+            <td>27/jan/2026</td>
+            <td>6B + instant-LoRA</td>
+            <td>Apache 2.0</td>
+            <td class="num">trainer $2.26/1k steps</td>
+            <td>—</td>
+            <td><span class="check">✓</span> (1-shot)</td>
+          </tr>
+          <tr>
+            <td>Z-Image-Edit</td>
+            <td>"coming soon"</td>
+            <td>6B edit</td>
+            <td>Apache 2.0 expected</td>
+            <td class="num">TBD</td>
+            <td>expected</td>
+            <td>TBD</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <p><strong>Mudança importante:</strong> Z-Image-Turbo agora tem <code>fal-ai/z-image/turbo/inpaint</code> (com máscara nativa) e <code>fal-ai/z-image/turbo/inpaint/lora</code> (com sua LoRA própria, também com máscara). <strong>$0.005/MP é 6× mais barato que Qwen-Image-Edit-2511</strong> — vale rodar benchmark visual com a LoRA de pixel art treinada em ambos.</p>
+    </div>
+
+    <h3 style="margin-top:32px">Alternativas open-weight (fora da família Alibaba)</h3>
+    <div class="card flat">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Lab</th>
+            <th>Lançamento</th>
+            <th>License</th>
+            <th>Trainer</th>
+            <th>Notas pro map.art</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Step1X-Edit v1p2</strong></td>
+            <td>StepFun</td>
+            <td>26/nov/2025 (v1p2); Edit 2 em 29/abr/2026</td>
+            <td>Open weights</td>
+            <td><strong>Oficial, single 24GB GPU @ 1024</strong></td>
+            <td>Backup real do Qwen — open-weight + LoRA out-of-box</td>
+          </tr>
+          <tr>
+            <td><strong>Lance</strong></td>
+            <td>ByteDance</td>
+            <td><strong>21/mai/2026</strong> (ontem)</td>
+            <td><strong>Apache 2.0</strong></td>
+            <td>Não oficial; treinável (Apache)</td>
+            <td>3B unified MoE (img+vídeo gen+edit). Muito novo — 3B unified historicamente perde de specialized editors em fine detail tipo grid pixel-art</td>
+          </tr>
+          <tr>
+            <td>LongCat-Image-Edit</td>
+            <td>Meituan</td>
+            <td>+ Edit-Turbo 03/fev/2026</td>
+            <td>Open + training code shipped</td>
+            <td><span class="check">✓</span></td>
+            <td>SOTA GEdit-Bench / ImgEdit-Bench. Strong CJK text. Inference fal $0.15/MP (caro)</td>
+          </tr>
+          <tr>
+            <td>GLM-Image</td>
+            <td>Z.AI / Zhipu</td>
+            <td>final 2025/início 2026</td>
+            <td>Open weights</td>
+            <td>não oficial</td>
+            <td><strong>Z.AI cruzou de T2I-only pra edit</strong> — não está mais ruled out</td>
+          </tr>
+          <tr>
+            <td>HunyuanImage-3.0 Instruct Edit</td>
+            <td>Tencent</td>
+            <td>jan/2026</td>
+            <td>Open weights</td>
+            <td>—</td>
+            <td>Hosted fal $0.09/MP (caro). Self-host viável se quiser</td>
+          </tr>
+          <tr>
+            <td>Seedream 5.0 Lite Edit</td>
+            <td>ByteDance</td>
+            <td>jan/fev/2026</td>
+            <td>Proprietária</td>
+            <td><span class="cross">✗</span> nenhum trainer público</td>
+            <td>$0.035 flat 1K–3K. Útil como fallback de qualidade, não como base LoRA</td>
+          </tr>
+          <tr>
+            <td>ERNIE-Image</td>
+            <td>Baidu</td>
+            <td>15/abr/2026</td>
+            <td><strong>Agora Apache 2.0</strong>, 8B</td>
+            <td>—</td>
+            <td>T2I only — ainda ruled out pra edit</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <strong>Veredito:</strong> <strong>Step1X-Edit v1p2 é o melhor backup</strong> — se a aposta no Qwen quebrar (custo de fal subir, mask quality regredir), Step1X é a evacuação natural: open weights, LoRA oficial em 24GB, mesmo eixo de capacidade.
+    </p>
+
+    <h3 style="margin-top:32px">Modelos ainda descartados (atualização 22/mai)</h3>
+    <div class="grid">
+      <div class="card">
+        <span class="tag bad">ruled out</span>
+        <h3>MiniMax / Hailuo</h3>
+        <p class="summary">Ainda não tem localized edit / mask inpaint. Hailuo 2.3 é video.</p>
+      </div>
+      <div class="card">
+        <span class="tag bad">ruled out</span>
+        <h3>Moonshot Kimi</h3>
+        <p class="summary">Ainda input-side only. Kimi K2.6 não gera imagem.</p>
+      </div>
+      <div class="card">
+        <span class="tag bad">ruled out</span>
+        <h3>DeepSeek Janus</h3>
+        <p class="summary">Resolução ainda travada, sem edit endpoint.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">ainda caro</span>
+        <h3>Tencent Hunyuan (hosted)</h3>
+        <p class="summary">$0.09/MP ainda caro vs Qwen $0.03 — mas open weights viável pra self-host.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">T2I only</span>
+        <h3>Baidu ERNIE Image</h3>
+        <p class="summary">Agora Apache 2.0 + fal/WaveSpeedAI hospeda intl, mas <strong>T2I only</strong> ainda.</p>
+      </div>
+    </div>
+
+    <!-- ========================= EIXO 2 ========================= -->
+    <h2 id="eixo2">Eixo 2 — Onde hostar o serviço de modelo?</h2>
+    <p>
+      A decisão #2 do <a href="architecture.html"><code>architecture.html</code></a> ("where does our model service live?"). Comparação focada em servir <strong>Qwen-Image-Edit-2511 (20B MMDiT) + LoRA própria</strong> com <code>POST /edit</code>.
+    </p>
+
+    <div class="card flat">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Plataforma</th>
+            <th>Cold start</th>
+            <th>Warm 1024²</th>
+            <th>$/img @ 100k/mês</th>
+            <th>DX</th>
+            <th>Veredito</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td><strong>fal.ai</strong></td>
+            <td>~2-5s (managed)</td>
+            <td>~3-6s</td>
+            <td class="num"><span class="price-pill mid">$0.0315</span> ($3.150)</td>
+            <td>REST puro, LoRA via URL</td>
+            <td><strong>Começar aqui</strong></td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>Modal</strong></td>
+            <td>10-30s (mitigável)</td>
+            <td>~4-6s H100</td>
+            <td class="num"><span class="price-pill cheap">$0.005-0.007</span> ($500-$700)</td>
+            <td>Python decorators</td>
+            <td><strong>Migrar quando volume justificar</strong></td>
+          </tr>
+          <tr>
+            <td>RunPod serverless</td>
+            <td>200ms P50 / 30s tail</td>
+            <td>~4-6s H100</td>
+            <td class="num"><span class="price-pill cheap">~$0.005</span></td>
+            <td>Docker handler</td>
+            <td>Skip a menos que time já viva em Docker</td>
+          </tr>
+          <tr>
+            <td>Replicate (privado)</td>
+            <td>30-90s + setup billed</td>
+            <td>~5-10s</td>
+            <td class="num"><span class="price-pill mid">~$0.015-0.040</span></td>
+            <td>Cog (Docker wrapper)</td>
+            <td>Skip pra produção privada</td>
+          </tr>
+          <tr>
+            <td>oxen.ai dedicated</td>
+            <td>minutos (não serverless)</td>
+            <td>4.63s H100 MIG</td>
+            <td class="num"><span class="price-pill cheap">$0.0054</span> batch</td>
+            <td>Treina + hosta junto</td>
+            <td>Bom pra batch, ruim pra <code>/edit</code> per-user</td>
+          </tr>
+          <tr>
+            <td>Together AI</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td><strong>Sem Qwen-Image-Edit</strong> — skip</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two-col" style="margin-top:18px">
+      <div class="card">
+        <span class="tag good">recomendação</span>
+        <h3>Por que fal.ai é a jogada inicial</h3>
+        <ul>
+          <li>Tem <code>qwen-image-edit-plus-lora</code> com parâmetro <code>loras: [{path: &lt;URL ou HF repo&gt;, scale}]</code> — exatamente a interface que o serviço precisa.</li>
+          <li>Tem <code>qwen-image-edit-2511-trainer</code> — vocês <strong>treinam e servem na mesma plataforma</strong>.</li>
+          <li><strong>Zero infra própria</strong> — adia toda a complexidade de "model service container" pra quando importar.</li>
+          <li>Cold start managed — desaparece como problema.</li>
+          <li>$0.03/MP é só ~10% mais caro que o piso teórico (Modal), mas economiza 100% do trabalho de operar GPU.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <span class="tag warn">próximo passo</span>
+        <h3>Quando trocar pra Modal</h3>
+        <p class="summary">
+          Quando volume passar ~<strong>50k imgs/mês</strong> ($1.500/mês na fal vs ~$300/mês no Modal), a economia paga o esforço de:
+        </p>
+        <ul>
+          <li>Bundle do base model (20B) na imagem Docker</li>
+          <li>LoRA hot-swap a partir de Modal Volume ou HF</li>
+          <li><code>@app.cls(container_idle_timeout=...)</code> + <code>keep_warm=N</code> pra cortar cold start</li>
+        </ul>
+<pre style="margin-top:10px"><span class="k">@app.cls</span>(gpu=<span class="s">"H100"</span>, container_idle_timeout=<span class="s">300</span>, keep_warm=<span class="s">1</span>)
+<span class="k">class</span> QwenEditService:
+    <span class="k">@modal.enter</span>()
+    <span class="k">def</span> load_base(self):
+        self.pipe = QwenImageEditPipeline.from_pretrained(
+            <span class="s">"Qwen/Qwen-Image-Edit-2511"</span>)
+
+    <span class="k">@modal.method</span>()
+    <span class="k">def</span> edit(self, image_b64, mask_b64, prompt, lora_url, seed):
+        lora_path = download_lora(lora_url)  <span class="c"># cached on Volume</span>
+        self.pipe.load_lora_weights(lora_path)
+        <span class="c"># ...</span></pre>
+      </div>
+    </div>
+
+    <!-- ========================= CUSTOS ========================= -->
+    <h2 id="custos">Cenários de custo</h2>
+    <p>
+      Premissa de mix: <strong>60% das chamadas sem máscara, 40% com máscara (inpaint)</strong>. "Hoje" = gpt-image-1 medium $0.042. "fal" = <code>qwen-image-edit-plus-lora</code> $0.0315. "Modal" = self-host Qwen-Image-Edit-2511 + LoRA, ~$0.006/img amortizado a 100k/mês.
+    </p>
+
+    <div class="scenario-grid">
+      <div class="scenario">
+        <h4>Cenário A — Solo dev / testing <span class="volume">1k imgs/mês</span></h4>
+        <div class="row"><span class="label">Hoje (gpt-image-1)</span><span></span><span></span><span class="num">$42.00</span></div>
+        <div class="row"><span class="label">fal (LoRA própria)</span><span></span><span></span><span class="num">$31.50</span></div>
+        <div class="row"><span class="label">Modal (LoRA própria)</span><span></span><span></span><span class="num">~$15.00*</span></div>
+        <div class="savings">Modal: idle/cold start dominam — fal melhor pra volume baixo</div>
+      </div>
+
+      <div class="scenario">
+        <h4>Cenário B — Soft launch <span class="volume">10k imgs/mês</span></h4>
+        <div class="row"><span class="label">Hoje</span><span></span><span></span><span class="num">$420</span></div>
+        <div class="row"><span class="label">fal</span><span></span><span></span><span class="num">$315</span></div>
+        <div class="row"><span class="label">Modal</span><span></span><span></span><span class="num">~$80-100</span></div>
+        <div class="savings">Modal: −76% vs hoje</div>
+      </div>
+
+      <div class="scenario">
+        <h4>Cenário C — Scale <span class="volume">100k imgs/mês</span></h4>
+        <div class="row"><span class="label">Hoje</span><span></span><span></span><span class="num">$4.200</span></div>
+        <div class="row"><span class="label">fal</span><span></span><span></span><span class="num">$3.150</span></div>
+        <div class="row total"><span class="label">Modal</span><span></span><span></span><span class="num">$500-$700</span></div>
+        <div class="savings">Modal: −83% vs hoje, −80% vs fal</div>
+      </div>
+
+      <div class="scenario">
+        <h4>Cenário D — Híbrido Z-Turbo + Qwen-LoRA <span class="volume">100k imgs/mês</span></h4>
+        <div class="row"><span class="label">60k sem máscara (Z-Turbo $0.005)</span><span></span><span></span><span class="num">$300</span></div>
+        <div class="row"><span class="label">40k com máscara (Qwen-Edit $0.0315)</span><span></span><span></span><span class="num">$1.260</span></div>
+        <div class="row total"><span class="label">Total fal híbrido</span><span></span><span></span><span class="num">$1.560</span></div>
+        <div class="savings">−63% vs gpt-image-1, sem sair de fal</div>
+      </div>
+    </div>
+
+    <div class="callout warn" style="margin-top:18px">
+      <p><strong>Trade-off no Cenário D.</strong> Z-Image-Turbo é distilled (8 NFEs) — output pode ser mais "soft" que Qwen-Edit. Vale fazer benchmark visual antes de comprometer; rotear edits importantes pro Qwen mesmo sem máscara.</p>
+    </div>
+
+    <!-- ========================= PLANO ========================= -->
+    <h2 id="plano">Plano de implementação</h2>
+
+    <div class="next-up">
+      <div class="num">0</div>
+      <div>
+        <h4>Treinar v01 LoRA na fal (1-2 dias, ~$4)</h4>
+        <p>Empacotar dataset em formato <code>qwen-image-edit-2511-trainer</code> aceita (<code>{input, target, prompt}</code> triples). Já tem <code>python/bundle_for_oxen.py</code>; precisa helper que produza ZIP no schema da fal. Submeter trainer com trigger <code>&lt;mapart isometric pixel art&gt;</code>. Output: <code>v01.safetensors</code> em URL pública.</p>
+        <div class="when">1000 steps × $4/1k = $4 por iteração</div>
+      </div>
+    </div>
+
+    <div class="next-up">
+      <div class="num">1</div>
+      <div>
+        <h4>Wire <code>FalImageModel</code> adapter (~1 dia)</h4>
+        <p>Criar <code>packages/models/src/fal.ts</code> na linha do <code>openai.ts</code>:</p>
+<pre style="margin-top:8px"><span class="k">export class</span> FalImageModel <span class="k">implements</span> ModelClient {
+  <span class="k">readonly</span> name: <span class="s">string</span>;
+  <span class="k">readonly</span> modelId: <span class="s">string</span>;
+  <span class="k">readonly</span> loraUrl?: <span class="s">string</span>;
+  <span class="k">private readonly</span> apiKey: <span class="s">string</span>;
+
+  <span class="k">async</span> generate(params: GenerateParams): Promise&lt;GenerateResult&gt; {
+    <span class="c">// 1. Upload params.input (+ params.mask se houver) pro fal storage</span>
+    <span class="c">// 2. POST queue.fal.run/{modelId} com image_url, mask_url?, prompt,</span>
+    <span class="c">//    loras: this.loraUrl ? [{path: this.loraUrl, scale: 1.0}] : []</span>
+    <span class="c">// 3. Poll até resolver, baixar PNG, retornar</span>
+  }
+}</pre>
+        <p style="margin-top:8px">Estender <code>ModelName</code> em <code>types.ts</code>:</p>
+<pre style="margin-top:8px"><span class="k">export type</span> ModelName =
+  | <span class="s">'stub'</span>
+  | <span class="s">'nano-banana'</span> | <span class="s">'nano-banana-pro'</span> | <span class="s">'gemini-3.1-flash-image'</span>
+  | <span class="s">'gpt-image-1'</span> | <span class="s">'gpt-image-1.5'</span>
+  | <span class="s">'mapart-v01'</span>           <span class="c">// nossa LoRA via fal qwen-image-edit-plus-lora</span>
+  | <span class="s">'qwen-image-edit-2511'</span> <span class="c">// Qwen base puro (fallback / benchmark)</span>
+  | <span class="s">'z-image-turbo-inpaint'</span>; <span class="c">// tier barato pra restyle leve</span></pre>
+        <p style="margin-top:8px"><code>factory.ts</code>:</p>
+<pre style="margin-top:8px"><span class="k">const</span> FAL_MODELS = {
+  <span class="s">'mapart-v01'</span>:            { endpoint: <span class="s">'fal-ai/qwen-image-edit-plus-lora'</span>, lora: env.MAPART_V01_LORA_URL },
+  <span class="s">'qwen-image-edit-2511'</span>:  { endpoint: <span class="s">'fal-ai/qwen-image-edit-2511'</span> },
+  <span class="s">'z-image-turbo-inpaint'</span>: { endpoint: <span class="s">'fal-ai/z-image/turbo/inpaint/lora'</span>, lora: env.MAPART_V01_LORA_URL },
+} <span class="k">as const</span>;</pre>
+        <p style="margin-top:8px"><code>.env.example</code>:</p>
+<pre style="margin-top:8px">FAL_API_KEY=
+MAPART_V01_LORA_URL=  <span class="c"># https://...v01.safetensors</span></pre>
+      </div>
+    </div>
+
+    <div class="next-up">
+      <div class="num">2</div>
+      <div>
+        <h4>Benchmark side-by-side em <code>/debug/models</code> (~meio dia)</h4>
+        <p>Estender debug page pra rodar 4 modelos sobre o mesmo tile:</p>
+        <ul>
+          <li><code>gpt-image-1</code> (baseline atual)</li>
+          <li><code>qwen-image-edit-2511</code> (base puro — testa quanto a LoRA está contribuindo)</li>
+          <li><code>mapart-v01</code> (Qwen + nossa LoRA)</li>
+          <li><code>z-image-turbo-inpaint</code> (Z-Turbo + nossa LoRA)</li>
+        </ul>
+        <p>Métricas: tempo, custo, qualidade visual (subjetiva no começo, depois quantitativa).</p>
+      </div>
+    </div>
+
+    <div class="next-up">
+      <div class="num">3</div>
+      <div>
+        <h4>Roteamento mask-aware (~1 dia)</h4>
+<pre style="margin-top:6px"><span class="k">const</span> model = qualityTier === <span class="s">'cheap'</span> &amp;&amp; !params.mask?.hasComplexEdges
+  ? getModel(<span class="s">'z-image-turbo-inpaint'</span>)  <span class="c">// 6× mais barato pra restyle leve</span>
+  : getModel(<span class="s">'mapart-v01'</span>);             <span class="c">// default</span></pre>
+      </div>
+    </div>
+
+    <div class="next-up">
+      <div class="num">4</div>
+      <div>
+        <h4>Migração pra Modal (quando volume justificar — &gt;50k/mês)</h4>
+        <p>Container com Qwen-Image-Edit-2511 base + LoRA loader. Substituir endpoint da fal pelo Modal endpoint <strong>mantendo mesma interface <code>ModelClient</code></strong> — adapter pattern protege.</p>
+      </div>
+    </div>
+
+    <!-- ========================= RISCOS ========================= -->
+    <h2 id="riscos">Riscos e tradeoffs</h2>
+
+    <div class="grid">
+      <div class="card">
+        <span class="tag warn">qualidade</span>
+        <h3>LoRA v01 regredir fora do JP bbox</h3>
+        <p class="summary">Training set é específico de área JP. Manter Qwen-Image-Edit-2511 puro como fallback no factory.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">vendor</span>
+        <h3>fal.ai cai → pipeline cai</h3>
+        <p class="summary">Adapter abstrai endpoint. Backup Modal/Replicate quando crítico.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">trigger</span>
+        <h3>Trigger phrase "vazar"</h3>
+        <p class="summary"><code>&lt;mapart isometric pixel art&gt;</code> pode contaminar prompts não-pixel. Validar com prompts adversariais no benchmark.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">distillation</span>
+        <h3>Z-Turbo soft em fine details</h3>
+        <p class="summary">Distilled (8 NFEs) — output mais "soft" que Qwen-Edit. Rotear edits importantes pro Qwen mesmo sem máscara.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">versionamento</span>
+        <h3>LoRA artifact perder versão</h3>
+        <p class="summary">Subir <code>v01.safetensors</code> pro R2/S3 próprio (não fal storage). Versionar <code>/models/{version}.safetensors</code>.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">latência</span>
+        <h3>fal queue latency variável</h3>
+        <p class="summary"><code>enable_sync_mode=true</code> quando possível. Cache de tiles no worker-stylize.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">cold start</span>
+        <h3>Modal cold start mesmo com keep_warm</h3>
+        <p class="summary"><code>keep_warm=1</code> mínimo em prod. Aceitar 10-30s no primeiro request da janela.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">migração</span>
+        <h3>Qwen-Image-2.0 não casar com LoRA 20B</h3>
+        <p class="summary">LoRA é por-arquitetura — re-treinar quando migrar pro 7B. Receita do trainer é reusável.</p>
+      </div>
+    </div>
+
+    <!-- ========================= FONTES ========================= -->
+    <h2 id="fontes">Fontes</h2>
+
+    <div class="sources-grid">
+      <div class="sources-block">
+        <h4>Releases novos (desde 17/mai)</h4>
+        <ul>
+          <li><a href="https://fal.ai/models/fal-ai/qwen-image-edit-2511">Qwen-Image-Edit-2511 — fal endpoint</a></li>
+          <li><a href="https://huggingface.co/Qwen/Qwen-Image-Edit-2511">Qwen-Image-Edit-2511 — Hugging Face</a></li>
+          <li><a href="https://qwenimages.com/blog/qwen-image-2-release">Qwen-Image-2.0 release blog</a></li>
+          <li><a href="https://fal.ai/models/fal-ai/qwen-image-2/edit">Qwen-Image-2 edit on fal</a></li>
+          <li><a href="https://the-decoder.com/alibabas-qwen-image-2-0-doubles-compression-and-cuts-generation-steps-from-40-to-4/">the-decoder — Qwen-Image-2.0 4 steps</a></li>
+          <li><a href="https://fal.ai/models/fal-ai/z-image/turbo/inpaint">Z-Image-Turbo inpaint</a></li>
+          <li><a href="https://fal.ai/models/fal-ai/z-image/turbo/inpaint/lora">Z-Image-Turbo inpaint + LoRA</a></li>
+          <li><a href="https://github.com/bytedance/Lance">ByteDance Lance — GitHub</a></li>
+          <li><a href="https://huggingface.co/zai-org/GLM-Image">GLM-Image — Hugging Face (Z.AI)</a></li>
+          <li><a href="https://github.com/stepfun-ai/Step1X-Edit">Step1X-Edit GitHub</a></li>
+          <li><a href="https://fal.ai/models/fal-ai/longcat-image/edit">LongCat-Image-Edit fal</a></li>
+          <li><a href="https://huggingface.co/baidu/ERNIE-Image">ERNIE-Image HF (Baidu)</a></li>
+        </ul>
+      </div>
+
+      <div class="sources-block">
+        <h4>Hosting / training</h4>
+        <ul>
+          <li><a href="https://fal.ai/models/fal-ai/qwen-image-edit-2511-trainer">fal — Qwen-Image-Edit-2511 trainer ($4/1k steps)</a></li>
+          <li><a href="https://fal.ai/models/fal-ai/qwen-image-edit-plus-lora/api">fal — Qwen-Image-Edit-Plus LoRA inference</a></li>
+          <li><a href="https://github.com/replicate/qwen-image-lora-trainer">Replicate Qwen-Image LoRA trainer</a></li>
+          <li><a href="https://modal.com/pricing">Modal pricing</a></li>
+          <li><a href="https://www.runpod.io/pricing">RunPod pricing</a></li>
+          <li><a href="https://replicate.com/pricing">Replicate pricing</a></li>
+          <li><a href="https://www.oxen.ai/blog/how-we-cut-inference-costs-from-46k-to-7-5k-fine-tuning-qwen-image-edit">oxen.ai — Qwen-Image-Edit inference $46k→$7.5k</a></li>
+          <li><a href="https://wavespeed.ai/blog/posts/introducing-wavespeed-ai-qwen-image-lora-trainer-on-wavespeedai/">WaveSpeed Qwen-Image LoRA trainer</a></li>
+        </ul>
+      </div>
+
+      <div class="sources-block">
+        <h4>Comunidade pixel-art</h4>
+        <ul>
+          <li><a href="https://civitai.com/models/144684/pixelartredmond-pixel-art-loras">PixelArtRedmond LoRA pra Qwen-Image</a></li>
+          <li><a href="https://civitai.com/models/1770073/pixel-art-style-lora">Pixel Art Style LoRA pra Z-Image-Turbo</a></li>
+        </ul>
+        <h4 style="margin-top:14px">Benchmarks</h4>
+        <ul>
+          <li><a href="https://wavespeed.ai/blog/posts/lm-arena-text-to-image-rankings-2026/">LMArena T2I rankings 2026</a></li>
+          <li><a href="https://artificialanalysis.ai/image/model-families/Seedream">Artificial Analysis — Seedream</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <footer>
+      map.art · pesquisa de modelos · gerado 17/mai/2026, recalibrado 22/mai/2026 com 4 agentes paralelos · pareia com <a href="architecture.html">architecture.html</a>
+    </footer>
+  </body>
+</html>
