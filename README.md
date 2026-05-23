@@ -17,6 +17,15 @@ Pixel-art map tool.
 - `storage` - file storage
 - `tiles` - tile math
 
+## Docs
+
+Standalone HTML in `docs/`, viewable straight from GitHub or by opening locally:
+
+- [`docs/architecture.html`](docs/architecture.html) — SaaS architecture sketch (workers, model service, queue, blob)
+- [`docs/models-research.html`](docs/models-research.html) — image-model landscape, LoRA plan, hosting comparison
+
+Also: `python/data_overview.html` documents the v01 training dataset pipeline.
+
 ## Dev
 
 ```bash
