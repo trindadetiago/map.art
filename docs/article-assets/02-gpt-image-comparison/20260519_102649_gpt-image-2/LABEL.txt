@@ -1,0 +1,1 @@
+gpt-image-2 · stitched 3×3 (second run, determinism check)
