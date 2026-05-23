@@ -117,11 +117,41 @@ def main() -> None:
     except Exception:  # noqa: BLE001 — workspace not existing throws; that's fine
         pass
 
+    # Build set of files already on remote so we can skip them on incremental
+    # re-runs. `repo.ls()` paginates at 100 entries per page max — earlier
+    # version of this code missed that and only checked the first 100,
+    # causing thousands of redundant uploads. Always page through to EOF.
+    # The manifest is ALWAYS re-uploaded because its contents change per run.
+    existing_remote: set[str] = set()
+    try:
+        page = 1
+        page_size = 100  # max per oxen SDK
+        while True:
+            entries = repo.ls('images', page_num=page, page_size=page_size)
+            if not entries:
+                break
+            for entry in entries:
+                name = entry if isinstance(entry, str) else getattr(entry, 'name', str(entry))
+                existing_remote.add(name)
+            if len(entries) < page_size:
+                break
+            page += 1
+        print(f'remote `images/` already has {len(existing_remote)} files (will skip these)')
+    except Exception as exc:  # noqa: BLE001
+        print(f'  ls of remote `images/` failed ({exc}) — uploading everything')
+
     files: list[tuple[Path, str]] = []  # (local_abs_path, dst_dir_in_repo)
-    files.append((MANIFEST, ''))  # root
+    files.append((MANIFEST, ''))  # root — always re-uploaded
+    skipped = 0
     for img in sorted(IMAGES_DIR.iterdir()):
-        if img.is_file():
-            files.append((img, 'images'))
+        if not img.is_file():
+            continue
+        if img.name in existing_remote:
+            skipped += 1
+            continue
+        files.append((img, 'images'))
+    if skipped:
+        print(f'  skipping {skipped} files already on remote')
 
     print()
     print(f'staging {len(files)} files into workspace `{WORKSPACE_NAME}`', flush=True)
