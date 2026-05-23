@@ -34,6 +34,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import io
+import json
 import os
 import time
 import uuid
@@ -86,7 +87,8 @@ def find_repo_root(start: Path) -> Path:
 
 
 REPO_ROOT = find_repo_root(Path(__file__).parent)
-TEST_GRIDS = REPO_ROOT / 'python' / 'test_grids'
+RENDERER_SAMPLES = REPO_ROOT / 'data' / 'renderer' / 'samples'
+KEEP_FILE = REPO_ROOT / 'python' / 'training' / 'v01' / '_keep.json'
 CACHE_DIR = REPO_ROOT / 'python' / 'training' / 'v01' / '_algorithm_playground'
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -95,29 +97,54 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 def user_to_filename(row: int, col: int) -> str:
     """User (row 0=top, col 0=left) → renderer filename c{col}_r{row}.
-
     Renderer convention: c ∈ {-1, 0, 1}, r ∈ {-1, 0, 1}, r=+1 is top.
     """
     return f'c{col - 1}_r{1 - row}.png'
 
 
 @st.cache_data(show_spinner=False)
+def _kept_pair_ids() -> set[str]:
+    if not KEEP_FILE.exists():
+        return set()
+    return set(json.loads(KEEP_FILE.read_text()).get('kept', []))
+
+
+@st.cache_data(show_spinner=False)
 def discover_grids() -> list[str]:
-    if not TEST_GRIDS.is_dir():
+    """Returns sample-folder names with all 9 c{c}_r{r}.png tiles AND
+    where NONE of the 9 tiles were in v01 training. Reads canonical
+    renders from `data/renderer/samples/` directly — the per-grid copy
+    under `python/test_grids/` was removed to save ~630 MB.
+    """
+    if not RENDERER_SAMPLES.is_dir():
         return []
-    out = []
-    for d in sorted(TEST_GRIDS.iterdir()):
-        if not d.is_dir() or d.name.startswith('_'):
+    kept = _kept_pair_ids()
+    out: list[str] = []
+    for run_dir in sorted(RENDERER_SAMPLES.iterdir()):
+        if not run_dir.is_dir():
             continue
-        # Need all 9 tiles to be a valid 3×3 grid
-        ok = all((d / user_to_filename(r, c)).exists() for r in range(3) for c in range(3))
-        if ok:
-            out.append(d.name)
+        for sample_dir in sorted(run_dir.iterdir()):
+            if not sample_dir.is_dir():
+                continue
+            if not all(
+                (sample_dir / user_to_filename(r, c)).exists()
+                for r in range(3) for c in range(3)
+            ):
+                continue
+            scene_id = f'{run_dir.name}__{sample_dir.name}'
+            any_trained = any(
+                f'{scene_id}/c{c-1}_r{1-r}' in kept
+                for r in range(3) for c in range(3)
+            )
+            if not any_trained:
+                # Encode the path so load_grid_tiles can find it back.
+                out.append(f'{run_dir.name}/{sample_dir.name}')
     return out
 
 
 def load_grid_tiles(grid_name: str) -> dict[tuple[int, int], Image.Image]:
-    base = TEST_GRIDS / grid_name
+    run, sample = grid_name.split('/', 1)
+    base = RENDERER_SAMPLES / run / sample
     tiles: dict[tuple[int, int], Image.Image] = {}
     for r in range(3):
         for c in range(3):
@@ -447,14 +474,14 @@ with st.sidebar:
              'the renderable centre.',
     )
     st.divider()
-    st.caption(f'Test grids: `{TEST_GRIDS.relative_to(REPO_ROOT)}/`')
+    st.caption(f'Source renders: `{RENDERER_SAMPLES.relative_to(REPO_ROOT)}/`')
     st.caption(f'Cache: `{CACHE_DIR.relative_to(REPO_ROOT)}/`')
 
 grids = discover_grids()
 if not grids:
     st.error(
-        f'No grids under `{TEST_GRIDS}`. Drop a folder of 9 PNGs named '
-        '`c-1_r-1.png` … `c1_r1.png` into that directory.'
+        f'No fully-untrained grids under `{RENDERER_SAMPLES}`. Add new samples '
+        'via the renderer harness, or relax the "fully untrained" filter.'
     )
     st.stop()
 

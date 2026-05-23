@@ -109,12 +109,30 @@ def make_hybrid(
     return hybrid
 
 
+def _renderer_source_path(scene_id: str, tile_id: str) -> Path:
+    """Translate scene_id (e.g. 'seed42_n50_1779308635275__sample0') and
+    tile_id (e.g. 'c-1_r-1') back to the canonical render path under
+    `data/renderer/samples/`. Saves keeping a per-pair `source.png` copy.
+    """
+    run, sample = scene_id.split('__', 1)
+    return REPO_ROOT / 'data' / 'renderer' / 'samples' / run / sample / f'{tile_id}.png'
+
+
 def process_pair(pair_id: str) -> list[dict]:
     scene_id, tile_id = pair_id.split('/', 1)
     pair_dir = TRAINING_ROOT / scene_id / tile_id
-    src_path = pair_dir / 'source.png'
     tgt_path = pair_dir / 'target.png'
-    if not src_path.exists() or not tgt_path.exists():
+
+    # Source: read canonically from `data/renderer/samples/`. The legacy
+    # `pair_dir/source.png` copy was removed to save 890 MB; the canonical
+    # path is what `meta.json` already records as `src_relpath`.
+    src_path = _renderer_source_path(scene_id, tile_id)
+    if not src_path.exists():
+        return []
+
+    # Target: kept locally for `augment.py` speed, but not committed to git
+    # (downloadable from oxen via `pull_targets_from_oxen.py` if missing).
+    if not tgt_path.exists():
         return []
 
     source = Image.open(src_path).convert('RGB')
@@ -153,6 +171,18 @@ def main() -> None:
     kept: list[str] = keep.get('kept', [])
     if not kept:
         raise SystemExit('no kept pairs in _keep.json — nothing to augment')
+
+    # Pre-flight: warn loudly if targets are missing. They live on oxen and
+    # need to be pulled before augmentation can produce anything.
+    missing_targets = [
+        p for p in kept
+        if not (TRAINING_ROOT / p.split('/', 1)[0] / p.split('/', 1)[1] / 'target.png').exists()
+    ]
+    if missing_targets:
+        raise SystemExit(
+            f'{len(missing_targets)}/{len(kept)} targets missing.\n'
+            f'Run: .venv/bin/python python/pull_targets_from_oxen.py'
+        )
 
     print(f'augmenting {len(kept)} kept pairs → {AUGMENTED_ROOT.relative_to(REPO_ROOT)}/')
     AUGMENTED_ROOT.mkdir(parents=True, exist_ok=True)
