@@ -1,10 +1,16 @@
-"""map.art — mask augmentation for v01 training pairs (Andy Coenen's scheme).
+"""map.art — mask augmentation for v01/v02 training pairs (Andy Coenen's scheme).
 
-For each kept pair (per `_keep.json`), produces 8 hybrid input variants
+For each kept pair (per `_keep.json`), produces 9 hybrid input variants
 that simulate the "infill" scenarios at inference time:
   - 4 single-quadrant infills (TL, TR, BL, BR)
   - 2 vertical-half infills (L, R)
   - 2 horizontal-half infills (T, B)
+  - 1 full-image conversion (entire frame is rendered, red border around the perimeter)
+
+The 'full' variant teaches the model how to handle the seed-tile case —
+i.e. converting a raw render into pure pixel art when there's no
+already-stylized neighbour context to extend from. v01 omitted this and
+the model couldn't handle inputs without context; v02 includes it.
 
 Each variant input image is a composite:
   - Stylized region = pixels from `target.png`
@@ -78,6 +84,10 @@ def variants_for(size: int) -> dict[str, tuple[int, int, int, int]]:
         'quad_TR': (h, 0, size, h),
         'quad_BL': (0, h, h, size),
         'quad_BR': (h, h, size, size),
+        # 'full' covers the seed-tile case: entire image is the rendered
+        # region, model converts the whole frame to pixel art. Missing in
+        # v01 — added for v02 so we can stylize a tile with no neighbours.
+        'full': (0, 0, size, size),
     }
 
 
@@ -160,7 +170,8 @@ def main() -> None:
         w.writerows(all_rows)
 
     print()
-    print(f'done. {len(all_rows)} training examples ({len(kept)} pairs × 8 variants)')
+    n_variants = len(variants_for(1024))
+    print(f'done. {len(all_rows)} training examples ({len(kept)} pairs × {n_variants} variants)')
     print(f'manifest: {MANIFEST_PATH.relative_to(REPO_ROOT)}')
 
 

@@ -23,3 +23,10 @@ python/training/*/_augmented/
 # Oxen.ai upload bundle — flat hard-link mirror of _augmented/, generated
 # by python/bundle_for_oxen.py just before pushing to hub.oxen.ai.
 python/training/*/_oxen_upload/
+
+# Playground inference outputs — cached results from python/playground.py.
+python/training/*/_playground/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
