@@ -130,7 +130,7 @@ export default async function AdminIndex() {
           <Card
             icon={IconDatabase}
             label="Database"
-            href="/admin/db"
+            href="https://local.drizzle.studio"
             badge={s.pgVersion ? 'live' : 'down'}
           >
             <Metric

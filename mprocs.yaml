@@ -3,3 +3,5 @@ procs:
     shell: "node scripts/run.mjs web -- pnpm --filter @mapart/web dev"
   worker:
     shell: "node scripts/run.mjs worker -- pnpm --filter @mapart/worker dev"
+  studio:
+    shell: "node scripts/run.mjs studio -- pnpm --filter @mapart/db drizzle studio"
