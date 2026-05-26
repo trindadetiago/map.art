@@ -1,6 +1,6 @@
 import { repos } from '@mapart/db';
 import { revalidatePath } from 'next/cache';
-import { DbPanel } from './Panel';
+import { DbPanel } from './panel';
 
 async function createProjectAction(
   fd: FormData,

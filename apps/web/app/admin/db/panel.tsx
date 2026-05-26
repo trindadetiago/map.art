@@ -1,7 +1,7 @@
 import type { TableCounts } from '@mapart/db/repos';
 import type { Model, Project } from '@mapart/db/schema';
-import { CreateProjectForm } from './CreateProjectForm';
-import { DeleteProjectButton } from './DeleteProjectButton';
+import { CreateProjectForm } from './create_project_form';
+import { DeleteProjectButton } from './delete_project_button';
 
 export interface DbPanelProps {
   postgresVersion: string;

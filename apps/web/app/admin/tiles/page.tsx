@@ -1,4 +1,4 @@
-import { TilesPanel } from './Panel';
+import { TilesPanel } from './panel';
 
 export default function TilesDebugPage() {
   return (

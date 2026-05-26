@@ -1,6 +1,6 @@
 'use client';
 
-import type { RenderedTileInfo } from './Panel';
+import type { RenderedTileInfo } from './panel';
 
 export function TileGridPreview({
   tiles,

@@ -16,7 +16,7 @@ import {
   type RenderedTileInfo,
   type StrategyRunError,
   type StrategyRunResult,
-} from './Panel';
+} from './panel';
 
 export const dynamic = 'force-dynamic';
 

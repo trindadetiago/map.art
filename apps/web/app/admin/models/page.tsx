@@ -7,7 +7,7 @@ import {
   ModelsPanel,
   type SaveError,
   type SaveResult,
-} from './Panel';
+} from './panel';
 
 async function runAction(formData: FormData): Promise<ActionResult | ActionError> {
   'use server';

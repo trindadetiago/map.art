@@ -1,10 +1,10 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@/components/Scene';
+import { Scene, type SceneHandle } from '@/components/scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import { useRef, useState } from 'react';
-import { Field } from './Field';
-import { TileGrid3x3 } from './TileGrid3x3';
+import { Field } from './field';
+import { TileGrid3x3 } from './tile_grid_3x3';
 
 export interface SaveResult {
   ok: true;

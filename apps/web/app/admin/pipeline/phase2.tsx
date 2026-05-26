@@ -7,8 +7,8 @@ import type {
   RenderedTileInfo,
   StrategyDescriptor,
   StrategyRunResult,
-} from './Panel';
-import { TileGridPreview } from './TileGridPreview';
+} from './panel';
+import { TileGridPreview } from './tile_grid_preview';
 
 export function Phase2({
   project,
