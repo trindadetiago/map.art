@@ -1,20 +1,14 @@
 import { env } from '@mapart/env';
 import { getStorage } from '@mapart/storage';
+import { revalidatePath } from 'next/cache';
 import { type StorageEntryWire, StoragePanel } from './panel';
 
-async function listAction(prefix: string): Promise<StorageEntryWire[]> {
-  'use server';
-  const entries = await getStorage().list(prefix);
-  return entries.map((e) => ({
-    key: e.key,
-    size: e.size,
-    modifiedAtIso: e.modifiedAt.toISOString(),
-  }));
-}
+export const dynamic = 'force-dynamic';
 
 async function deleteAction(key: string): Promise<void> {
   'use server';
   await getStorage().delete(key);
+  revalidatePath('/admin/storage');
 }
 
 function deriveConsoleUrl(endpoint: string | undefined): string | null {
@@ -28,51 +22,70 @@ function deriveConsoleUrl(endpoint: string | undefined): string | null {
   }
 }
 
-export default function StorageDebugPage() {
+export default async function StoragePage() {
+  let entries: StorageEntryWire[] = [];
+  let error: string | null = null;
+  try {
+    const raw = await getStorage().list('');
+    entries = raw.map((e) => ({
+      key: e.key,
+      size: e.size,
+      modifiedAtIso: e.modifiedAt.toISOString(),
+    }));
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e);
+  }
+
   const isS3 = env.storageBackend === 's3';
-  const bucket = env.s3Bucket;
-  const endpoint = env.s3Endpoint;
-  const consoleUrl = isS3 ? deriveConsoleUrl(endpoint) : null;
+  const consoleUrl = isS3 ? deriveConsoleUrl(env.s3Endpoint) : null;
+  const totalBytes = entries.reduce((a, e) => a + e.size, 0);
 
   return (
     <div>
-      <div className="mt-0 flex items-baseline gap-3">
-        <h1 className="m-0">storage</h1>
-        {consoleUrl && (
-          <a
-            href={consoleUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded border border-current px-2.5 py-1 text-[13px] no-underline opacity-70 hover:opacity-100"
-          >
-            Open MinIO console ↗
-          </a>
-        )}
+      <div className="mb-10 flex items-baseline gap-4">
+        <h1 className="m-0 text-3xl font-light tracking-tight text-stone-900">Storage</h1>
+        <span className="text-sm text-stone-500">
+          {error
+            ? 'storage unreachable'
+            : `${entries.length.toLocaleString()} files · ${formatBytes(totalBytes)}`}
+        </span>
+        <span className="ml-auto flex items-center gap-2">
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 font-mono text-[11px] text-stone-600">
+            {env.storageBackend}
+            {isS3 && env.s3Bucket ? ` · ${env.s3Bucket}` : ''}
+          </span>
+          {consoleUrl && (
+            <a
+              href={consoleUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-stone-200 bg-white px-3 py-1 text-[11px] text-stone-700 no-underline transition hover:border-stone-400"
+            >
+              MinIO console ↗
+            </a>
+          )}
+        </span>
       </div>
-      <p className="max-w-[640px] opacity-70">
-        {isS3 ? (
-          <>
-            Browse the S3 bucket <code>{bucket}</code>
-            {endpoint ? (
-              <>
-                {' '}
-                via <code>{endpoint}</code>
-              </>
-            ) : null}
-            . Files land here when you hit <strong>save</strong> in the renderer or models panels.
-          </>
-        ) : (
-          <>
-            Browse the local storage root (<code>&lt;repo&gt;/data/</code>). Files land here when
-            you hit <strong>save</strong> in the renderer or models panels.
-          </>
-        )}
-      </p>
-      <StoragePanel
-        listAction={listAction}
-        deleteAction={deleteAction}
-        serveUrlPrefix="/api/storage/"
-      />
+
+      {error ? (
+        <div className="rounded-2xl border border-dashed border-stone-300 bg-white/40 p-12 text-center">
+          <div className="text-[15px] font-medium text-stone-700">Storage is unreachable</div>
+          <p className="mx-auto mt-2 max-w-[44ch] text-sm text-stone-500">{error}</p>
+        </div>
+      ) : (
+        <StoragePanel
+          entries={entries}
+          deleteAction={deleteAction}
+          serveUrlPrefix="/api/storage/"
+        />
+      )}
     </div>
   );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
