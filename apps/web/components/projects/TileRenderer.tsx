@@ -196,51 +196,48 @@ export function TileRenderer({
   const missingCount = tiles.reduce((n, t) => (savedMap.has(keyOf(t.col, t.row)) ? n : n + 1), 0);
 
   return (
-    <section style={cardStyle}>
-      <h3 style={h3}>tile export</h3>
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 320 }}>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>
+    <section className="mt-4 rounded-lg border border-neutral-200 bg-white p-4">
+      <h3 className="m-0 mb-3 text-[11px] uppercase tracking-wider opacity-[0.55]">tile export</h3>
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="flex w-[320px] flex-col gap-3">
+          <div className="text-xs opacity-75">
             Click any tile in the grid to render & save it. Files are saved as{' '}
             <code>{'{col}_{row}.png'}</code> under <code>pipeline/{projectId}/rendered/</code>. Uses
             the <b>saved</b> project params; if you changed sliders above, save first.
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={runMissing}
               disabled={busy || missingCount === 0}
-              style={primaryBtn}
+              className="cursor-pointer rounded-md border border-neutral-900 bg-neutral-900 px-4 py-2 text-[13px] text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {bulkRunning
                 ? `rendering ${bulkProgress.done}/${bulkProgress.total}`
                 : `render missing (${missingCount})`}
             </button>
-            <button type="button" onClick={runAll} disabled={busy} style={secondaryBtn}>
+            <button
+              type="button"
+              onClick={runAll}
+              disabled={busy}
+              className="cursor-pointer rounded-md border border-neutral-300 bg-white px-4 py-2 text-[13px] text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
               re-render all
             </button>
-            <button type="button" onClick={refresh} disabled={busy} style={secondaryBtn}>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={busy}
+              className="cursor-pointer rounded-md border border-neutral-300 bg-white px-4 py-2 text-[13px] text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
               reload
             </button>
           </div>
-          {error && (
-            <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 4 }}>
-              {error}
-            </pre>
-          )}
-          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>
+          {error && <pre className="mt-1 whitespace-pre-wrap text-xs text-red-700">{error}</pre>}
+          <div className="mt-1 text-[11px] opacity-50">
             capture scene (full-res {tilePixelSize}×{tilePixelSize} off-screen, shown scaled):
           </div>
-          <div
-            style={{
-              width: 180,
-              height: 180,
-              overflow: 'hidden',
-              border: '1px solid #ccc',
-              borderRadius: 4,
-              position: 'relative',
-            }}
-          >
+          <div className="relative h-[180px] w-[180px] overflow-hidden rounded border border-neutral-300">
             <div
               style={{
                 transform: `scale(${180 / tilePixelSize})`,
@@ -251,23 +248,18 @@ export function TileRenderer({
             </div>
           </div>
         </div>
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>
+        <div className="min-w-[240px] flex-1">
+          <div className="mb-2 text-xs opacity-60">
             grid · {tiles.length} tiles · {savedMap.size} saved · click a cell to render
           </div>
           {tiles.length === 0 ? (
-            <div style={{ fontSize: 12, opacity: 0.6 }}>no tiles seeded yet</div>
+            <div className="text-xs opacity-60">no tiles seeded yet</div>
           ) : (
             <div
+              className="grid w-fit gap-px rounded bg-neutral-200 p-px"
               style={{
-                display: 'grid',
                 gridTemplateColumns: `repeat(${cols}, ${cellPx}px)`,
                 gridTemplateRows: `repeat(${rows}, ${cellPx}px)`,
-                gap: 2,
-                background: '#e5e7eb',
-                padding: 2,
-                borderRadius: 4,
-                width: 'fit-content',
               }}
             >
               {tiles.map((t) => {
@@ -291,63 +283,33 @@ export function TileRenderer({
                     }}
                     disabled={busy || isPending}
                     title={`(${t.col}, ${t.row})${saved ? ' — saved' : ''}`}
+                    className={`relative overflow-hidden border-none p-0 ${saved ? 'bg-white' : 'bg-neutral-100'} ${busy || isPending ? 'cursor-wait' : 'cursor-pointer'}`}
                     style={{
                       gridColumn,
                       gridRow,
                       width: cellPx,
                       height: cellPx,
-                      padding: 0,
-                      border: 'none',
-                      background: saved ? '#fff' : '#f3f4f6',
-                      cursor: busy || isPending ? 'wait' : 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden',
                     }}
                   >
                     {thumbSrc && (
                       // biome-ignore lint/a11y/useAltText: thumbnail in a clickable grid
                       <img
                         src={thumbSrc}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          display: 'block',
-                          opacity: isPending ? 0.4 : 1,
-                        }}
+                        className={`block h-full w-full object-cover ${isPending ? 'opacity-40' : ''}`}
                       />
                     )}
                     {!saved && (
                       <span
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: Math.max(8, Math.floor(cellPx / 8)),
-                          fontFamily: 'monospace',
-                          color: '#9ca3af',
-                          pointerEvents: 'none',
-                        }}
+                        className="pointer-events-none absolute inset-0 flex items-center justify-center font-mono text-neutral-400"
+                        style={{ fontSize: Math.max(8, Math.floor(cellPx / 8)) }}
                       >
                         {t.col},{t.row}
                       </span>
                     )}
                     {isPending && (
                       <span
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: Math.max(8, Math.floor(cellPx / 6)),
-                          fontFamily: 'monospace',
-                          color: '#111',
-                          background: 'rgba(255,255,255,0.6)',
-                          pointerEvents: 'none',
-                        }}
+                        className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/60 font-mono text-neutral-900"
+                        style={{ fontSize: Math.max(8, Math.floor(cellPx / 6)) }}
                       >
                         …
                       </span>
@@ -362,37 +324,3 @@ export function TileRenderer({
     </section>
   );
 }
-
-const cardStyle = {
-  padding: 16,
-  background: '#fff',
-  border: '1px solid #e5e5e5',
-  borderRadius: 8,
-  marginTop: 16,
-};
-const h3 = {
-  margin: 0,
-  marginBottom: 12,
-  fontSize: 11,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 1,
-  opacity: 0.55,
-};
-const primaryBtn = {
-  padding: '8px 16px',
-  fontSize: 13,
-  border: '1px solid #111',
-  background: '#111',
-  color: '#fff',
-  borderRadius: 6,
-  cursor: 'pointer',
-};
-const secondaryBtn = {
-  padding: '8px 16px',
-  fontSize: 13,
-  border: '1px solid #ccc',
-  background: '#fff',
-  color: '#111',
-  borderRadius: 6,
-  cursor: 'pointer',
-};

@@ -192,28 +192,22 @@ export function ProjectMap({
 
   if (!apiKey) {
     return (
-      <div style={{ color: 'crimson', padding: 12 }}>
+      <div className="p-3 text-red-700">
         <code>GOOGLE_MAPS_API_KEY</code> is not set. Add it to the root <code>.env</code> and
         restart.
       </div>
     );
   }
   if (tiles.length === 0) {
-    return <div style={{ opacity: 0.5 }}>no tiles</div>;
+    return <div className="opacity-50">no tiles</div>;
   }
 
   return (
     <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        height,
-        borderRadius: 4,
-        border: '1px solid #ccc',
-        overflow: 'hidden',
-      }}
+      className="relative w-full overflow-hidden rounded border border-neutral-300"
+      style={{ height }}
     >
-      <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0a0a0a' }} />
+      <div ref={containerRef} className="h-full w-full bg-neutral-950" />
       {overlay}
     </div>
   );

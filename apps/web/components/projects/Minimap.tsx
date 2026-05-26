@@ -79,50 +79,12 @@ export function Minimap({
 
   return (
     <div
-      style={{
-        position: 'absolute',
-        bottom: 12,
-        left: 12,
-        width,
-        height,
-        border: '2px solid #fff',
-        borderRadius: 6,
-        overflow: 'hidden',
-        boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
-        zIndex: 10,
-        background: '#eee',
-      }}
+      className="absolute bottom-3 left-3 z-10 overflow-hidden rounded-md border-2 border-white bg-neutral-200 shadow-[0_6px_18px_rgba(0,0,0,0.45)]"
+      style={{ width, height }}
     >
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-          zIndex: 1000,
-          width: 16,
-          height: 16,
-          borderRadius: '50%',
-          border: '2px solid #dc2626',
-          background: 'rgba(220, 38, 38, 0.25)',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          top: 6,
-          left: 6,
-          fontSize: 10,
-          padding: '2px 6px',
-          background: 'rgba(0,0,0,0.55)',
-          color: '#fff',
-          borderRadius: 3,
-          fontFamily: 'monospace',
-          pointerEvents: 'none',
-        }}
-      >
+      <div ref={containerRef} className="h-full w-full" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-[1000] h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-600 bg-red-600/25" />
+      <div className="pointer-events-none absolute left-1.5 top-1.5 rounded-sm bg-black/55 px-1.5 py-0.5 font-mono text-[10px] text-white">
         drag to re-center
       </div>
     </div>
