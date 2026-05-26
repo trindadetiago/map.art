@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@mapart/db": "workspace:*",
+    "@mapart/env": "workspace:*",
     "@mapart/queue": "workspace:*",
     "@mapart/shared": "workspace:*",
     "@mapart/storage": "workspace:*",

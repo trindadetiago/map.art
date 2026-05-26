@@ -1,11 +1,13 @@
+import { env } from '@mapart/env';
 import puppeteer from 'puppeteer';
 import type { Browser } from 'puppeteer';
+
+export const VIEWPORT_PAD = 100;
 
 export type RenderGpuMode = 'cpu' | 'gpu';
 
 function resolveGpuMode(): RenderGpuMode {
-  const raw = process.env.RENDER_GPU_ENABLED ?? '';
-  if (raw === '1' || raw === 'true' || raw === 'yes') return 'gpu';
+  if (env.renderGpuEnabled) return 'gpu';
   return 'cpu';
 }
 
