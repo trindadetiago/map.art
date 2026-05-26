@@ -8,16 +8,11 @@
     "./schema": "./src/schema/index.ts",
     "./repos": "./src/repos/index.ts"
   },
-  "bin": {
-    "mapart-db": "./bin/cli.ts"
-  },
   "scripts": {
-    "cli": "tsx bin/cli.ts",
     "drizzle": "drizzle-kit"
   },
   "dependencies": {
     "@mapart/env": "workspace:*",
-    "commander": "^12.1.0",
     "drizzle-orm": "^0.36.4",
     "postgres": "^3.4.5"
   },
