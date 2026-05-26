@@ -80,17 +80,15 @@ export default function ModelsDebugPage() {
 
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>models</h1>
-      <p style={{ opacity: 0.7, maxWidth: 720 }}>
+      <h1 className="mt-0">models</h1>
+      <p className="max-w-[720px] opacity-70">
         Run an input PNG through a model. <strong>stub</strong> = pixelate + hue shift (no API
         call). <strong>nano-banana</strong> = Gemini 2.5 Flash Image (fast, cheap).{' '}
         <strong>nano-banana-pro</strong> = Gemini 3 Pro Image Preview (higher quality, slower,
         pricier — what Cannon Eyed used). <strong>gemini-3.1-flash-image</strong> = newer Flash
         variant.{' '}
         {geminiAvailable ? null : (
-          <span style={{ color: 'crimson' }}>
-            (GEMINI_API_KEY not set — only stub is available.)
-          </span>
+          <span className="text-red-600">(GEMINI_API_KEY not set — only stub is available.)</span>
         )}
       </p>
       <ModelsPanel

@@ -57,8 +57,8 @@ export default async function DbDebugPage() {
 
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>db</h1>
-      <p style={{ opacity: 0.7, maxWidth: 720 }}>
+      <h1 className="mt-0">db</h1>
+      <p className="max-w-[720px] opacity-70">
         Connection status, row counts, and the projects + models tables. Create a project here; it
         will be the scope for rendered/generated tiles in the next step.
       </p>

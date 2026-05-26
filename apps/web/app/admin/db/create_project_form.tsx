@@ -2,6 +2,10 @@
 
 import { useState, useTransition } from 'react';
 
+const INPUT = 'rounded border border-neutral-300 px-1.5 py-1 text-[13px]';
+const BTN =
+  'cursor-pointer rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50';
+
 export function CreateProjectForm({
   action,
 }: {
@@ -30,13 +34,7 @@ export function CreateProjectForm({
           }
         });
       }}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(6, 1fr) auto',
-        gap: 8,
-        alignItems: 'end',
-        fontSize: 13,
-      }}
+      className="grid grid-cols-[repeat(6,1fr)_auto] items-end gap-2 text-[13px]"
     >
       <Labeled label="name">
         <input
@@ -48,7 +46,7 @@ export function CreateProjectForm({
             setName(v);
             if (!slug || slug === slugify(name)) setSlug(slugify(v));
           }}
-          style={inputStyle}
+          className={INPUT}
         />
       </Labeled>
       <Labeled label="slug">
@@ -57,14 +55,14 @@ export function CreateProjectForm({
           required
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
-          style={inputStyle}
+          className={INPUT}
         />
       </Labeled>
       <Labeled label="pitch">
-        <input name="pitch" type="number" defaultValue={30} step={1} style={inputStyle} />
+        <input name="pitch" type="number" defaultValue={30} step={1} className={INPUT} />
       </Labeled>
       <Labeled label="yaw">
-        <input name="yaw" type="number" defaultValue={45} step={1} style={inputStyle} />
+        <input name="yaw" type="number" defaultValue={45} step={1} className={INPUT} />
       </Labeled>
       <Labeled label="center lat">
         <input
@@ -72,7 +70,7 @@ export function CreateProjectForm({
           type="number"
           defaultValue={-7.115}
           step={0.0001}
-          style={inputStyle}
+          className={INPUT}
         />
       </Labeled>
       <Labeled label="center lng">
@@ -81,18 +79,14 @@ export function CreateProjectForm({
           type="number"
           defaultValue={-34.861}
           step={0.0001}
-          style={inputStyle}
+          className={INPUT}
         />
       </Labeled>
-      <button type="submit" disabled={pending} style={btnStyle}>
+      <button type="submit" disabled={pending} className={BTN}>
         {pending ? '…' : 'create'}
       </button>
       {error && (
-        <pre
-          style={{ gridColumn: '1 / -1', color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12 }}
-        >
-          {error}
-        </pre>
+        <pre className="col-span-full whitespace-pre-wrap text-xs text-red-600">{error}</pre>
       )}
     </form>
   );
@@ -100,10 +94,8 @@ export function CreateProjectForm({
 
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.5 }}>
-        {label}
-      </span>
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-[1px] opacity-50">{label}</span>
       {children}
     </div>
   );
@@ -117,13 +109,3 @@ function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
-
-const inputStyle = { padding: '4px 6px', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 };
-const btnStyle = {
-  fontSize: 12,
-  padding: '6px 12px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  background: '#fff',
-  cursor: 'pointer',
-};

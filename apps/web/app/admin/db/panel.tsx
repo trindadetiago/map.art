@@ -16,6 +16,15 @@ export interface DbPanelProps {
   seedAction: () => Promise<void>;
 }
 
+const CARD = 'rounded-lg border border-neutral-200 bg-white p-5';
+const H2 = 'm-0 mb-3 text-sm uppercase tracking-[1px] opacity-60';
+const TABLE = 'w-full border-collapse text-[13px]';
+const TH =
+  'border-b border-neutral-200 px-2.5 py-1.5 text-left text-[11px] uppercase tracking-[1px] opacity-50';
+const TD = 'border-b border-neutral-100 px-2.5 py-2';
+const BTN =
+  'cursor-pointer rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs hover:bg-neutral-50';
+
 export function DbPanel({
   postgresVersion,
   postgisVersion,
@@ -27,59 +36,55 @@ export function DbPanel({
   seedAction,
 }: DbPanelProps) {
   return (
-    <div style={{ display: 'grid', gap: 24 }}>
-      <section style={card}>
-        <h2 style={h2}>connection</h2>
-        <dl style={dlStyle}>
-          <dt style={dtStyle}>postgres</dt>
-          <dd style={ddStyle}>{shortVersion(postgresVersion)}</dd>
-          <dt style={dtStyle}>postgis</dt>
-          <dd style={ddStyle}>{postgisVersion ?? '(not installed)'}</dd>
+    <div className="grid gap-6">
+      <section className={CARD}>
+        <h2 className={H2}>connection</h2>
+        <dl className="m-0 grid grid-cols-[120px_1fr] gap-x-3 gap-y-1 text-[13px]">
+          <dt className="font-mono opacity-70">postgres</dt>
+          <dd className="m-0 font-mono">{shortVersion(postgresVersion)}</dd>
+          <dt className="font-mono opacity-70">postgis</dt>
+          <dd className="m-0 font-mono">{postgisVersion ?? '(not installed)'}</dd>
         </dl>
       </section>
 
-      <section style={card}>
-        <h2 style={h2}>row counts</h2>
-        <table style={tableStyle}>
+      <section className={CARD}>
+        <h2 className={H2}>row counts</h2>
+        <table className={TABLE}>
           <tbody>
             {Object.entries(counts).map(([k, v]) => (
               <tr key={k}>
-                <td style={tdStyle}>
+                <td className={TD}>
                   <code>{k}</code>
                 </td>
-                <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                  {v}
-                </td>
+                <td className={`${TD} text-right tabular-nums`}>{v}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
 
-      <section style={card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={h2}>models</h2>
+      <section className={CARD}>
+        <div className="flex items-center justify-between">
+          <h2 className={H2}>models</h2>
           <form action={seedAction}>
-            <button type="submit" style={btnStyle}>
+            <button type="submit" className={BTN}>
               seed defaults
             </button>
           </form>
         </div>
         {models.length === 0 ? (
-          <div style={{ opacity: 0.6, fontSize: 13 }}>(none — press "seed defaults")</div>
+          <div className="text-[13px] opacity-60">(none — press "seed defaults")</div>
         ) : (
-          <table style={tableStyle}>
+          <table className={TABLE}>
             <tbody>
               {models.map((m) => (
                 <tr key={m.id}>
-                  <td style={tdStyle}>{m.active ? '★' : ''}</td>
-                  <td style={tdStyle}>
+                  <td className={TD}>{m.active ? '★' : ''}</td>
+                  <td className={TD}>
                     <code>{m.id}</code>
                   </td>
-                  <td style={{ ...tdStyle, opacity: 0.7 }}>{m.kind}</td>
-                  <td style={{ ...tdStyle, opacity: 0.7, fontFamily: 'monospace', fontSize: 12 }}>
-                    {m.endpoint}
-                  </td>
+                  <td className={`${TD} opacity-70`}>{m.kind}</td>
+                  <td className={`${TD} font-mono text-xs opacity-70`}>{m.endpoint}</td>
                 </tr>
               ))}
             </tbody>
@@ -87,37 +92,37 @@ export function DbPanel({
         )}
       </section>
 
-      <section style={card}>
-        <h2 style={h2}>projects</h2>
+      <section className={CARD}>
+        <h2 className={H2}>projects</h2>
         <CreateProjectForm action={createProjectAction} />
-        <div style={{ height: 16 }} />
+        <div className="h-4" />
         {projects.length === 0 ? (
-          <div style={{ opacity: 0.6, fontSize: 13 }}>(no projects)</div>
+          <div className="text-[13px] opacity-60">(no projects)</div>
         ) : (
-          <table style={tableStyle}>
+          <table className={TABLE}>
             <thead>
               <tr>
-                <th style={thStyle}>name</th>
-                <th style={thStyle}>slug</th>
-                <th style={thStyle}>status</th>
-                <th style={thStyle}>camera</th>
-                <th style={thStyle}>center</th>
-                <th style={thStyle} />
+                <th className={TH}>name</th>
+                <th className={TH}>slug</th>
+                <th className={TH}>status</th>
+                <th className={TH}>camera</th>
+                <th className={TH}>center</th>
+                <th className={TH} />
               </tr>
             </thead>
             <tbody>
               {projects.map((p) => (
                 <tr key={p.id}>
-                  <td style={tdStyle}>{p.name}</td>
-                  <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 12 }}>{p.slug}</td>
-                  <td style={tdStyle}>{p.status}</td>
-                  <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 12 }}>
+                  <td className={TD}>{p.name}</td>
+                  <td className={`${TD} font-mono text-xs`}>{p.slug}</td>
+                  <td className={TD}>{p.status}</td>
+                  <td className={`${TD} font-mono text-xs`}>
                     p={p.cameraPitch}° y={p.cameraYaw}°
                   </td>
-                  <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 12 }}>
+                  <td className={`${TD} font-mono text-xs`}>
                     {p.centerLat.toFixed(4)}, {p.centerLng.toFixed(4)}
                   </td>
-                  <td style={tdStyle}>
+                  <td className={TD}>
                     <DeleteProjectButton id={p.id} slug={p.slug} action={deleteProjectAction} />
                   </td>
                 </tr>
@@ -133,46 +138,3 @@ export function DbPanel({
 function shortVersion(v: string): string {
   return v.split(' ').slice(0, 2).join(' ');
 }
-
-const card = {
-  background: '#fff',
-  border: '1px solid #e5e5e5',
-  borderRadius: 8,
-  padding: 20,
-};
-const h2 = {
-  fontSize: 14,
-  margin: 0,
-  marginBottom: 12,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 1,
-  opacity: 0.6,
-};
-const dlStyle = {
-  display: 'grid',
-  gridTemplateColumns: '120px 1fr',
-  gap: '4px 12px',
-  fontSize: 13,
-  margin: 0,
-};
-const dtStyle = { fontFamily: 'monospace' as const, opacity: 0.7 };
-const ddStyle = { margin: 0, fontFamily: 'monospace' as const };
-const tableStyle = { width: '100%', borderCollapse: 'collapse' as const, fontSize: 13 };
-const thStyle = {
-  textAlign: 'left' as const,
-  padding: '6px 10px',
-  borderBottom: '1px solid #e5e5e5',
-  fontSize: 11,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 1,
-  opacity: 0.5,
-};
-const tdStyle = { padding: '8px 10px', borderBottom: '1px solid #f3f4f6' };
-const btnStyle = {
-  fontSize: 12,
-  padding: '4px 10px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  background: '#fff',
-  cursor: 'pointer',
-};

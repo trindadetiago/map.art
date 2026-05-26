@@ -235,14 +235,14 @@ export default async function PipelineDebugPage() {
 
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>pipeline</h1>
-      <p style={{ opacity: 0.7, maxWidth: 720 }}>
+      <h1 className="mt-0">pipeline</h1>
+      <p className="max-w-[720px] opacity-70">
         Research harness for generation strategies. Phase 1 renders N tiles of a project to disk.
         Phase 2 runs a <code>GenerationStrategy</code> against those rendered tiles and shows the
         stitched result with an optional seam overlay.
       </p>
       {projects.length === 0 ? (
-        <div style={{ opacity: 0.6 }}>
+        <div className="opacity-60">
           No projects yet. Create one via <code>pnpm -w run db projects create-rect ...</code>{' '}
           first.
         </div>
