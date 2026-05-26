@@ -30,3 +30,5 @@ python/training/*/_playground/
 # Python bytecode caches
 __pycache__/
 *.pyc
+
+data/pipeline/
