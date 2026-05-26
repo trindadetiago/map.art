@@ -1,14 +1,15 @@
-import type { Browser } from 'puppeteer';
 import { repos } from '@mapart/db';
-import { startQueue, stopQueue, type RenderTilePayload } from '@mapart/queue';
+import type { Browser } from 'puppeteer';
+import '@mapart/env';
+import { env } from '@mapart/env';
+import { type RenderTilePayload, startQueue, stopQueue } from '@mapart/queue';
 import { renderParamsForTile } from '@mapart/shared';
 import { getStorage } from '@mapart/storage';
-import { launchBrowser } from './chrome';
+import { VIEWPORT_PAD, launchBrowser } from './chrome';
 
 const WORKER_NAME = `render-worker-${process.pid}`;
-const BASE_URL = process.env.RENDER_WORKER_URL ?? 'http://localhost:3210/render-worker';
+const BASE_URL = env.renderWorkerUrl;
 const RENDER_DEADLINE_MS = 120_000;
-const VIEWPORT_PAD = 100;
 
 let browser: Browser | null = null;
 let browserPromise: Promise<Browser> | null = null;
@@ -22,7 +23,13 @@ async function getBrowser(): Promise<Browser> {
     .then((b) => {
       browser = b;
       browserPromise = null;
-      b.on('disconnected', () => { browser = null; });
+      b.on('disconnected', () => {
+        console.warn(
+          `[${WORKER_NAME}] browser disconnected unexpectedly — will relaunch on next job`,
+        );
+        browser = null;
+        browserPromise = null;
+      });
       return b;
     })
     .catch((err) => {
@@ -33,7 +40,7 @@ async function getBrowser(): Promise<Browser> {
   return browserPromise;
 }
 
-async function renderAndCapture(job: RenderTilePayload): Promise<Buffer> {
+async function renderAndCapture(job: RenderTilePayload, signal?: AbortSignal): Promise<Buffer> {
   const params = renderParamsForTile(
     {
       centerLat: job.centerLat,
@@ -49,7 +56,8 @@ async function renderAndCapture(job: RenderTilePayload): Promise<Buffer> {
 
   const url =
     `${BASE_URL}?lat=${params.center.lat}&lng=${params.center.lng}` +
-    `&pitch=${params.pitch}&yaw=${params.yaw}&zoom=${params.zoom}&size=${params.size}`;
+    `&pitch=${params.pitch}&yaw=${params.yaw}&zoom=${params.zoom}&size=${params.size}` +
+    `&token=${process.env.RENDER_WORKER_TOKEN ?? 'dev-token-placeholder'}`;
 
   const b = await getBrowser();
   const page = await b.newPage();
@@ -59,23 +67,33 @@ async function renderAndCapture(job: RenderTilePayload): Promise<Buffer> {
     if (msg.type() === 'error') console.error(`[${WORKER_NAME}] console:`, msg.text());
   });
 
+  if (signal) {
+    signal.addEventListener(
+      'abort',
+      () => {
+        page.close().catch(() => {});
+      },
+      { once: true },
+    );
+  }
+
   try {
-    await page.setViewport({ width: params.size + VIEWPORT_PAD, height: params.size + VIEWPORT_PAD });
+    await page.setViewport({
+      width: params.size + VIEWPORT_PAD,
+      height: params.size + VIEWPORT_PAD,
+    });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    await page.waitForFunction(
-      () => window.__sceneReady === true,
-      { timeout: 10000 },
-    );
+    await page.waitForFunction(() => window.__sceneReady === true, { timeout: 10000 });
 
-    await page.waitForFunction(
-      () => window.__scene?.isReady?.() === true,
-      { timeout: 45000 },
-    );
+    await page.waitForFunction(() => window.__scene?.isReady?.() === true, { timeout: 30000 });
 
-    await page.evaluate((settleOpts) => {
-      return window.__scene?.waitForSettled?.(settleOpts);
-    }, { settleMs: 1000, timeoutMs: 60000 });
+    await page.evaluate(
+      (settleOpts) => {
+        return window.__scene?.waitForSettled?.(settleOpts);
+      },
+      { settleMs: 1000, timeoutMs: 30000 },
+    );
 
     const dataUrl = await page.evaluate(() => {
       return window.__scene?.capture?.() ?? null;
@@ -119,6 +137,7 @@ async function processRenderJob(job: RenderTilePayload): Promise<void> {
     const claimed = await repos.claimJob(dbJob.id, WORKER_NAME);
     if (!claimed) {
       console.log(`[${WORKER_NAME}] duplicate job skipped: ${job.idempotencyKey}`);
+      await repos.failJob(dbJob.id, 'Job already claimed by another worker');
       return;
     }
   } catch (err) {
@@ -142,7 +161,7 @@ async function processRenderJob(job: RenderTilePayload): Promise<void> {
     });
 
     const pngBuffer = await Promise.race([
-      renderAndCapture(job).finally(() => clearTimeout(timeout)),
+      renderAndCapture(job, abortController.signal).finally(() => clearTimeout(timeout)),
       timeoutPromise,
     ]).catch((err) => {
       throw err;
@@ -191,7 +210,7 @@ async function shutdown(signal?: string) {
   if (browser) {
     try {
       await browser.close();
-    } catch { }
+    } catch {}
     browser = null;
   }
   const exitCode = signal ? 128 + (signal === 'SIGINT' ? 2 : 15) : 0;
@@ -208,10 +227,13 @@ async function main() {
   const boss = await startQueue();
   console.log(`[${WORKER_NAME}] queue connected, listening on 'render-tile'`);
 
-  await boss.work<RenderTilePayload>('render-tile', async (pgBossJob: { data: RenderTilePayload }) => {
-    if (shuttingDown) return;
-    await processRenderJob(pgBossJob.data);
-  });
+  await boss.work<RenderTilePayload>(
+    'render-tile',
+    async (pgBossJob: { data: RenderTilePayload }) => {
+      if (shuttingDown) return;
+      await processRenderJob(pgBossJob.data);
+    },
+  );
 
   console.log(`[${WORKER_NAME}] ready`);
 }
