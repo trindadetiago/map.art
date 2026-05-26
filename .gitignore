@@ -32,3 +32,6 @@ __pycache__/
 *.pyc
 
 data/pipeline/
+
+# Dev runner per-process logs (mprocs + scripts/run.mjs); truncated each run.
+.logs/

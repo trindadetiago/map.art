@@ -8,7 +8,9 @@
   },
   "scripts": {
     "run-setup": "bash scripts/setup.sh",
-    "dev": "pnpm --filter @mapart/web dev",
+    "dev": "mprocs",
+    "dev:web": "pnpm --filter @mapart/web dev",
+    "dev:worker": "pnpm --filter @mapart/worker dev",
     "build": "pnpm -r build",
     "lint": "biome check .",
     "format": "biome format --write .",
@@ -29,6 +31,7 @@
     "@types/node": "^22.9.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
+    "mprocs": "^0.9.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
