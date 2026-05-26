@@ -11,24 +11,7 @@ import type { SavedTile } from './TileRenderer';
 const Minimap = dynamic(() => import('./Minimap').then((m) => m.Minimap), {
   ssr: false,
   loading: () => (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: 12,
-        left: 12,
-        width: 260,
-        height: 200,
-        borderRadius: 6,
-        background: 'rgba(0,0,0,0.4)',
-        color: '#fff',
-        fontSize: 12,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'monospace',
-        zIndex: 10,
-      }}
-    >
+    <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex h-[200px] w-[260px] items-center justify-center rounded-md bg-black/40 font-mono text-xs text-white">
       loading minimap…
     </div>
   ),
@@ -190,6 +173,15 @@ export interface ProjectWorkspaceProps {
     fd: FormData,
   ) => Promise<{ ok: true; url: string; filename: string } | { ok: false; error: string }>;
 }
+
+const PRIMARY_BTN =
+  'cursor-pointer rounded-md border border-neutral-900 bg-neutral-900 px-4 py-2 text-[13px] text-white disabled:cursor-not-allowed disabled:opacity-50';
+const SECONDARY_BTN =
+  'cursor-pointer rounded-md border border-neutral-300 bg-white px-4 py-2 text-[13px] text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50';
+const MINI_LABEL = 'text-[11px] uppercase tracking-wider opacity-50';
+const STUDIO_CARD = 'relative mt-4 rounded-lg border border-neutral-200 bg-white p-4';
+const H3 = 'm-0 text-[11px] uppercase tracking-wider opacity-[0.55]';
+const THUMB = 'h-8 w-8 rounded-sm border border-neutral-200 object-cover';
 
 export function ProjectWorkspace({
   projectId,
@@ -378,10 +370,6 @@ export function ProjectWorkspace({
         const scene = sceneRef.current;
         if (!scene) throw new Error('capture scene not ready');
 
-        // Capture-and-save: re-cameras the off-screen Scene to (c, r), waits for
-        // 3D Tiles to settle, captures, saves to storage, and updates
-        // savedRendered. Returns the storage URL and the data URL (the latter
-        // only needed for the target tile — we feed it into the hybrid canvas).
         const localRendered = new Map(savedRendered);
         const captureAndSave = async (
           c: number,
@@ -413,7 +401,6 @@ export function ProjectWorkspace({
           return { url: rr.url, dataUrl };
         };
 
-        // 1) Render the target tile.
         const targetCap = await captureAndSave(col, row);
         const renderedUrl = `${targetCap.url}${targetCap.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
 
@@ -424,9 +411,6 @@ export function ProjectWorkspace({
 
         setStatus(k, { phase: 'generating', renderedUrl, ts: Date.now() });
 
-        // 2) Build the neighbor context. Prefer generated > rendered. If a
-        //    neighbor in-grid has neither, render it now — black slots throw
-        //    off the model's scale, so we never want them.
         const canInfill = modelName.startsWith('gpt-image');
         const neighbors: Array<{ dc: number; dr: number; url: string }> = [];
         if (canInfill) {
@@ -445,7 +429,7 @@ export function ProjectWorkspace({
               neighbors.push({ dc, dr, url: ren.url });
               continue;
             }
-            if (!inGrid.has(nk)) continue; // edge — leave slot empty (rare)
+            if (!inGrid.has(nk)) continue;
             setStatus(nk, { phase: 'rendering', ts: Date.now() });
             try {
               const neighCap = await captureAndSave(nc, nr);
@@ -537,8 +521,6 @@ export function ProjectWorkspace({
   const tileImages = useMemo<Map<string, string>>(() => {
     const m = new Map<string, string>();
     for (const [k, t] of savedGenerated) {
-      // "see original" overrides: swap in the rendered URL for tiles the user
-      // has toggled. Falls through to generated otherwise.
       const overrideKey = showOriginal.has(k) ? savedRendered.get(k)?.url : undefined;
       m.set(k, overrideKey ?? t.url);
     }
@@ -593,23 +575,22 @@ export function ProjectWorkspace({
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          gap: 16,
-          alignItems: 'center',
-          marginBottom: 8,
-          fontSize: 13,
-          opacity: 0.8,
-        }}
-      >
+      <div className="mb-2 flex items-center gap-4 text-[13px] opacity-80">
         <span>
           drag the minimap to re-center · click any cell to render & generate · {renderedCount}/
           {tiles.length} rendered · {generatedCount}/{tiles.length} generated
         </span>
-        <span style={{ flex: 1 }} />
-        {dirty && <span style={dirtyChip}>unsaved</span>}
-        {!dirty && justSaved && <span style={savedChip}>saved</span>}
+        <span className="flex-1" />
+        {dirty && (
+          <span className="rounded-sm border border-amber-200 bg-amber-100/20 px-2 py-0.5 font-mono text-[11px] text-amber-600">
+            unsaved
+          </span>
+        )}
+        {!dirty && justSaved && (
+          <span className="rounded-sm border border-green-200 bg-green-100/20 px-2 py-0.5 font-mono text-[11px] text-green-600">
+            saved
+          </span>
+        )}
       </div>
 
       <ProjectMap
@@ -657,29 +638,19 @@ export function ProjectWorkspace({
                 const hasRendered = savedRendered.has(k);
                 if (!hasGenerated && !hasRendered) return null;
                 const isShowingOriginal = showOriginal.has(k);
-                // Scale toolbar with tile screen size, clamped so it stays legible
-                // and never grows too large.
                 const fontSize = Math.max(9, Math.min(14, hovered.screenSize * 0.07));
                 const padY = Math.max(2, Math.min(6, hovered.screenSize * 0.025));
                 const padX = padY * 2;
                 const gap = Math.max(2, Math.min(6, hovered.screenSize * 0.02));
                 const inset = Math.max(3, Math.min(8, hovered.screenSize * 0.03));
-                const btn: React.CSSProperties = {
-                  ...hoverBtn,
-                  fontSize,
-                  padding: `${padY}px ${padX}px`,
-                };
                 return (
                   <div
+                    className="pointer-events-none absolute z-20 flex"
                     style={{
-                      position: 'absolute',
                       left: hovered.x,
                       top: hovered.y,
                       transform: `translate(calc(-100% - ${inset}px), ${inset}px)`,
-                      display: 'flex',
                       gap,
-                      pointerEvents: 'none',
-                      zIndex: 20,
                     }}
                   >
                     {hasGenerated && hasRendered && (
@@ -693,7 +664,8 @@ export function ProjectWorkspace({
                             return next;
                           });
                         }}
-                        style={{ ...btn, pointerEvents: 'auto' }}
+                        className="pointer-events-auto cursor-pointer whitespace-nowrap rounded-sm border border-white/30 bg-black/75 font-mono text-white"
+                        style={{ fontSize, padding: `${padY}px ${padX}px` }}
                       >
                         {isShowingOriginal ? 'see generated' : 'see original'}
                       </button>
@@ -704,7 +676,8 @@ export function ProjectWorkspace({
                         onClick={() => {
                           void renderAndGenerate(hovered.col, hovered.row);
                         }}
-                        style={{ ...btn, pointerEvents: 'auto' }}
+                        className="pointer-events-auto cursor-pointer whitespace-nowrap rounded-sm border border-white/30 bg-black/75 font-mono text-white"
+                        style={{ fontSize, padding: `${padY}px ${padX}px` }}
                       >
                         regenerate
                       </button>
@@ -718,32 +691,19 @@ export function ProjectWorkspace({
 
       {/* Hidden capture scene — full-res off-screen render used per-tile. */}
       <div
+        className="pointer-events-none absolute"
         style={{
-          position: 'absolute',
           left: -99999,
           top: -99999,
           width: initialTilePixelSize,
           height: initialTilePixelSize,
-          pointerEvents: 'none',
         }}
         aria-hidden
       >
         <Scene ref={sceneRef} apiKey={apiKey} params={activeParams} />
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto auto',
-          gap: 16,
-          alignItems: 'end',
-          marginTop: 16,
-          padding: 16,
-          background: '#fff',
-          border: '1px solid #e5e5e5',
-          borderRadius: 8,
-        }}
-      >
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] items-end gap-4 rounded-lg border border-neutral-200 bg-white p-4">
         <Slider
           label="pitch"
           min={5}
@@ -767,28 +727,21 @@ export function ProjectWorkspace({
           type="button"
           onClick={onReset}
           disabled={!dirty || savePending}
-          style={secondaryBtn}
+          className={SECONDARY_BTN}
         >
           reset
         </button>
-        <button type="button" onClick={onSave} disabled={!dirty || savePending} style={primaryBtn}>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!dirty || savePending}
+          className={PRIMARY_BTN}
+        >
           {savePending ? 'saving…' : 'save'}
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) auto auto',
-          gap: 16,
-          alignItems: 'end',
-          marginTop: 8,
-          padding: 16,
-          background: '#fff',
-          border: '1px solid #e5e5e5',
-          borderRadius: 8,
-        }}
-      >
+      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-4 rounded-lg border border-neutral-200 bg-white p-4">
         <Slider
           label="grid side"
           min={1}
@@ -797,18 +750,10 @@ export function ProjectWorkspace({
           value={gridSide}
           onChange={(v) => setGridSide(Math.round(v))}
         />
-        <span
-          style={{
-            fontSize: 11,
-            opacity: 0.6,
-            alignSelf: 'center',
-            maxWidth: 240,
-            fontFamily: 'monospace',
-          }}
-        >
+        <span className="max-w-[240px] self-center font-mono text-[11px] opacity-60">
           {gridSide}×{gridSide} = {gridSide * gridSide} tiles
           {gridDirty && (
-            <span style={{ display: 'block', opacity: 0.7 }}>
+            <span className="block opacity-70">
               {gridSide < saved.gridSide
                 ? `shrinking from ${saved.gridSide}×${saved.gridSide} — destructive`
                 : `growing from ${saved.gridSide}×${saved.gridSide}`}
@@ -819,58 +764,42 @@ export function ProjectWorkspace({
           type="button"
           onClick={onApplyGrid}
           disabled={!gridDirty || reseedPending}
-          style={primaryBtn}
+          className={PRIMARY_BTN}
         >
           {reseedPending ? 'applying…' : 'apply grid'}
         </button>
       </div>
 
       {editorError && (
-        <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 8 }}>
-          {editorError}
-        </pre>
+        <pre className="mt-2 whitespace-pre-wrap text-xs text-red-700">{editorError}</pre>
       )}
 
-      <section style={studioCard}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            marginBottom: 12,
-          }}
-        >
-          <h3 style={h3}>tile studio</h3>
-          <div style={{ fontSize: 12, opacity: 0.6, fontFamily: 'monospace' }}>
-            <span style={legendChip('idle')} /> idle <span style={legendChip('pending')} /> pending{' '}
-            <span style={legendChip('done')} /> done <span style={legendChip('error')} /> error
+      <section className={STUDIO_CARD}>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h3 className={H3}>tile studio</h3>
+          <div className="font-mono text-xs opacity-60">
+            <LegendDot state="idle" /> idle <LegendDot state="pending" /> pending{' '}
+            <LegendDot state="done" /> done <LegendDot state="error" /> error
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={miniLabel}>prompt</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_320px] gap-4">
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className={MINI_LABEL}>prompt</span>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={8}
-                style={{
-                  fontFamily: 'inherit',
-                  fontSize: 12,
-                  padding: 8,
-                  border: '1px solid #d4d4d8',
-                  borderRadius: 4,
-                  resize: 'vertical',
-                }}
+                className="resize-y rounded border border-neutral-300 p-2 font-sans text-xs"
               />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={miniLabel}>model</span>
+            <label className="flex flex-col gap-1">
+              <span className={MINI_LABEL}>model</span>
               <select
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value as ModelName)}
-                style={{ padding: 6, fontSize: 13 }}
+                className="rounded border border-neutral-300 px-1.5 py-1 text-[13px]"
               >
                 {MODEL_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -879,12 +808,12 @@ export function ProjectWorkspace({
                 ))}
               </select>
             </label>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 disabled={bulkRunning || missingGenerated === 0}
                 onClick={() => runBulk('missing-generated')}
-                style={primaryBtn}
+                className={PRIMARY_BTN}
               >
                 {bulkRunning
                   ? `${bulkProgress.done}/${bulkProgress.total}`
@@ -894,60 +823,45 @@ export function ProjectWorkspace({
                 type="button"
                 disabled={bulkRunning || missingRendered === 0}
                 onClick={() => runBulk('missing-rendered')}
-                style={secondaryBtn}
+                className={SECONDARY_BTN}
               >
                 render only ({missingRendered})
               </button>
-              <button type="button" onClick={refresh} disabled={bulkRunning} style={secondaryBtn}>
+              <button
+                type="button"
+                onClick={refresh}
+                disabled={bulkRunning}
+                className={SECONDARY_BTN}
+              >
                 reload
               </button>
             </div>
             {studioError && (
-              <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 11, margin: 0 }}>
-                {studioError}
-              </pre>
+              <pre className="m-0 whitespace-pre-wrap text-[11px] text-red-700">{studioError}</pre>
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, opacity: 0.55 }}>recent activity</div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-                maxHeight: 360,
-                overflow: 'auto',
-              }}
-            >
+          <div className="flex flex-col gap-1.5">
+            <div className="text-[11px] opacity-[0.55]">recent activity</div>
+            <div className="flex max-h-[360px] flex-col gap-1.5 overflow-auto">
               {recent.length === 0 && (
-                <div style={{ fontSize: 11, opacity: 0.5 }}>click a tile to start</div>
+                <div className="text-[11px] opacity-50">click a tile to start</div>
               )}
               {recent.map(([k, s]) => (
                 <div
                   key={k}
-                  style={{
-                    display: 'flex',
-                    gap: 6,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    alignItems: 'center',
-                    background: '#fafafa',
-                    border: '1px solid #eee',
-                    borderRadius: 4,
-                    padding: 4,
-                  }}
+                  className="flex items-center gap-1.5 rounded border border-neutral-200 bg-neutral-50 p-1 font-mono text-[11px]"
                 >
-                  <span style={{ width: 50 }}>{k}</span>
+                  <span className="w-[50px]">{k}</span>
                   {s.renderedUrl && (
                     // biome-ignore lint/a11y/useAltText: thumbnail
-                    <img src={s.renderedUrl} style={thumb} />
+                    <img src={s.renderedUrl} className={THUMB} />
                   )}
                   {s.generatedUrl && (
                     // biome-ignore lint/a11y/useAltText: thumbnail
-                    <img src={s.generatedUrl} style={thumb} />
+                    <img src={s.generatedUrl} className={THUMB} />
                   )}
-                  <span style={{ flex: 1, color: phaseColor(s.phase) }}>
+                  <span className="flex-1" style={{ color: phaseColor(s.phase) }}>
                     {s.phase}
                     {s.error ? ` — ${s.error.slice(0, 40)}` : ''}
                   </span>
@@ -979,27 +893,10 @@ function Slider({
   suffix?: string;
 }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-      <span
-        style={{
-          fontSize: 11,
-          textTransform: 'uppercase',
-          letterSpacing: 1,
-          opacity: 0.5,
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}
-      >
+    <label className="flex min-w-0 flex-col gap-1">
+      <span className="flex justify-between text-[11px] uppercase tracking-wider opacity-50">
         <span>{label}</span>
-        <span
-          style={{
-            fontFamily: 'monospace',
-            opacity: 0.8,
-            fontVariantNumeric: 'tabular-nums',
-            width: 48,
-            textAlign: 'right',
-          }}
-        >
+        <span className="w-12 text-right font-mono tabular-nums opacity-80">
           {value.toFixed(0)}
           {suffix}
         </span>
@@ -1011,104 +908,25 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number.parseFloat(e.target.value))}
-        style={{ width: '100%', minWidth: 0 }}
+        className="w-full min-w-0"
       />
     </label>
   );
 }
 
-const primaryBtn = {
-  padding: '8px 16px',
-  fontSize: 13,
-  border: '1px solid #111',
-  background: '#111',
-  color: '#fff',
-  borderRadius: 6,
-  cursor: 'pointer',
-};
-const secondaryBtn = {
-  padding: '8px 16px',
-  fontSize: 13,
-  border: '1px solid #ccc',
-  background: '#fff',
-  color: '#111',
-  borderRadius: 6,
-  cursor: 'pointer',
-};
-const dirtyChip = {
-  fontSize: 11,
-  padding: '2px 8px',
-  borderRadius: 3,
-  background: '#fef3c722',
-  color: '#ca8a04',
-  border: '1px solid #fde68a',
-  fontFamily: 'monospace' as const,
-};
-const savedChip = {
-  fontSize: 11,
-  padding: '2px 8px',
-  borderRadius: 3,
-  background: '#d1fae522',
-  color: '#16a34a',
-  border: '1px solid #bbf7d0',
-  fontFamily: 'monospace' as const,
-};
-const studioCard = {
-  padding: 16,
-  background: '#fff',
-  border: '1px solid #e5e5e5',
-  borderRadius: 8,
-  marginTop: 16,
-  position: 'relative' as const,
-};
-const h3 = {
-  margin: 0,
-  fontSize: 11,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 1,
-  opacity: 0.55,
-};
-const miniLabel = {
-  fontSize: 11,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 1,
-  opacity: 0.5,
-};
-const thumb = {
-  width: 32,
-  height: 32,
-  objectFit: 'cover' as const,
-  border: '1px solid #eee',
-  borderRadius: 2,
-};
-const hoverBtn = {
-  padding: '4px 8px',
-  fontSize: 11,
-  border: '1px solid rgba(255,255,255,0.3)',
-  background: 'rgba(0,0,0,0.75)',
-  color: '#fff',
-  borderRadius: 3,
-  cursor: 'pointer',
-  fontFamily: 'monospace' as const,
-  whiteSpace: 'nowrap' as const,
-};
-
-function legendChip(state: TileVisualState): React.CSSProperties {
+function LegendDot({ state }: { state: TileVisualState }) {
   const colors: Record<TileVisualState, string> = {
     idle: '#3b82f6',
     pending: '#eab308',
     done: '#22c55e',
     error: '#ef4444',
   };
-  return {
-    display: 'inline-block',
-    width: 8,
-    height: 8,
-    background: colors[state],
-    borderRadius: 2,
-    marginRight: 2,
-    marginLeft: 4,
-  };
+  return (
+    <span
+      className="ml-1 mr-0.5 inline-block h-2 w-2 rounded-sm"
+      style={{ background: colors[state] }}
+    />
+  );
 }
 
 function phaseColor(p: TileStatus['phase']): string {
