@@ -78,14 +78,17 @@ export default function ModelsDebugPage() {
 
   return (
     <div>
-      <h1 className="mt-0">models</h1>
-      <p className="max-w-[720px] opacity-70">
-        Run an input PNG through an OpenAI image-edit model. Pick a model, supply a prompt, and the
-        output PNG is resized back to the input dimensions so downstream code stays size-agnostic.{' '}
-        {openaiAvailable ? null : (
-          <span className="text-red-600">(OPENAI_API_KEY not set — calls will fail.)</span>
+      <div className="mb-10 flex items-baseline gap-4">
+        <h1 className="m-0 text-3xl font-light tracking-tight text-stone-900">Models</h1>
+        <span className="text-sm text-stone-500">
+          {openaiAvailable ? 'OpenAI image-edit sandbox' : 'OPENAI_API_KEY not set'}
+        </span>
+        {!openaiAvailable && (
+          <span className="ml-auto rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700">
+            calls will fail
+          </span>
         )}
-      </p>
+      </div>
       <ModelsPanel availableModels={MODEL_NAMES} runAction={runAction} saveAction={saveAction} />
     </div>
   );
