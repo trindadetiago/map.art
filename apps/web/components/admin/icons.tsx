@@ -97,6 +97,22 @@ export function IconArrowUpRight(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChevronDown(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...p}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+export function IconCheck(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 export function IconMap(p: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...p}>
