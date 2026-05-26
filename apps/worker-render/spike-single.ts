@@ -71,20 +71,21 @@ async function renderTile(
       () => window.__sceneReady === true,
       { timeout: 10000 },
     );
-
     await page.waitForFunction(
       () => window.__scene?.isReady?.() === true,
       { timeout: 30000 },
     );
+    const t2 = Date.now();
 
     await page.evaluate(() => {
       return window.__scene?.waitForSettled?.({ settleMs: 1000, timeoutMs: 60000 });
     });
+    const t3 = Date.now();
 
     const dataUrl = await page.evaluate(() => {
       return window.__scene?.capture?.() ?? null;
     });
-    const t3 = Date.now();
+    const t4 = Date.now();
 
     if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
       throw new Error('capture() returned invalid data');
@@ -102,8 +103,8 @@ async function renderTile(
         navigationMs: t1 - t0,
         sceneReadyMs: t2 - t1,
         tilesSettledMs: t3 - t2,
-        captureMs: 0,
-        totalMs: t3 - t0,
+        captureMs: t4 - t3,
+        totalMs: t4 - t0,
       },
       pngPath,
       pngBytes: buf.length,
