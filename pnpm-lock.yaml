@@ -41,9 +41,6 @@ importers:
       '@mapart/models':
         specifier: workspace:*
         version: link:../../packages/models
-      '@mapart/renderer':
-        specifier: workspace:*
-        version: link:../../packages/renderer
       '@mapart/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -168,9 +165,6 @@ importers:
       '@mapart/models':
         specifier: workspace:*
         version: link:../models
-      '@mapart/renderer':
-        specifier: workspace:*
-        version: link:../renderer
       '@mapart/shared':
         specifier: workspace:*
         version: link:../shared
@@ -189,9 +183,6 @@ importers:
       '@mapart/shared':
         specifier: workspace:*
         version: link:../shared
-      sharp:
-        specifier: ^0.33.5
-        version: 0.33.5
       three:
         specifier: ^0.169.0
         version: 0.169.0

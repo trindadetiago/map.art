@@ -16,9 +16,9 @@ Pure server-side libraries. No React, no UI code.
 
 - `db` — Drizzle schema + repos + migrations (Postgres + PostGIS)
 - `env` — typed env loader
-- `models` — image-edit model clients (stub, Gemini, OpenAI)
+- `models` — OpenAI image-edit clients (gpt-image-1.5, gpt-image-2)
 - `pipeline` — generation-strategy harness (independent / infill / big-render / …)
-- `renderer` — Three.js + Google 3D Tiles tile renderer
+- `renderer` — shared Three.js + Google 3D Tiles helpers (consumed by `apps/web` today; designed for a future worker)
 - `shared` — shared types
 - `storage` — blob storage (LocalFs + S3/MinIO backends)
 - `tiles` — web-mercator tile math
@@ -44,18 +44,18 @@ Also: `python/data_overview.html` documents the v01 training dataset pipeline.
 ```bash
 pnpm install
 pnpm run-setup    # Docker check, boots Postgres + MinIO, writes .env, installs deps, runs migrations
-pnpm dev          # mprocs TUI — runs apps/web (Next) + apps/worker side-by-side
+pnpm dev          # mprocs TUI — runs apps/web (Next), apps/worker, and Drizzle Studio side-by-side
 ```
 
 In mprocs: `j`/`k` switch between procs, `r` restart, `x` stop, `q` quit. Each proc's live output is also streamed to `.logs/<name>.log` (gitignored, truncated on each run) — `grep`-able from any other terminal.
 
-Escape hatches if you don't want the TUI: `pnpm dev:web` or `pnpm dev:worker` alone.
+Escape hatches if you don't want the TUI: `pnpm dev:web`, `pnpm dev:worker`, or `pnpm dev:studio` alone.
 
 `.env` keys to fill in:
 
 - `GOOGLE_MAPS_API_KEY` — Map Tiles API key, used by the renderer
-- `GEMINI_API_KEY` — Gemini 2.5 Flash Image
-- `OPENAI_API_KEY` — gpt-image-1
+- `OPENAI_API_KEY` — required by `@mapart/models` (gpt-image-1.5 / gpt-image-2)
+- `OXEN_API_KEY` — for the planned oxen.ai LoRA training/hosting workflow
 - `DATABASE_URL` — preset to local docker Postgres
 - `STORAGE_BACKEND=s3` + `S3_*` — preset to local MinIO
 
@@ -70,5 +70,4 @@ pnpm mapart db migrate             # apply pending migrations
 pnpm mapart storage list           # list keys in current backend
 pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 pnpm mapart models generate --input … --prompt …  --out …
-pnpm mapart renderer render --lat … --lng … --out …
 ```
