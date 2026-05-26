@@ -1,7 +1,7 @@
 import { env } from '@mapart/env';
 import type { RenderParams } from '@mapart/shared';
 import { getStorage } from '@mapart/storage';
-import { RendererPanel, type SaveError, type SaveResult } from './Panel';
+import { RendererPanel, type SaveError, type SaveResult } from './panel';
 
 async function saveAction(dataUrl: string, params: RenderParams): Promise<SaveResult | SaveError> {
   'use server';

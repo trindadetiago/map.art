@@ -1,5 +1,5 @@
-import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
-import type { SavedTile } from '@/components/projects/TileRenderer';
+import { ProjectWorkspace } from '@/components/projects/project_workspace';
+import type { SavedTile } from '@/components/projects/tile_renderer';
 import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
 import { type ModelName, getModel } from '@mapart/models';

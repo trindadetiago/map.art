@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Phase1 } from './Phase1';
-import { Phase2 } from './Phase2';
+import { Phase1 } from './phase1';
+import { Phase2 } from './phase2';
 
 export interface PipelineProject {
   id: string;

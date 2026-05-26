@@ -20,7 +20,8 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,jsonc,css}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{js,jsx,ts,tsx,json,jsonc,css}": ["biome check --write --no-errors-on-unmatched"],
+    "apps/web/**/*.{ts,tsx}": ["bash scripts/check-naming.sh"]
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

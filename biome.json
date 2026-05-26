@@ -30,7 +30,7 @@
   },
   "overrides": [
     {
-      "include": ["apps/web/components/projects/ProjectMap.tsx"],
+      "include": ["apps/web/components/projects/project_map.tsx"],
       "linter": {
         "rules": {
           "style": { "noNonNullAssertion": "off" }

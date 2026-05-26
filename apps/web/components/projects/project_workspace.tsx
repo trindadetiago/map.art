@@ -1,14 +1,14 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@/components/Scene';
+import { Scene, type SceneHandle } from '@/components/scene';
 import type { ModelName } from '@mapart/models';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { ProjectMap, type TileCoord, type TileVisualState } from './ProjectMap';
-import type { SavedTile } from './TileRenderer';
+import { ProjectMap, type TileCoord, type TileVisualState } from './project_map';
+import type { SavedTile } from './tile_renderer';
 
-const Minimap = dynamic(() => import('./Minimap').then((m) => m.Minimap), {
+const Minimap = dynamic(() => import('./minimap').then((m) => m.Minimap), {
   ssr: false,
   loading: () => (
     <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex h-[200px] w-[260px] items-center justify-center rounded-md bg-black/40 font-mono text-xs text-white">

@@ -1,4 +1,4 @@
-import { EnvPanel } from './Panel';
+import { EnvPanel } from './panel';
 
 export default function EnvDebugPage() {
   return (

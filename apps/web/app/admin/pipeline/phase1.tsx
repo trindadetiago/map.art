@@ -1,10 +1,10 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@/components/Scene';
+import { Scene, type SceneHandle } from '@/components/scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import { useMemo, useRef, useState } from 'react';
-import type { PipelinePanelProps, PipelineProject, RenderedTileInfo } from './Panel';
-import { TileGridPreview } from './TileGridPreview';
+import type { PipelinePanelProps, PipelineProject, RenderedTileInfo } from './panel';
+import { TileGridPreview } from './tile_grid_preview';
 
 export function Phase1({
   apiKey,
