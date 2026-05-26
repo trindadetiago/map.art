@@ -24,6 +24,11 @@ export const SCHEMA = {
     envKey: 'OPENAI_API_KEY',
     description: 'OpenAI API key for gpt-image-1 (image-to-image editing).',
   },
+  oxenApiKey: {
+    envKey: 'OXEN_API_KEY',
+    description:
+      'oxen.ai API key for pushing training bundles to hub.oxen.ai and dedicated LoRA inference.',
+  },
   databaseUrl: {
     envKey: 'DATABASE_URL',
     description: 'Postgres connection string. Optional until DB work starts.',
