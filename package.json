@@ -18,6 +18,10 @@
     "mapart": "tsx apps/cli/bin/mapart.ts",
     "db:generate": "pnpm --filter @mapart/db exec drizzle-kit generate",
     "db:migrate": "tsx apps/cli/bin/mapart.ts db migrate",
+    "spike:single": "tsx apps/worker-render/spike-single.ts",
+    "spike:batch": "tsx apps/worker-render/spike-batch.ts",
+    "spike": "tsx apps/worker-render/spike.ts",
+    "worker:render": "tsx apps/worker-render/index.ts",
     "prepare": "husky"
   },
   "lint-staged": {
