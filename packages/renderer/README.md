@@ -1,8 +1,9 @@
 # @mapart/renderer
 
-Tile renderer.
+Tile renderer. Three.js scene streaming Google Photorealistic 3D Tiles → captures the canvas as a PNG.
 
-- Input: camera params
-- Output: PNG
-- Current renderer is a stub
-- CLI and debug page
+- Input: camera params (lat/lng, pitch, yaw, zoom, size)
+- Output: PNG buffer
+- Server-side `renderTile()` is currently a stub; real rendering happens client-side via the `<Scene>` component (now lives in `apps/web/components/Scene.tsx`).
+- Admin inspector at `/admin/renderer` in `apps/web`
+- CLI entry: `pnpm mapart render --lat … --lng … --out …` (stub output for now)

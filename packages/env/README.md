@@ -2,7 +2,8 @@
 
 Typed env loader.
 
-- Reads `.env`
-- Validates values
-- Exposes `env`
-- Debug page at `/debug/env`
+- Reads `.env` (idempotent; populates `process.env`)
+- Validates values via per-key validators
+- Exposes `env` (typed) and `requireEnv(key)` for call-site enforcement
+- Schema lives in `src/schema.ts`
+- Admin inspector at `/admin/env` in `apps/web`

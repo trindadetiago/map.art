@@ -1,8 +1,10 @@
 # @mapart/tiles
 
-Tile math.
+Web-mercator tile math.
 
-- Point to tile
-- Bbox to tiles
-- Circle to tiles
-- CLI and debug page
+- Point → tile (`latLngToTile`)
+- Tile → bounds / center / WKT (`tileToBounds`, `tileToCenter`, `tileToBoundsWkt`)
+- Bbox → tile coverage (`bboxToTiles`)
+- Circle / polygon → tile coverage (`circleToPolygon`, `polygonToTiles`)
+- Admin inspector at `/admin/tiles` in `apps/web`
+- CLI entries: `pnpm mapart tiles for-point|bounds|for-bbox|for-circle`

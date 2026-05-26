@@ -484,20 +484,26 @@
         <p class="meta">monorepo as it stands today</p>
 <pre class="tree">map.art/
 ├── apps/
-│   └── <span class="n">web/</span>                  <span class="c"># Next.js (frontend + API)</span>
+│   ├── <span class="n">web/</span>                  <span class="c"># Next.js (frontend + thin API + /admin)</span>
+│   ├── <span class="n">worker/</span>               <span class="c"># background job process (placeholder)</span>
+│   └── <span class="n">cli/</span>                  <span class="c"># `mapart` CLI binary</span>
 ├── packages/
 │   ├── <span class="n">db/</span>                   <span class="c"># Drizzle + Postgres schema</span>
 │   ├── env/                  <span class="c"># typed env</span>
 │   ├── <span class="n">models/</span>               <span class="c"># nano-banana, openai, stub</span>
-│   ├── <span class="n">pipeline/</span>             <span class="c"># independent, context-border</span>
-│   ├── <span class="n">renderer/</span>             <span class="c"># Three.js tile render (client)</span>
+│   ├── <span class="n">pipeline/</span>             <span class="c"># generation-strategy harness</span>
+│   ├── <span class="n">renderer/</span>             <span class="c"># Three.js tile render</span>
 │   ├── shared/               <span class="c"># shared types</span>
-│   ├── <span class="n">storage/</span>              <span class="c"># blob storage</span>
+│   ├── <span class="n">storage/</span>              <span class="c"># blob storage (LocalFs + S3)</span>
 │   └── tiles/                <span class="c"># tile math</span>
+├── infra/
+│   ├── <span class="n">db/</span>                   <span class="c"># Postgres + PostGIS compose</span>
+│   └── <span class="n">storage/</span>              <span class="c"># MinIO compose (S3-compatible local)</span>
 ├── python/                   <span class="c"># exploration and data training stuff</span>
 ├── data/
-├── scripts/setup.sh
-└── docker-compose.yml        <span class="c"># local Postgres</span></pre>
+├── scripts/                  <span class="c"># setup.sh, run.mjs (dev log tee)</span>
+├── mprocs.yaml               <span class="c"># dev runner: web + worker</span>
+└── docker-compose.yml        <span class="c"># includes infra/db + infra/storage</span></pre>
       </div>
 
       <div class="card tree-card">

@@ -24,9 +24,9 @@ interface GenerationStrategy {
 
 Add a new strategy = new file under `src/strategies/`, register in `strategies/index.ts`.
 
-## Debug UI
+## Admin UI
 
-Mounted at `/debug/pipeline` in the web app. Two-phase workflow:
+Mounted at `/admin/pipeline` in `apps/web`. Two-phase workflow:
 
 1. **Source prep** — pick a project + tile set, render each tile via the renderer's Scene component. Outputs saved to storage at `pipeline/{projectId}/rendered/{col}_{row}.png`.
 2. **Experiments** — load the rendered tiles, run a chosen strategy, save outputs to `pipeline/{projectId}/generated/{strategyName}/{col}_{row}.png`. Display stitched output with optional seam overlay.
