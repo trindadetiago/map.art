@@ -1,8 +1,17 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@mapart/renderer/debug/Scene';
+import { Scene, type SceneHandle } from '@/components/scene';
 import type { RenderParams } from '@mapart/shared';
 import { useEffect, useMemo, useRef } from 'react';
+
+// Augmentation duplicated from apps/worker-render/global.d.ts because that
+// file is not included in the apps/web tsconfig scope and Next.js won't see it.
+declare global {
+  interface Window {
+    __scene?: SceneHandle | null;
+    __sceneReady?: boolean;
+  }
+}
 
 interface Props {
   apiKey: string;
@@ -12,13 +21,6 @@ interface Props {
   yaw: number;
   zoom: number;
   size: number;
-}
-
-declare global {
-  interface Window {
-    __scene?: SceneHandle | null;
-    __sceneReady?: boolean;
-  }
 }
 
 export function RenderWorkerClient({ apiKey, lat, lng, pitch, yaw, zoom, size }: Props) {
@@ -40,8 +42,8 @@ export function RenderWorkerClient({ apiKey, lat, lng, pitch, yaw, zoom, size }:
     window.__sceneReady = true;
     return () => {
       if (window.__scene === sceneRef.current) {
-        window.__scene = undefined;
-        window.__sceneReady = undefined;
+        window.__scene = null;
+        window.__sceneReady = false;
       }
     };
   }, []);
