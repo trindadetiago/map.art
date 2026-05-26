@@ -74,6 +74,31 @@ export const SCHEMA = {
       'Use path-style S3 URLs (bucket in path, not subdomain). Required "true" for MinIO.',
     default: 'false',
   },
+  renderWorkerUrl: {
+    envKey: 'RENDER_WORKER_URL',
+    description: 'URL where the render-worker page is served (the Next.js app).',
+    default: 'http://localhost:3210/render-worker',
+  },
+  renderGpuEnabled: {
+    envKey: 'RENDER_GPU_ENABLED',
+    description:
+      'Enable GPU acceleration for rendering. Uses z.coerce.boolean() — truthy values: "1", "true", "yes"; falsy values: "0", "false", "no", or empty for CPU SwiftShader.',
+    default: 'false',
+  },
+  renderBrowserWs: {
+    envKey: 'RENDER_BROWSER_WS',
+    description: 'WebSocket URL for the browser-less renderer. Optional.',
+  },
+  renderRetryCount: {
+    envKey: 'RENDER_RETRY_COUNT',
+    description: 'Number of times to retry a failed render job.',
+    default: '3',
+  },
+  renderRetryDelayMs: {
+    envKey: 'RENDER_RETRY_DELAY_MS',
+    description: 'Delay in milliseconds between render retry attempts.',
+    default: '5000',
+  },
 } as const satisfies Record<string, EnvFieldDef>;
 
 export type EnvKey = keyof typeof SCHEMA;
