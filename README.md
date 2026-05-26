@@ -71,3 +71,21 @@ pnpm mapart storage list           # list keys in current backend
 pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 pnpm mapart models generate --input … --prompt …  --out …
 ```
+
+### Render worker (local test)
+
+Requires `GOOGLE_MAPS_API_KEY` in `.env`.
+
+```bash
+# Terminal 1: start Next.js
+pnpm dev
+
+# Terminal 2: render a single tile (comparison CPU vs GPU)
+pnpm spike:single
+
+# With only GPU acceleration (macOS Metal)
+RENDER_GPU_ENABLED=true pnpm spike:single
+
+# Batch: 100 tiles in the same page
+pnpm spike:batch
+```

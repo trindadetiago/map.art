@@ -35,3 +35,6 @@ data/
 
 # Dev runner per-process logs (mprocs + scripts/run.mjs); truncated each run.
 .logs/
+
+# Render spike outputs
+data/spike-renders/
