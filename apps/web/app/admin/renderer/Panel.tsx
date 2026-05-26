@@ -3,6 +3,8 @@
 import { Scene, type SceneHandle } from '@/components/Scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import { useRef, useState } from 'react';
+import { Field } from './Field';
+import { TileGrid3x3 } from './TileGrid3x3';
 
 export interface SaveResult {
   ok: true;
@@ -190,7 +192,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
 
   if (!apiKey) {
     return (
-      <div style={{ color: 'crimson' }}>
+      <div className="text-red-700">
         <code>GOOGLE_MAPS_API_KEY</code> is not set. Add it to the root <code>.env</code> and
         restart the dev server.
       </div>
@@ -199,11 +201,8 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 1fr', gap: 24 }}>
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-        >
+      <div className="grid grid-cols-[320px_1fr_1fr] gap-6">
+        <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-2">
           <Field label="lat" value={lat} onChange={setLat} step={0.0001} />
           <Field label="lng" value={lng} onChange={setLng} step={0.0001} />
           <Field label="pitch" value={pitch} onChange={setPitch} />
@@ -224,28 +223,20 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
                 }
               }
             }}
-            style={{ marginTop: 8 }}
+            className="mt-2 cursor-pointer rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             capture
           </button>
         </form>
         <div>
-          <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>live scene</div>
+          <div className="mb-1 text-xs opacity-60">live scene</div>
           <Scene ref={sceneRef} apiKey={apiKey} params={activeParams} />
         </div>
         <div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 4,
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 12, opacity: 0.6 }}>captured PNG</span>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="text-xs opacity-60">captured PNG</span>
             {capturedUrl && (
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div className="flex gap-1.5">
                 {saveAction && (
                   <button
                     type="button"
@@ -265,7 +256,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
                         setSaving(false);
                       }
                     }}
-                    style={buttonStyle}
+                    className="cursor-pointer rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? 'saving…' : 'save'}
                   </button>
@@ -273,7 +264,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
                 <a
                   href={capturedUrl}
                   download={downloadFilename(liveParams)}
-                  style={{ ...buttonStyle, textDecoration: 'none', color: '#111' }}
+                  className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-900 no-underline"
                 >
                   download
                 </a>
@@ -286,39 +277,21 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
               src={capturedUrl}
               width={size}
               height={size}
-              style={{
-                border: '1px solid #ccc',
-                imageRendering: 'pixelated',
-                maxWidth: '100%',
-              }}
+              className="max-w-full border border-neutral-300 [image-rendering:pixelated]"
             />
           ) : (
-            <div style={{ opacity: 0.5 }}>press "capture" once tiles have loaded</div>
+            <div className="opacity-50">press "capture" once tiles have loaded</div>
           )}
-          {saveInfo && (
-            <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6, fontFamily: 'monospace' }}>
-              {saveInfo}
-            </div>
-          )}
+          {saveInfo && <div className="mt-1.5 font-mono text-xs opacity-75">{saveInfo}</div>}
           {saveError && (
-            <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 6 }}>
-              {saveError}
-            </pre>
+            <pre className="mt-1.5 whitespace-pre-wrap text-xs text-red-700">{saveError}</pre>
           )}
         </div>
       </div>
 
-      <section
-        style={{
-          marginTop: 24,
-          padding: 16,
-          background: '#fafafa',
-          border: '1px solid #e5e5e5',
-          borderRadius: 8,
-        }}
-      >
-        <h3 style={{ margin: 0, marginBottom: 8, fontSize: 13 }}>random samples (João Pessoa)</h3>
-        <p style={{ fontSize: 12, opacity: 0.7, margin: '0 0 12px 0' }}>
+      <section className="mt-6 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+        <h3 className="m-0 mb-2 text-[13px]">random samples (João Pessoa)</h3>
+        <p className="m-0 mb-3 text-xs opacity-70">
           Picks N random points in the JP bounding box and captures each + its 8 neighbours. Files
           land at{' '}
           <code>
@@ -326,14 +299,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
           </code>
           . Tile framing uses the current pitch/yaw/size plus the tileWorldMeters field below.
         </p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr)) auto',
-            gap: 12,
-            alignItems: 'end',
-          }}
-        >
+        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-end gap-3">
           <Field
             label="N samples"
             value={sampleN}
@@ -356,57 +322,27 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
             type="button"
             onClick={runRandomSamples}
             disabled={sampleRunning || !saveToKeyAction}
-            style={{
-              ...buttonStyle,
-              background: sampleRunning ? '#eee' : '#111',
-              color: sampleRunning ? '#999' : '#fff',
-              borderColor: sampleRunning ? '#ddd' : '#111',
-              padding: '8px 14px',
-            }}
+            className="cursor-pointer rounded border px-3.5 py-2 text-xs enabled:border-neutral-900 enabled:bg-neutral-900 enabled:text-white disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400"
           >
             {sampleRunning ? 'rendering…' : 'render random samples'}
           </button>
         </div>
-        {sampleProgress && (
-          <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'monospace' }}>
-            {sampleProgress}
-          </div>
-        )}
+        {sampleProgress && <div className="mt-2 font-mono text-xs">{sampleProgress}</div>}
         {sampleError && (
-          <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 8 }}>
-            {sampleError}
-          </pre>
+          <pre className="mt-2 whitespace-pre-wrap text-xs text-red-700">{sampleError}</pre>
         )}
         {sampleSummary && (
-          <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'monospace', color: '#15803d' }}>
-            {sampleSummary}
-          </div>
+          <div className="mt-2 font-mono text-xs text-green-700">{sampleSummary}</div>
         )}
       </section>
 
       {sampleResults.length > 0 && (
-        <section style={{ marginTop: 16 }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: 13 }}>rendered samples</h3>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: 16,
-            }}
-          >
+        <section className="mt-4">
+          <h3 className="m-0 mb-3 text-[13px]">rendered samples</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
             {sampleResults.map((s) => (
-              <div
-                key={s.sampleIdx}
-                style={{ padding: 12, border: '1px solid #e5e5e5', borderRadius: 8 }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    opacity: 0.7,
-                    marginBottom: 8,
-                  }}
-                >
+              <div key={s.sampleIdx} className="rounded-lg border border-neutral-200 p-3">
+                <div className="mb-2 font-mono text-xs opacity-70">
                   sample {s.sampleIdx} · ({s.centerLat.toFixed(4)}, {s.centerLng.toFixed(4)})
                 </div>
                 <TileGrid3x3 tiles={s.tiles} />
@@ -419,79 +355,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
   );
 }
 
-function TileGrid3x3({
-  tiles,
-}: {
-  tiles: ReadonlyArray<{ col: number; row: number; url: string }>;
-}) {
-  // Place each tile in its 3×3 slot via (col, row). row=+1 is top.
-  const byKey = new Map<string, string>();
-  for (const t of tiles) byKey.set(`${t.col},${t.row}`, t.url);
-  const slots: Array<{ col: number; row: number; url: string | null }> = [];
-  for (let r = 1; r >= -1; r--) {
-    for (let c = -1; c <= 1; c++) {
-      slots.push({ col: c, row: r, url: byKey.get(`${c},${r}`) ?? null });
-    }
-  }
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
-      {slots.map((s) =>
-        s.url ? (
-          // biome-ignore lint/a11y/useAltText: sample thumb
-          <img
-            key={`${s.col},${s.row}`}
-            src={s.url}
-            style={{ width: '100%', height: 'auto', display: 'block', background: '#000' }}
-          />
-        ) : (
-          <div key={`${s.col},${s.row}`} style={{ aspectRatio: '1', background: '#222' }} />
-        ),
-      )}
-    </div>
-  );
-}
-
-const buttonStyle = {
-  fontSize: 12,
-  padding: '4px 10px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  background: '#fff',
-  cursor: 'pointer',
-} as const;
-
 function downloadFilename(p: RenderParams): string {
   const round = (n: number, d = 4) => n.toFixed(d).replace(/\.?0+$/, '');
   return `mapart_${round(p.center.lat)}_${round(p.center.lng)}_p${Math.round(p.pitch)}_y${Math.round(p.yaw)}_z${round(p.zoom, 2)}_${p.size}.png`;
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  step = 1,
-}: {
-  label: string;
-  value: number;
-  onChange: (n: number) => void;
-  step?: number;
-}) {
-  return (
-    <label
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '140px 1fr',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{label}</span>
-      <input
-        type="number"
-        value={value}
-        step={step}
-        onChange={(e) => onChange(Number.parseFloat(e.target.value))}
-      />
-    </label>
-  );
 }
