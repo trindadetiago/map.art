@@ -12,7 +12,7 @@ import {
 async function runAction(formData: FormData): Promise<ActionResult | ActionError> {
   'use server';
   try {
-    const modelName = String(formData.get('model') ?? 'stub') as ModelName;
+    const modelName = String(formData.get('model') ?? 'gpt-image-1.5') as ModelName;
     const prompt = String(formData.get('prompt') ?? '');
     const inputDataUrl = String(formData.get('inputDataUrl') ?? '');
     const seedRaw = formData.get('seed');
@@ -25,15 +25,14 @@ async function runAction(formData: FormData): Promise<ActionResult | ActionError
     const base64 = inputDataUrl.slice(inputDataUrl.indexOf(',') + 1);
     const input = Buffer.from(base64, 'base64');
 
-    const needsGemini = modelName !== 'stub';
-    if (needsGemini && !env.geminiApiKey) {
+    if (!env.openaiApiKey) {
       return {
         ok: false,
-        error: 'GEMINI_API_KEY is not set. Add it to the root .env and restart the dev server.',
+        error: 'OPENAI_API_KEY is not set. Add it to the root .env and restart the dev server.',
       };
     }
 
-    const model = getModel(modelName, env.geminiApiKey ? { apiKey: env.geminiApiKey } : {});
+    const model = getModel(modelName, { apiKey: env.openaiApiKey });
     const result = await model.generate({
       input,
       prompt,
@@ -75,27 +74,19 @@ async function saveAction(
 }
 
 export default function ModelsDebugPage() {
-  const geminiAvailable = !!env.geminiApiKey;
-  const availableModels = geminiAvailable ? MODEL_NAMES : MODEL_NAMES.filter((m) => m === 'stub');
+  const openaiAvailable = !!env.openaiApiKey;
 
   return (
     <div>
       <h1 className="mt-0">models</h1>
       <p className="max-w-[720px] opacity-70">
-        Run an input PNG through a model. <strong>stub</strong> = pixelate + hue shift (no API
-        call). <strong>nano-banana</strong> = Gemini 2.5 Flash Image (fast, cheap).{' '}
-        <strong>nano-banana-pro</strong> = Gemini 3 Pro Image Preview (higher quality, slower,
-        pricier — what Cannon Eyed used). <strong>gemini-3.1-flash-image</strong> = newer Flash
-        variant.{' '}
-        {geminiAvailable ? null : (
-          <span className="text-red-600">(GEMINI_API_KEY not set — only stub is available.)</span>
+        Run an input PNG through an OpenAI image-edit model. Pick a model, supply a prompt, and the
+        output PNG is resized back to the input dimensions so downstream code stays size-agnostic.{' '}
+        {openaiAvailable ? null : (
+          <span className="text-red-600">(OPENAI_API_KEY not set — calls will fail.)</span>
         )}
       </p>
-      <ModelsPanel
-        availableModels={availableModels}
-        runAction={runAction}
-        saveAction={saveAction}
-      />
+      <ModelsPanel availableModels={MODEL_NAMES} runAction={runAction} saveAction={saveAction} />
     </div>
   );
 }

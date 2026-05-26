@@ -177,7 +177,7 @@ export function registerDbCommands(parent: Command): void {
 
   parent
     .command('seed')
-    .description('Seed default model rows (stub + gemini variants)')
+    .description('Seed default model rows (OpenAI gpt-image variants)')
     .action(async () => {
       try {
         const n = await repos.seedDefaultModels();

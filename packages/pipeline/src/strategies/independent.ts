@@ -16,13 +16,17 @@ export const independentStrategy: GenerationStrategy = {
     const outputs: PipelineTileOutput[] = [];
     for (const [i, tile] of input.tiles.entries()) {
       const started = Date.now();
-      console.log(`[pipeline:independent] tile ${i + 1}/${total} (col=${tile.col} row=${tile.row}) — generating`);
+      console.log(
+        `[pipeline:independent] tile ${i + 1}/${total} (col=${tile.col} row=${tile.row}) — generating`,
+      );
       const result = await model.generate({
         input: tile.renderedPng,
         prompt: input.prompt,
       });
       const wallClockMs = Date.now() - started;
-      console.log(`[pipeline:independent] tile ${i + 1}/${total} (col=${tile.col} row=${tile.row}) — done in ${wallClockMs}ms (model ${result.metadata.durationMs}ms)`);
+      console.log(
+        `[pipeline:independent] tile ${i + 1}/${total} (col=${tile.col} row=${tile.row}) — done in ${wallClockMs}ms (model ${result.metadata.durationMs}ms)`,
+      );
       outputs.push({
         col: tile.col,
         row: tile.row,

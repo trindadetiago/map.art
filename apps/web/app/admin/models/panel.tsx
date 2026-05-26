@@ -48,7 +48,7 @@ export interface ModelsPanelProps {
 export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPanelProps) {
   const [pending, startTransition] = useTransition();
 
-  const [model, setModel] = useState<ModelName>(availableModels[0] ?? 'stub');
+  const [model, setModel] = useState<ModelName>(availableModels[0] ?? 'gpt-image-1.5');
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const [seed, setSeed] = useState<number | ''>('');
   const [inputDataUrl, setInputDataUrl] = useState<string | null>(null);
