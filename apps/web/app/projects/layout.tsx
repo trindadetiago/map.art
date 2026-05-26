@@ -23,8 +23,8 @@ export default function ProjectsLayout({ children }: { children: ReactNode }) {
           projects
         </Link>
         <span style={{ flex: 1 }} />
-        <Link href="/debug" style={{ opacity: 0.6, fontSize: 13 }}>
-          /debug
+        <Link href="/admin" style={{ opacity: 0.6, fontSize: 13 }}>
+          /admin
         </Link>
       </header>
       <main style={{ padding: 32 }}>{children}</main>

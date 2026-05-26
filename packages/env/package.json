@@ -4,16 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./debug": "./debug/Panel.tsx"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true }
-  },
-  "devDependencies": {
-    "@types/react": "^19.0.0"
+    ".": "./src/index.ts"
   }
 }

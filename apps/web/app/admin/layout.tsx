@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-export default function DebugLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh' }}>
       <aside
@@ -25,7 +25,7 @@ export default function DebugLayout({ children }: { children: ReactNode }) {
             opacity: 0.5,
           }}
         >
-          debug
+          admin
         </h2>
         <ul
           style={{
@@ -38,28 +38,28 @@ export default function DebugLayout({ children }: { children: ReactNode }) {
           }}
         >
           <li>
-            <Link href="/debug">index</Link>
+            <Link href="/admin">index</Link>
           </li>
           <li>
-            <Link href="/debug/env">env</Link>
+            <Link href="/admin/env">env</Link>
           </li>
           <li>
-            <Link href="/debug/renderer">renderer</Link>
+            <Link href="/admin/renderer">renderer</Link>
           </li>
           <li>
-            <Link href="/debug/models">models</Link>
+            <Link href="/admin/models">models</Link>
           </li>
           <li>
-            <Link href="/debug/storage">storage</Link>
+            <Link href="/admin/storage">storage</Link>
           </li>
           <li>
-            <Link href="/debug/db">db</Link>
+            <Link href="/admin/db">db</Link>
           </li>
           <li>
-            <Link href="/debug/tiles">tiles</Link>
+            <Link href="/admin/tiles">tiles</Link>
           </li>
           <li>
-            <Link href="/debug/pipeline">pipeline</Link>
+            <Link href="/admin/pipeline">pipeline</Link>
           </li>
         </ul>
       </aside>

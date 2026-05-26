@@ -1,4 +1,4 @@
-import { EnvPanel } from '@mapart/env/debug';
+import { EnvPanel } from './Panel';
 
 export default function EnvDebugPage() {
   return (

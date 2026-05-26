@@ -1,4 +1,4 @@
-import { TilesPanel } from '@mapart/tiles/debug';
+import { TilesPanel } from './Panel';
 
 export default function TilesDebugPage() {
   return (

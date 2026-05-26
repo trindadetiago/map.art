@@ -1,8 +1,8 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@mapart/renderer/debug/Scene';
+import { Scene, type SceneHandle } from '@/components/Scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface SavedTile {
   col: number;
@@ -45,14 +45,17 @@ export function TileRenderer({
   saveTileAction,
   listTilesAction,
 }: TileRendererProps) {
-  const project = {
-    centerLat,
-    centerLng,
-    cameraPitch,
-    cameraYaw,
-    tileWorldMeters,
-    tilePixelSize,
-  };
+  const project = useMemo(
+    () => ({
+      centerLat,
+      centerLng,
+      cameraPitch,
+      cameraYaw,
+      tileWorldMeters,
+      tilePixelSize,
+    }),
+    [centerLat, centerLng, cameraPitch, cameraYaw, tileWorldMeters, tilePixelSize],
+  );
 
   const firstTile = tiles[0] ?? { col: 0, row: 0 };
   const [activeParams, setActiveParams] = useState<RenderParams>(() =>
@@ -115,17 +118,7 @@ export function TileRenderer({
         });
       }
     },
-    // project params are read fresh inside renderOne; depending on the primitives is enough.
-    [
-      projectId,
-      saveTileAction,
-      centerLat,
-      centerLng,
-      cameraPitch,
-      cameraYaw,
-      tileWorldMeters,
-      tilePixelSize,
-    ],
+    [projectId, saveTileAction, project],
   );
 
   const refresh = useCallback(async () => {
@@ -150,7 +143,8 @@ export function TileRenderer({
     setBulkProgress({ done: 0, total: tiles.length });
     try {
       for (let i = 0; i < tiles.length; i++) {
-        const t = tiles[i]!;
+        const t = tiles[i];
+        if (!t) continue;
         await renderOne(t.col, t.row);
         setBulkProgress({ done: i + 1, total: tiles.length });
       }
@@ -166,7 +160,8 @@ export function TileRenderer({
     setBulkProgress({ done: 0, total: missing.length });
     try {
       for (let i = 0; i < missing.length; i++) {
-        const t = missing[i]!;
+        const t = missing[i];
+        if (!t) continue;
         await renderOne(t.col, t.row);
         setBulkProgress({ done: i + 1, total: missing.length });
       }
@@ -181,10 +176,10 @@ export function TileRenderer({
   let minRow = 0;
   let maxRow = 0;
   if (tiles.length > 0) {
-    minCol = Infinity;
-    maxCol = -Infinity;
-    minRow = Infinity;
-    maxRow = -Infinity;
+    minCol = Number.POSITIVE_INFINITY;
+    maxCol = Number.NEGATIVE_INFINITY;
+    minRow = Number.POSITIVE_INFINITY;
+    maxRow = Number.NEGATIVE_INFINITY;
     for (const t of tiles) {
       if (t.col < minCol) minCol = t.col;
       if (t.col > maxCol) maxCol = t.col;
@@ -198,10 +193,7 @@ export function TileRenderer({
   const cellPx = Math.max(28, Math.min(96, Math.floor(640 / Math.max(cols, rows))));
   const busy = bulkRunning;
 
-  const missingCount = tiles.reduce(
-    (n, t) => (savedMap.has(keyOf(t.col, t.row)) ? n : n + 1),
-    0,
-  );
+  const missingCount = tiles.reduce((n, t) => (savedMap.has(keyOf(t.col, t.row)) ? n : n + 1), 0);
 
   return (
     <section style={cardStyle}>
@@ -210,9 +202,8 @@ export function TileRenderer({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 320 }}>
           <div style={{ fontSize: 12, opacity: 0.75 }}>
             Click any tile in the grid to render & save it. Files are saved as{' '}
-            <code>{'{col}_{row}.png'}</code> under{' '}
-            <code>pipeline/{projectId}/rendered/</code>. Uses the <b>saved</b> project params; if
-            you changed sliders above, save first.
+            <code>{'{col}_{row}.png'}</code> under <code>pipeline/{projectId}/rendered/</code>. Uses
+            the <b>saved</b> project params; if you changed sliders above, save first.
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
@@ -287,7 +278,9 @@ export function TileRenderer({
                 // Flip row so highest row (north) sits at top.
                 const gridRow = maxRow - t.row + 1;
                 const v = thumbVersion.get(k) ?? 0;
-                const thumbSrc = saved ? `${saved.url}${saved.url.includes('?') ? '&' : '?'}v=${v}` : null;
+                const thumbSrc = saved
+                  ? `${saved.url}${saved.url.includes('?') ? '&' : '?'}v=${v}`
+                  : null;
                 return (
                   <button
                     type="button"

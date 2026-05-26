@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./debug": "./debug/Panel.tsx"
+    ".": "./src/index.ts"
   },
   "bin": {
     "mapart-tiles": "./bin/cli.ts"
@@ -16,14 +15,5 @@
   "dependencies": {
     "@mapart/shared": "workspace:*",
     "commander": "^12.1.0"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true }
-  },
-  "devDependencies": {
-    "@types/react": "^19.0.0"
   }
 }

@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./debug": "./debug/Panel.tsx"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@mapart/models": "workspace:*",
@@ -13,14 +12,5 @@
     "@mapart/shared": "workspace:*",
     "@mapart/storage": "workspace:*",
     "sharp": "^0.33.5"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true }
-  },
-  "devDependencies": {
-    "@types/react": "^19.0.0"
   }
 }

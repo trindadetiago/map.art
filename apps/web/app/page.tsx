@@ -15,8 +15,8 @@ export default function Home() {
           </span>
         </li>
         <li>
-          <Link href="/debug" style={{ fontSize: 16 }}>
-            /debug
+          <Link href="/admin" style={{ fontSize: 16 }}>
+            /admin
           </Link>
           <span style={{ opacity: 0.6, marginLeft: 8, fontSize: 14 }}>
             — dev hub for individual package panels

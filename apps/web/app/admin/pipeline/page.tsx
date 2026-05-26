@@ -1,22 +1,22 @@
 import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
-import { getModel, MODEL_NAMES, type ModelName } from '@mapart/models';
+import { MODEL_NAMES, type ModelName, getModel } from '@mapart/models';
 import {
+  type PipelineTileInput,
+  type PipelineTileOutput,
   getStrategy,
   overlaySeams,
   stitchTiles,
   strategies,
-  type PipelineTileInput,
-  type PipelineTileOutput,
 } from '@mapart/pipeline';
+import { getStorage } from '@mapart/storage';
 import {
   PipelinePanel,
   type PipelineProject,
   type RenderedTileInfo,
   type StrategyRunError,
   type StrategyRunResult,
-} from '@mapart/pipeline/debug';
-import { getStorage } from '@mapart/storage';
+} from './Panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,12 +34,7 @@ const DEFAULT_PROMPT = [
 function renderedKey(projectId: string, col: number, row: number): string {
   return `pipeline/${projectId}/rendered/${col}_${row}.png`;
 }
-function generatedKey(
-  projectId: string,
-  strategyName: string,
-  col: number,
-  row: number,
-): string {
+function generatedKey(projectId: string, strategyName: string, col: number, row: number): string {
   return `pipeline/${projectId}/generated/${strategyName}/${col}_${row}.png`;
 }
 function stitchedKey(projectId: string, strategyName: string, kind: 'plain' | 'seams'): string {
@@ -161,7 +156,9 @@ async function runStrategyAction(
     }
     const model = getModel(modelName as ModelName, apiKey ? { apiKey } : {});
 
-    console.log(`[pipeline] phase 2 — strategy=${strategyName} model=${modelName} tiles=${inputs.length}`);
+    console.log(
+      `[pipeline] phase 2 — strategy=${strategyName} model=${modelName} tiles=${inputs.length}`,
+    );
     const phaseStarted = Date.now();
 
     const outputs = await strategy.run(
@@ -178,7 +175,9 @@ async function runStrategyAction(
       model,
     );
 
-    console.log(`[pipeline] phase 2 done — ${outputs.length} tile(s) in ${Date.now() - phaseStarted}ms — stitching`);
+    console.log(
+      `[pipeline] phase 2 done — ${outputs.length} tile(s) in ${Date.now() - phaseStarted}ms — stitching`,
+    );
 
     // Persist outputs + stitch + seam overlay.
     for (const o of outputs) {
@@ -244,8 +243,8 @@ export default async function PipelineDebugPage() {
       </p>
       {projects.length === 0 ? (
         <div style={{ opacity: 0.6 }}>
-          No projects yet. Create one via{' '}
-          <code>pnpm -w run db projects create-rect ...</code> first.
+          No projects yet. Create one via <code>pnpm -w run db projects create-rect ...</code>{' '}
+          first.
         </div>
       ) : (
         <PipelinePanel
