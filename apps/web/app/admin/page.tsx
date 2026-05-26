@@ -75,7 +75,7 @@ export default function DebugIndex() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Link href={`/debug/${t.slug}`} style={{ fontWeight: 600, fontSize: 16 }}>
+              <Link href={`/admin/${t.slug}`} style={{ fontWeight: 600, fontSize: 16 }}>
                 {t.title}
               </Link>
               <span

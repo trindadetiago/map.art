@@ -1,4 +1,4 @@
-import { getEnvStatus } from '../src/index';
+import { getEnvStatus } from '@mapart/env';
 
 export function EnvPanel() {
   const entries = getEnvStatus();

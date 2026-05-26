@@ -1,6 +1,6 @@
 import { repos } from '@mapart/db';
-import { DbPanel } from '@mapart/db/debug';
 import { revalidatePath } from 'next/cache';
+import { DbPanel } from './Panel';
 
 async function createProjectAction(
   fd: FormData,
@@ -22,7 +22,7 @@ async function createProjectAction(
       cameraPitch: pitch,
       cameraYaw: yaw,
     });
-    revalidatePath('/debug/db');
+    revalidatePath('/admin/db');
     return { ok: true, id: row.id };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -32,13 +32,13 @@ async function createProjectAction(
 async function deleteProjectAction(id: string): Promise<void> {
   'use server';
   await repos.deleteProject(id);
-  revalidatePath('/debug/db');
+  revalidatePath('/admin/db');
 }
 
 async function seedAction(): Promise<void> {
   'use server';
   await repos.seedDefaultModels();
-  revalidatePath('/debug/db');
+  revalidatePath('/admin/db');
 }
 
 function numOrDefault(v: FormDataEntryValue | null, fallback: number): number {

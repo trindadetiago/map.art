@@ -1,8 +1,8 @@
 'use client';
 
+import { Scene, type SceneHandle } from '@/components/Scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import { useRef, useState } from 'react';
-import { Scene, type SceneHandle } from './Scene';
 
 export interface SaveResult {
   ok: true;

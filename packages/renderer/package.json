@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./debug": "./debug/Panel.tsx",
-    "./debug/Scene": "./debug/Scene.tsx"
+    ".": "./src/index.ts"
   },
   "bin": {
     "mapart-render": "./bin/cli.ts"
@@ -21,14 +19,7 @@
     "sharp": "^0.33.5",
     "three": "^0.169.0"
   },
-  "peerDependencies": {
-    "react": "^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true }
-  },
   "devDependencies": {
-    "@types/react": "^19.0.0",
     "@types/three": "^0.169.0"
   }
 }

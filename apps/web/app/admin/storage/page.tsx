@@ -1,6 +1,6 @@
 import { env } from '@mapart/env';
 import { getStorage } from '@mapart/storage';
-import { type StorageEntryWire, StoragePanel } from '@mapart/storage/debug';
+import { type StorageEntryWire, StoragePanel } from './Panel';
 
 async function listAction(prefix: string): Promise<StorageEntryWire[]> {
   'use server';

@@ -1,6 +1,6 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@mapart/renderer/debug/Scene';
+import { Scene, type SceneHandle } from '@/components/Scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import { useMemo, useRef, useState } from 'react';
 
@@ -169,7 +169,8 @@ function Phase1({
     const outputs: RenderedTileInfo[] = [];
     try {
       for (let i = 0; i < targets.length; i++) {
-        const t = targets[i]!;
+        const t = targets[i];
+        if (!t) continue;
         const params = renderParamsForTile(project, t.col, t.row);
         setActiveParams(params);
         // Give React one frame to propagate params into Scene, then wait for the
@@ -460,9 +461,7 @@ function Phase2({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>
-                rendered (input)
-              </div>
+              <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>rendered (input)</div>
               <TileGridPreview tiles={rendered} pixelSize={project.tilePixelSize} />
             </div>
             <div>
@@ -531,10 +530,10 @@ function TileGridPreview({
       </div>
     );
   }
-  let minCol = Infinity;
-  let maxCol = -Infinity;
-  let minRow = Infinity;
-  let maxRow = -Infinity;
+  let minCol = Number.POSITIVE_INFINITY;
+  let maxCol = Number.NEGATIVE_INFINITY;
+  let minRow = Number.POSITIVE_INFINITY;
+  let maxRow = Number.NEGATIVE_INFINITY;
   for (const t of tiles) {
     if (t.col < minCol) minCol = t.col;
     if (t.col > maxCol) maxCol = t.col;
@@ -610,7 +609,6 @@ function buildGrid(cols: number, rows: number): Array<{ col: number; row: number
   }
   return out;
 }
-
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   // `fetch(dataUrl)` is the standard way to parse a data URL into a Blob

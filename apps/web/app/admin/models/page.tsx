@@ -1,13 +1,13 @@
 import { env } from '@mapart/env';
 import { MODEL_NAMES, type ModelName, getModel } from '@mapart/models';
+import { getStorage } from '@mapart/storage';
 import {
   type ActionError,
   type ActionResult,
   ModelsPanel,
   type SaveError,
   type SaveResult,
-} from '@mapart/models/debug';
-import { getStorage } from '@mapart/storage';
+} from './Panel';
 
 async function runAction(formData: FormData): Promise<ActionResult | ActionError> {
   'use server';

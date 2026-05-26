@@ -1,7 +1,7 @@
 'use client';
 
+import type { ModelName } from '@mapart/models';
 import { useEffect, useState, useTransition } from 'react';
-import type { ModelName } from '../src/types';
 
 const LATEST_CAPTURE_KEY = 'mapart:latest-capture';
 

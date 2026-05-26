@@ -1,7 +1,7 @@
 import { env } from '@mapart/env';
-import { RendererPanel, type SaveError, type SaveResult } from '@mapart/renderer/debug';
 import type { RenderParams } from '@mapart/shared';
 import { getStorage } from '@mapart/storage';
+import { RendererPanel, type SaveError, type SaveResult } from './Panel';
 
 async function saveAction(dataUrl: string, params: RenderParams): Promise<SaveResult | SaveError> {
   'use server';
@@ -58,7 +58,7 @@ export default function RendererDebugPage() {
       <p style={{ opacity: 0.7 }}>
         Live Three.js scene streaming Google Photorealistic 3D Tiles. Adjust params, wait for tiles
         to stream in, then <strong>capture</strong> to grab the canvas as a PNG. Use{' '}
-        <strong>save</strong> to persist into <code>/debug/storage</code>.
+        <strong>save</strong> to persist into <code>/admin/storage</code>.
       </p>
       <RendererPanel
         apiKey={env.googleMapsApiKey ?? ''}

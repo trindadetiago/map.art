@@ -1,6 +1,5 @@
-import type { TableCounts } from '../src/repos/stats';
-import type { Model } from '../src/schema/models';
-import type { Project } from '../src/schema/projects';
+import type { TableCounts } from '@mapart/db/repos';
+import type { Model, Project } from '@mapart/db/schema';
 import { CreateProjectForm, DeleteProjectButton } from './ClientBits';
 
 export interface DbPanelProps {
