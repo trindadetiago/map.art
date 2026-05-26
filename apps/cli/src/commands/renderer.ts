@@ -3,8 +3,10 @@ import { resolve } from 'node:path';
 import { renderTile } from '@mapart/renderer';
 import type { Command } from 'commander';
 
-export function registerRenderCommands(parent: Command): void {
+export function registerRendererCommands(parent: Command): void {
   parent
+    .command('render')
+    .description('Render a single tile PNG from camera params')
     .requiredOption('--lat <number>', 'center latitude', Number.parseFloat)
     .requiredOption('--lng <number>', 'center longitude', Number.parseFloat)
     .option('--pitch <number>', 'camera pitch in degrees', Number.parseFloat, 30)

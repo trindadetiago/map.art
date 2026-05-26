@@ -5,6 +5,7 @@
     "allowJs": true,
     "incremental": true,
     "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
       "@/*": ["./*"]
     }
