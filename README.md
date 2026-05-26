@@ -74,11 +74,11 @@ pnpm mapart models generate --input … --prompt …  --out …
 
 ### Render worker (local test)
 
-Requires `GOOGLE_MAPS_API_KEY` in `.env`.
+Requires `GOOGLE_MAPS_API_KEY` in `.env`. For the full worker (pg-boss queue consumer), set `RENDER_WORKER_TOKEN` in `.env` and run `pnpm worker:render`.
 
 ```bash
-# Terminal 1: start Next.js
-pnpm dev
+# Terminal 1: start Next.js (just the web app; no TUI needed)
+pnpm dev:web
 
 # Terminal 2: render a single tile (comparison CPU vs GPU)
 pnpm spike:single
@@ -88,4 +88,7 @@ RENDER_GPU_ENABLED=true pnpm spike:single
 
 # Batch: 100 tiles in the same page
 pnpm spike:batch
+
+# Full worker (pg-boss queue consumer, requires DATABASE_URL + RENDER_WORKER_TOKEN)
+pnpm worker:render
 ```
