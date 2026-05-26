@@ -98,34 +98,6 @@ export function CreateProjectForm({
   );
 }
 
-export function DeleteProjectButton({
-  id,
-  slug,
-  action,
-}: {
-  id: string;
-  slug: string;
-  action: (id: string) => Promise<void>;
-}) {
-  const [pending, startTransition] = useTransition();
-  return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() => {
-        if (
-          !confirm(`Delete project "${slug}"?\nAll tiles, versions and jobs for it will cascade.`)
-        )
-          return;
-        startTransition(() => action(id));
-      }}
-      style={{ ...btnStyle, fontSize: 11 }}
-    >
-      {pending ? '…' : 'delete'}
-    </button>
-  );
-}
-
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

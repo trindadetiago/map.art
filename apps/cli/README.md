@@ -17,8 +17,8 @@ apps/cli/
   src/commands/
     db.ts              # mapart db status|migrate|reset|projects|models|seed|sql
     storage.ts         # mapart storage list|put|get|delete
-    generate.ts        # mapart generate --input … --prompt …
-    render.ts          # mapart render --lat … --lng …
+    models.ts          # mapart models generate
+    renderer.ts        # mapart renderer render
     tiles.ts           # mapart tiles for-point|bounds|for-bbox|for-circle
 ```
 

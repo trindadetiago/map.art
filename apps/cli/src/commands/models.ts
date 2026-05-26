@@ -4,8 +4,10 @@ import { env } from '@mapart/env';
 import { type ModelName, getModel } from '@mapart/models';
 import type { Command } from 'commander';
 
-export function registerGenerateCommands(parent: Command): void {
+export function registerModelsCommands(parent: Command): void {
   parent
+    .command('generate')
+    .description('Run a PNG through a model and write the output PNG')
     .requiredOption('--input <path>', 'input PNG path')
     .requiredOption('--prompt <text>', 'text prompt')
     .option('--reference <path>', 'optional reference PNG path')

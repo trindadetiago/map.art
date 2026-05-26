@@ -84,7 +84,8 @@ pnpm mapart db migrate                 # apply pending migrations (alias: pnpm d
 pnpm mapart db projects list
 pnpm mapart storage list
 pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
-pnpm mapart generate --input … --prompt … --out …
+pnpm mapart models generate --input … --prompt … --out …
+pnpm mapart renderer render --lat … --lng … --out …
 ```
 
 If you need a *new* command, add it under `apps/cli/src/commands/<domain>.ts` and register it in `apps/cli/bin/mapart.ts`. Don't add new `bin/` folders inside packages — packages stay library-only.
