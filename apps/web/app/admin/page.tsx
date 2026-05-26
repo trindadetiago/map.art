@@ -56,42 +56,31 @@ const tools: {
   },
 ];
 
+const STATUS_CLASS: Record<(typeof tools)[number]['status'], string> = {
+  ready: 'bg-emerald-100 text-neutral-700',
+  wip: 'bg-amber-100 text-neutral-700',
+  stub: 'bg-neutral-200 text-neutral-700',
+};
+
 export default function DebugIndex() {
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>debug</h1>
-      <p style={{ opacity: 0.7, maxWidth: 640 }}>
+      <h1 className="mt-0">debug</h1>
+      <p className="max-w-[640px] opacity-70">
         One panel per package. Use these to exercise individual modules in isolation.
       </p>
-      <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 12, maxWidth: 640 }}>
+      <ul className="grid max-w-[640px] list-none gap-3 p-0">
         {tools.map((t) => (
-          <li
-            key={t.slug}
-            style={{
-              padding: 16,
-              background: '#fff',
-              border: '1px solid #e5e5e5',
-              borderRadius: 8,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Link href={`/admin/${t.slug}`} style={{ fontWeight: 600, fontSize: 16 }}>
+          <li key={t.slug} className="rounded-lg border border-neutral-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <Link href={`/admin/${t.slug}`} className="text-base font-semibold">
                 {t.title}
               </Link>
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  background:
-                    t.status === 'ready' ? '#d1fae5' : t.status === 'wip' ? '#fef3c7' : '#e5e7eb',
-                  color: '#374151',
-                }}
-              >
+              <span className={`rounded px-1.5 py-0.5 text-[11px] ${STATUS_CLASS[t.status]}`}>
                 {t.status}
               </span>
             </div>
-            <p style={{ opacity: 0.7, margin: '4px 0 0', fontSize: 14 }}>{t.description}</p>
+            <p className="mt-1 mb-0 text-sm opacity-70">{t.description}</p>
           </li>
         ))}
       </ul>

@@ -23,18 +23,9 @@ export function DeleteProjectButton({
           return;
         startTransition(() => action(id));
       }}
-      style={btnStyle}
+      className="cursor-pointer rounded border border-neutral-300 bg-white px-3 py-1.5 text-[11px] hover:bg-neutral-50"
     >
       {pending ? '…' : 'delete'}
     </button>
   );
 }
-
-const btnStyle = {
-  fontSize: 11,
-  padding: '6px 12px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  background: '#fff',
-  cursor: 'pointer',
-};

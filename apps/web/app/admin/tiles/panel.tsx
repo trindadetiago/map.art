@@ -39,17 +39,14 @@ export function TilesPanel() {
   }, [mode, zoom, west, south, east, north, centerLat, centerLng, radiusMeters]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24 }}>
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
-      >
-        <div style={{ display: 'flex', gap: 8 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div className="grid grid-cols-[320px_1fr] gap-6">
+      <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-2.5">
+        <div className="flex gap-2">
+          <label className="flex items-center gap-1">
             <input type="radio" checked={mode === 'bbox'} onChange={() => setMode('bbox')} />
             bbox
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <label className="flex items-center gap-1">
             <input type="radio" checked={mode === 'circle'} onChange={() => setMode('circle')} />
             circle
           </label>
@@ -77,19 +74,11 @@ export function TilesPanel() {
           </>
         )}
 
-        <div
-          style={{
-            fontSize: 13,
-            marginTop: 12,
-            padding: 10,
-            background: '#f9fafb',
-            borderRadius: 4,
-          }}
-        >
+        <div className="mt-3 rounded bg-neutral-50 p-2.5 text-[13px]">
           <div>
             <strong>{result.tiles.length}</strong> tiles at z={zoom}
           </div>
-          <div style={{ fontFamily: 'monospace', fontSize: 12, opacity: 0.7 }}>
+          <div className="font-mono text-xs opacity-70">
             ~{result.width.toFixed(1)}m / tile at lat {result.lat.toFixed(3)}
           </div>
         </div>
@@ -128,21 +117,12 @@ function TileOverlay({
   highlight: Highlight;
 }) {
   if (tiles.length === 0) {
-    return <div style={{ opacity: 0.5 }}>no tiles — adjust params</div>;
+    return <div className="opacity-50">no tiles — adjust params</div>;
   }
 
   if (tiles.length > MAX_PREVIEW_TILES) {
     return (
-      <div
-        style={{
-          padding: 20,
-          background: '#fef3c7',
-          border: '1px solid #fde68a',
-          borderRadius: 4,
-          fontSize: 13,
-          maxWidth: 480,
-        }}
-      >
+      <div className="max-w-[480px] rounded border border-amber-200 bg-amber-100 p-5 text-[13px]">
         <strong>{tiles.length.toLocaleString()}</strong> tiles — too many to preview (cap{' '}
         {MAX_PREVIEW_TILES.toLocaleString()}). The math is fine; it's just the SVG renderer that
         would freeze. Reduce zoom or shrink the area.
@@ -180,13 +160,11 @@ function TileOverlay({
 
   return (
     <div>
-      <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>
-        tile coverage · blue = tiles, red = selection
-      </div>
+      <div className="mb-1 text-xs opacity-60">tile coverage · blue = tiles, red = selection</div>
       <svg
         width="100%"
         viewBox={`0 0 ${svgW} ${svgH}`}
-        style={{ border: '1px solid #ccc', background: '#fff', borderRadius: 4 }}
+        className="rounded border border-neutral-300 bg-white"
       >
         <title>Tile coverage preview</title>
         {tiles.map((t) => {
@@ -270,10 +248,8 @@ function Field({
   step?: number;
 }) {
   return (
-    <label
-      style={{ display: 'grid', gridTemplateColumns: '110px 1fr', alignItems: 'center', gap: 8 }}
-    >
-      <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{label}</span>
+    <label className="grid grid-cols-[110px_1fr] items-center gap-2">
+      <span className="font-mono text-[13px]">{label}</span>
       <input
         type="number"
         value={value}

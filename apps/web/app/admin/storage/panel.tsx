@@ -55,87 +55,60 @@ export function StoragePanel({ listAction, deleteAction, serveUrlPrefix }: Stora
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+    <div className="grid grid-cols-2 gap-6">
       <div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             refresh();
           }}
-          style={{ display: 'flex', gap: 8, marginBottom: 12 }}
+          className="mb-3 flex gap-2"
         >
           <input
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
             placeholder="prefix (empty = all)"
-            style={{ flex: 1, padding: 4 }}
+            className="flex-1 p-1"
           />
           <button type="submit" disabled={pending}>
             {pending ? '…' : 'list'}
           </button>
         </form>
 
-        {error && <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap' }}>{error}</pre>}
-        <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>
+        {error && <pre className="whitespace-pre-wrap text-red-600">{error}</pre>}
+        <div className="mb-1 text-xs opacity-60">
           {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
         </div>
-        <div
-          style={{ border: '1px solid #e5e5e5', borderRadius: 4, maxHeight: 520, overflow: 'auto' }}
-        >
-          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+        <div className="max-h-[520px] overflow-auto rounded border border-neutral-200">
+          <table className="w-full border-collapse text-[13px]">
             <tbody>
               {entries.map((e) => {
                 const isSelected = selected?.key === e.key;
                 return (
                   <tr
                     key={e.key}
-                    style={{
-                      background: isSelected ? '#eef2ff' : 'transparent',
-                      borderBottom: '1px solid #f3f4f6',
-                    }}
+                    className={`border-b border-neutral-100 ${isSelected ? 'bg-indigo-50' : ''}`}
                   >
-                    <td
-                      style={{
-                        padding: '6px 10px',
-                        fontFamily: 'monospace',
-                        wordBreak: 'break-all',
-                      }}
-                    >
+                    <td className="break-all px-2.5 py-1.5 font-mono">
                       <button
                         type="button"
                         onClick={() => setSelected(e)}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: 0,
-                          border: 0,
-                          background: 'transparent',
-                          font: 'inherit',
-                          cursor: 'pointer',
-                        }}
+                        className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left font-inherit text-inherit"
                       >
                         {e.key}
                       </button>
                     </td>
-                    <td
-                      style={{
-                        padding: '6px 10px',
-                        textAlign: 'right',
-                        whiteSpace: 'nowrap',
-                        opacity: 0.7,
-                      }}
-                    >
+                    <td className="whitespace-nowrap px-2.5 py-1.5 text-right opacity-70">
                       {(e.size / 1024).toFixed(1)} KB
                     </td>
-                    <td style={{ padding: '6px 10px' }}>
+                    <td className="px-2.5 py-1.5">
                       <button
                         type="button"
                         onClick={(ev) => {
                           ev.stopPropagation();
                           onDelete(e.key);
                         }}
-                        style={{ fontSize: 11 }}
+                        className="text-[11px]"
                       >
                         delete
                       </button>
@@ -145,7 +118,7 @@ export function StoragePanel({ listAction, deleteAction, serveUrlPrefix }: Stora
               })}
               {entries.length === 0 && !pending && (
                 <tr>
-                  <td style={{ padding: 12, opacity: 0.5 }}>(empty)</td>
+                  <td className="p-3 opacity-50">(empty)</td>
                 </tr>
               )}
             </tbody>
@@ -154,25 +127,19 @@ export function StoragePanel({ listAction, deleteAction, serveUrlPrefix }: Stora
       </div>
 
       <div>
-        <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>
-          preview{selected ? ` · ${selected.key}` : ''}
-        </div>
+        <div className="mb-1 text-xs opacity-60">preview{selected ? ` · ${selected.key}` : ''}</div>
         {selected ? (
           isImageKey(selected.key) ? (
             // biome-ignore lint/a11y/useAltText: debug surface
             <img
               src={`${serveUrlPrefix}${encodeURI(selected.key)}`}
-              style={{
-                maxWidth: '100%',
-                border: '1px solid #ccc',
-                imageRendering: 'pixelated',
-              }}
+              className="max-w-full border border-neutral-300 [image-rendering:pixelated]"
             />
           ) : (
-            <div style={{ opacity: 0.5 }}>non-image file · size {selected.size} bytes</div>
+            <div className="opacity-50">non-image file · size {selected.size} bytes</div>
           )
         ) : (
-          <div style={{ opacity: 0.5 }}>select a key to preview</div>
+          <div className="opacity-50">select a key to preview</div>
         )}
       </div>
     </div>

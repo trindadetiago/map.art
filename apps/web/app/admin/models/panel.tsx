@@ -103,20 +103,20 @@ export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPa
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 1fr', gap: 24 }}>
+    <div className="grid grid-cols-[320px_1fr_1fr] gap-6">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           run();
         }}
-        style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+        className="flex flex-col gap-2.5"
       >
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>model</span>
+        <label className="flex flex-col gap-1">
+          <span className="font-mono text-[13px]">model</span>
           <select
             value={model}
             onChange={(e) => setModel(e.target.value as ModelName)}
-            style={{ padding: 4 }}
+            className="p-1"
           >
             {availableModels.map((m) => (
               <option key={m} value={m}>
@@ -126,18 +126,18 @@ export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPa
           </select>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>prompt</span>
+        <label className="flex flex-col gap-1">
+          <span className="font-mono text-[13px]">prompt</span>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             rows={6}
-            style={{ fontFamily: 'inherit', fontSize: 13, padding: 6 }}
+            className="p-1.5 font-inherit text-[13px]"
           />
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>seed (optional)</span>
+        <label className="flex flex-col gap-1">
+          <span className="font-mono text-[13px]">seed (optional)</span>
           <input
             type="number"
             value={seed}
@@ -147,8 +147,8 @@ export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPa
           />
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>input PNG</span>
+        <label className="flex flex-col gap-1">
+          <span className="font-mono text-[13px]">input PNG</span>
           <input
             type="file"
             accept="image/png"
@@ -164,50 +164,36 @@ export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPa
               if (stored) setInputDataUrl(stored);
               else setError('No capture in localStorage yet.');
             }}
-            style={{ marginTop: 4 }}
+            className="mt-1"
           >
             use latest renderer capture
           </button>
         </label>
 
-        <button type="submit" disabled={pending || !inputDataUrl} style={{ marginTop: 8 }}>
+        <button type="submit" disabled={pending || !inputDataUrl} className="mt-2">
           {pending ? 'generating…' : 'generate'}
         </button>
 
-        {info && <div style={{ fontSize: 12, opacity: 0.7 }}>{info}</div>}
-        {error && (
-          <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12 }}>{error}</pre>
-        )}
+        {info && <div className="text-xs opacity-70">{info}</div>}
+        {error && <pre className="whitespace-pre-wrap text-xs text-red-600">{error}</pre>}
       </form>
 
       <div>
-        <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>input</div>
+        <div className="mb-1 text-xs opacity-60">input</div>
         {inputDataUrl ? (
           // biome-ignore lint/a11y/useAltText: debug surface
           <img
             src={inputDataUrl}
-            style={{
-              maxWidth: '100%',
-              border: '1px solid #ccc',
-              imageRendering: 'pixelated',
-            }}
+            className="max-w-full border border-neutral-300 [image-rendering:pixelated]"
           />
         ) : (
-          <div style={{ opacity: 0.5 }}>no input selected</div>
+          <div className="opacity-50">no input selected</div>
         )}
       </div>
 
       <div>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 4,
-            gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 12, opacity: 0.6 }}>output</span>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="text-xs opacity-60">output</span>
           {outputDataUrl && saveAction && (
             <button
               type="button"
@@ -226,14 +212,7 @@ export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPa
                   setSaving(false);
                 }
               }}
-              style={{
-                fontSize: 12,
-                padding: '4px 10px',
-                border: '1px solid #ccc',
-                borderRadius: 4,
-                background: '#fff',
-                cursor: 'pointer',
-              }}
+              className="cursor-pointer rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs hover:bg-neutral-50"
             >
               {saving ? 'saving…' : 'save'}
             </button>
@@ -244,41 +223,20 @@ export function ModelsPanel({ availableModels, runAction, saveAction }: ModelsPa
             {/* biome-ignore lint/a11y/useAltText: debug surface */}
             <img
               src={outputDataUrl}
-              style={{
-                maxWidth: '100%',
-                border: '1px solid #ccc',
-                imageRendering: 'pixelated',
-              }}
+              className="max-w-full border border-neutral-300 [image-rendering:pixelated]"
             />
             {textResponse && (
-              <pre
-                style={{
-                  marginTop: 8,
-                  fontSize: 12,
-                  background: '#f9fafb',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 4,
-                  padding: 8,
-                  whiteSpace: 'pre-wrap',
-                  opacity: 0.85,
-                }}
-              >
+              <pre className="mt-2 whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50 p-2 text-xs opacity-85">
                 {textResponse}
               </pre>
             )}
-            {saveInfo && (
-              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6, fontFamily: 'monospace' }}>
-                {saveInfo}
-              </div>
-            )}
+            {saveInfo && <div className="mt-1.5 font-mono text-xs opacity-75">{saveInfo}</div>}
             {saveError && (
-              <pre style={{ color: 'crimson', whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 6 }}>
-                {saveError}
-              </pre>
+              <pre className="mt-1.5 whitespace-pre-wrap text-xs text-red-600">{saveError}</pre>
             )}
           </>
         ) : (
-          <div style={{ opacity: 0.5 }}>press generate</div>
+          <div className="opacity-50">press generate</div>
         )}
       </div>
     </div>

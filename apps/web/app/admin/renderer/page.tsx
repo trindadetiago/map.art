@@ -54,8 +54,8 @@ function renderCaptureKey(p: RenderParams): string {
 export default function RendererDebugPage() {
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>renderer</h1>
-      <p style={{ opacity: 0.7 }}>
+      <h1 className="mt-0">renderer</h1>
+      <p className="opacity-70">
         Live Three.js scene streaming Google Photorealistic 3D Tiles. Adjust params, wait for tiles
         to stream in, then <strong>capture</strong> to grab the canvas as a PNG. Use{' '}
         <strong>save</strong> to persist into <code>/admin/storage</code>.

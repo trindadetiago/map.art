@@ -36,27 +36,20 @@ export default function StorageDebugPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 0 }}>
-        <h1 style={{ margin: 0 }}>storage</h1>
+      <div className="mt-0 flex items-baseline gap-3">
+        <h1 className="m-0">storage</h1>
         {consoleUrl && (
           <a
             href={consoleUrl}
             target="_blank"
             rel="noreferrer"
-            style={{
-              fontSize: 13,
-              padding: '4px 10px',
-              border: '1px solid currentColor',
-              borderRadius: 4,
-              opacity: 0.7,
-              textDecoration: 'none',
-            }}
+            className="rounded border border-current px-2.5 py-1 text-[13px] no-underline opacity-70 hover:opacity-100"
           >
             Open MinIO console ↗
           </a>
         )}
       </div>
-      <p style={{ opacity: 0.7, maxWidth: 640 }}>
+      <p className="max-w-[640px] opacity-70">
         {isS3 ? (
           <>
             Browse the S3 bucket <code>{bucket}</code>
