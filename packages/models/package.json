@@ -6,16 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "bin": {
-    "mapart-generate": "./bin/cli.ts"
-  },
-  "scripts": {
-    "cli": "tsx bin/cli.ts"
-  },
   "dependencies": {
     "@mapart/env": "workspace:*",
     "@mapart/shared": "workspace:*",
-    "commander": "^12.1.0",
     "sharp": "^0.33.5"
   }
 }

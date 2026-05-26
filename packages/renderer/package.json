@@ -6,16 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "bin": {
-    "mapart-render": "./bin/cli.ts"
-  },
-  "scripts": {
-    "cli": "tsx bin/cli.ts"
-  },
   "dependencies": {
     "@mapart/shared": "workspace:*",
     "3d-tiles-renderer": "^0.4.8",
-    "commander": "^12.1.0",
     "sharp": "^0.33.5",
     "three": "^0.169.0"
   },

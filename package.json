@@ -14,13 +14,9 @@
     "build": "pnpm -r build",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "render": "tsx packages/renderer/bin/cli.ts",
-    "generate": "tsx packages/models/bin/cli.ts",
-    "storage": "tsx packages/storage/bin/cli.ts",
-    "tiles": "tsx packages/tiles/bin/cli.ts",
-    "db": "tsx packages/db/bin/cli.ts",
+    "mapart": "tsx apps/cli/bin/mapart.ts",
     "db:generate": "pnpm --filter @mapart/db exec drizzle-kit generate",
-    "db:migrate": "tsx packages/db/bin/cli.ts migrate",
+    "db:migrate": "tsx apps/cli/bin/mapart.ts db migrate",
     "prepare": "husky"
   },
   "lint-staged": {

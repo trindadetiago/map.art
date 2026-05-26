@@ -102,4 +102,5 @@ fi
 
 bold "Done."
 echo "Next:"
-echo "  pnpm dev"
+echo "  pnpm dev          # boots web + worker via mprocs"
+echo "  pnpm mapart --help # explore the CLI"
