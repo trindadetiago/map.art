@@ -1,42 +1,22 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import '@mapart/env';
+import { writeFileSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { env } from '@mapart/env';
 import type { Page } from 'puppeteer';
-import { launchBrowser } from './chrome';
+import { VIEWPORT_PAD, launchBrowser } from './chrome';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-async function loadEnv(): Promise<string> {
-  const envPath = resolve(__dirname, '../../.env');
-  try {
-    const contents = readFileSync(envPath, 'utf8');
-    for (const line of contents.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const eq = trimmed.indexOf('=');
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const raw = trimmed.slice(eq + 1).trim();
-      const value = raw.replace(/^['"]|['"]$/g, '');
-      if (!process.env[key]) process.env[key] = value;
-    }
-  } catch {
-    // .env not found
-  }
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error('GOOGLE_MAPS_API_KEY not set in .env or environment');
-  return key;
-}
-
 const LOCATIONS = [
   { name: 'João Pessoa — Ponta do Seixas', lat: -7.1195, lng: -34.8286 },
-  { name: 'João Pessoa — Centro', lat: -7.1150, lng: -34.8800 },
-  { name: 'João Pessoa — Cabo Branco', lat: -7.1400, lng: -34.8200 },
-  { name: 'Recife — Boa Viagem', lat: -8.1200, lng: -34.9000 },
-  { name: 'São Paulo — Av Paulista', lat: -23.5615, lng: -46.6560 },
-  { name: 'Rio de Janeiro — Copacabana', lat: -22.9710, lng: -43.1823 },
-  { name: 'Nova York — Manhattan', lat: 40.7580, lng: -73.9855 },
+  { name: 'João Pessoa — Centro', lat: -7.115, lng: -34.88 },
+  { name: 'João Pessoa — Cabo Branco', lat: -7.14, lng: -34.82 },
+  { name: 'Recife — Boa Viagem', lat: -8.12, lng: -34.9 },
+  { name: 'São Paulo — Av Paulista', lat: -23.5615, lng: -46.656 },
+  { name: 'Rio de Janeiro — Copacabana', lat: -22.971, lng: -43.1823 },
+  { name: 'Nova York — Manhattan', lat: 40.758, lng: -73.9855 },
   { name: 'Paris — Torre Eiffel', lat: 48.8584, lng: 2.2945 },
 ];
 
@@ -49,6 +29,8 @@ interface TileRender {
   error?: string;
 }
 
+const SPIKE_SIZE = 1024;
+
 async function renderOne(
   page: Page,
   baseUrl: string,
@@ -56,20 +38,14 @@ async function renderOne(
   outputDir: string,
 ): Promise<TileRender> {
   const started = Date.now();
-  const url = `${baseUrl}?lat=${loc.lat}&lng=${loc.lng}&pitch=60&yaw=0&zoom=18&size=1024`;
+  const url = `${baseUrl}?lat=${loc.lat}&lng=${loc.lng}&pitch=60&yaw=0&zoom=18&size=${SPIKE_SIZE}&token=${process.env.RENDER_WORKER_TOKEN ?? 'dev-token-placeholder'}`;
 
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    await page.waitForFunction(
-      () => window.__sceneReady === true,
-      { timeout: 10000 },
-    );
+    await page.waitForFunction(() => window.__sceneReady === true, { timeout: 10000 });
 
-    await page.waitForFunction(
-      () => window.__scene?.isReady?.() === true,
-      { timeout: 45000 },
-    );
+    await page.waitForFunction(() => window.__scene?.isReady?.() === true, { timeout: 45000 });
 
     await page.evaluate(() => {
       return window.__scene?.waitForSettled?.({ settleMs: 1000, timeoutMs: 90000 });
@@ -77,11 +53,6 @@ async function renderOne(
 
     const dataUrl = await page.evaluate(() => {
       return window.__scene?.capture?.() ?? null;
-    });
-
-    const dataUrl = await page.evaluate(() => {
-      const s = (window as any).__scene as { capture?: () => string | null } | undefined;
-      return s?.capture?.() ?? null;
     });
 
     if (!dataUrl || !dataUrl.startsWith('data:image/png')) {
@@ -106,8 +77,7 @@ async function renderOne(
 }
 
 async function main() {
-  const apiKey = await loadEnv();
-  const baseUrl = process.env.RENDER_WORKER_URL ?? 'http://localhost:3210/render-worker';
+  const baseUrl = env.renderWorkerUrl ?? 'http://localhost:3210/render-worker';
   const outputDir = resolve(__dirname, '../../data/spike-renders');
 
   await mkdir(outputDir, { recursive: true });
@@ -120,7 +90,7 @@ async function main() {
   const browser = await launchBrowser();
 
   const page = await browser.newPage();
-  await page.setViewport({ width: 1200, height: 1200 });
+  await page.setViewport({ width: SPIKE_SIZE + VIEWPORT_PAD, height: SPIKE_SIZE + VIEWPORT_PAD });
 
   const results: TileRender[] = [];
   const overallStart = Date.now();
@@ -139,7 +109,7 @@ async function main() {
   const succeeded = results.filter((r) => !r.error);
   const failed = results.filter((r) => r.error);
 
-  console.log(`\n=== Summary ===`);
+  console.log('\n=== Summary ===');
   console.log(`Total: ${results.length} | OK: ${succeeded.length} | Failed: ${failed.length}`);
   console.log(`Overall time: ${(overallMs / 1000).toFixed(1)}s`);
 
@@ -147,7 +117,9 @@ async function main() {
     const avg = succeeded.reduce((s, r) => s + r.durationMs, 0) / succeeded.length;
     const min = Math.min(...succeeded.map((r) => r.durationMs));
     const max = Math.max(...succeeded.map((r) => r.durationMs));
-    console.log(`Per-tile: avg ${(avg / 1000).toFixed(1)}s | min ${(min / 1000).toFixed(1)}s | max ${(max / 1000).toFixed(1)}s`);
+    console.log(
+      `Per-tile: avg ${(avg / 1000).toFixed(1)}s | min ${(min / 1000).toFixed(1)}s | max ${(max / 1000).toFixed(1)}s`,
+    );
   }
 
   const reportPath = resolve(outputDir, 'report.json');

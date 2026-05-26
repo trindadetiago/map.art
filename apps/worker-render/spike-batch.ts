@@ -1,27 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import '@mapart/env';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { env } from '@mapart/env';
 import type { Browser } from 'puppeteer';
-import { launchBrowser, type RenderGpuMode } from './chrome';
+import { type RenderGpuMode, VIEWPORT_PAD, launchBrowser } from './chrome';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-async function loadEnv(): Promise<void> {
-  const envPath = resolve(__dirname, '../../.env');
-  try {
-    const contents = readFileSync(envPath, 'utf8');
-    for (const line of contents.split('\n')) {
-      if (!line.trim() || line.trim().startsWith('#')) continue;
-      const eq = line.indexOf('=');
-      if (eq === -1) continue;
-      const key = line.slice(0, eq).trim();
-      const value = line.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '');
-      if (!process.env[key]) process.env[key] = value;
-    }
-  } catch {}
-  if (!process.env.GOOGLE_MAPS_API_KEY) throw new Error('GOOGLE_MAPS_API_KEY not set');
-};
 
 interface TileTiming {
   index: number;
@@ -68,12 +53,12 @@ async function renderBatch(
 
   // biome-ignore lint/style/noNonNullAssertion: LOCATIONS is always length TILES
   const seed = LOCATIONS[0]!;
-  const seedUrl = `${baseUrl}?lat=${seed.lat}&lng=${seed.lng}&pitch=${PITCH}&yaw=${YAW}&zoom=${ZOOM}&size=${size}`;
+  const seedUrl = `${baseUrl}?lat=${seed.lat}&lng=${seed.lng}&pitch=${PITCH}&yaw=${YAW}&zoom=${ZOOM}&size=${size}&token=${process.env.RENDER_WORKER_TOKEN ?? 'dev-token-placeholder'}`;
   const page = await browser.newPage();
   const timings: TileTiming[] = [];
 
   try {
-    await page.setViewport({ width: size + 100, height: size + 100 });
+    await page.setViewport({ width: size + VIEWPORT_PAD, height: size + VIEWPORT_PAD });
     await page.goto(seedUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForFunction(() => window.__sceneReady === true, { timeout: 10000 });
     await page.waitForFunction(() => window.__scene?.isReady?.() === true, { timeout: 30000 });
@@ -90,7 +75,14 @@ async function renderBatch(
         });
       } else {
         await page.evaluate(
-          ({ lat, lng, pitch, yaw, zoom, s }: { lat: number; lng: number; pitch: number; yaw: number; zoom: number; s: number }) => {
+          ({
+            lat,
+            lng,
+            pitch,
+            yaw,
+            zoom,
+            s,
+          }: { lat: number; lng: number; pitch: number; yaw: number; zoom: number; s: number }) => {
             window.__scene?.updateParams?.({ center: { lat, lng }, pitch, yaw, zoom, size: s });
             return window.__scene?.waitForSettled?.({ settleMs: 1000, timeoutMs: 60000 });
           },
@@ -146,49 +138,68 @@ function formatTime(ms: number): string {
   return `${m}m${sec}s`;
 }
 
-function project(nTiles: number, firstMs: number, restAvgMs: number): { seconds: number; formatted: string } {
+function project(
+  nTiles: number,
+  firstMs: number,
+  restAvgMs: number,
+): { seconds: number; formatted: string } {
   const totalMs = firstMs + (nTiles - 1) * restAvgMs;
   return { seconds: totalMs / 1000, formatted: formatTime(totalMs) };
 }
 
 async function main() {
-  await loadEnv();
-
-  const baseUrl = process.env.RENDER_WORKER_URL ?? 'http://localhost:3210/render-worker';
+  const baseUrl = env.renderWorkerUrl ?? 'http://localhost:3210/render-worker';
   const outputDir = resolve(__dirname, '../../data/spike-renders');
   await mkdir(outputDir, { recursive: true });
 
   const SIZE = 1024;
   console.log(`=== Batch Test: ${TILES} tiles (${GRID}×${GRID} grid) ===\n`);
 
-  console.log('Rodando CPU (SwiftShader)...');
+  console.log('Running CPU (SwiftShader)...');
   const cpuBrowser = await launchBrowser('cpu');
   const cpu = await renderBatch(cpuBrowser, baseUrl, SIZE, outputDir, 'cpu');
   await cpuBrowser.close();
   console.log('');
 
-  console.log('Rodando GPU (Metal)...');
+  console.log('Running GPU (Metal)...');
   const gpuBrowser = await launchBrowser('gpu');
   const gpu = await renderBatch(gpuBrowser, baseUrl, SIZE, outputDir, 'gpu');
   await gpuBrowser.close();
 
-  console.log('\n' + '='.repeat(60));
+  console.log(`\n${'='.repeat(60)}`);
   console.log('               CPU vs GPU — 100 tiles em batch');
   console.log('='.repeat(60));
   console.log('');
 
   console.log(''.padEnd(30), 'CPU (SwiftShader)'.padEnd(22), 'GPU (Metal)');
   console.log('─'.repeat(74));
-  console.log('Primeiro tile (setup Three.js)'.padEnd(30), formatTime(cpu.firstMs).padEnd(22), formatTime(gpu.firstMs));
-  console.log('Média tiles seguintes'.padEnd(30), formatTime(cpu.restAvgMs).padEnd(22), formatTime(gpu.restAvgMs));
-  console.log('Total 100 tiles'.padEnd(30), formatTime(cpu.totalMs).padEnd(22), formatTime(gpu.totalMs));
+  console.log(
+    'Primeiro tile (setup Three.js)'.padEnd(30),
+    formatTime(cpu.firstMs).padEnd(22),
+    formatTime(gpu.firstMs),
+  );
+  console.log(
+    'Média tiles seguintes'.padEnd(30),
+    formatTime(cpu.restAvgMs).padEnd(22),
+    formatTime(gpu.restAvgMs),
+  );
+  console.log(
+    'Total 100 tiles'.padEnd(30),
+    formatTime(cpu.totalMs).padEnd(22),
+    formatTime(gpu.totalMs),
+  );
   console.log('');
 
   console.log('── Projeção pra 1.000, 5.000 e 9.000 tiles ──\n');
 
   const targets = [1000, 5000, 9000];
 
-  console.log('Tiles'.padEnd(12), 'CPU (SwiftShader)'.padEnd(18), 'GPU (Metal)'.padEnd(18), 'Diferença');
+  console.log(
+    'Tiles'.padEnd(12),
+    'CPU (SwiftShader)'.padEnd(18),
+    'GPU (Metal)'.padEnd(18),
+    'Diferença',
+  );
   console.log('─'.repeat(60));
   for (const n of targets) {
     const cpuP = project(n, cpu.firstMs, cpu.restAvgMs);

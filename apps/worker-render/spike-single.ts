@@ -1,33 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import '@mapart/env';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { env } from '@mapart/env';
 import type { Browser } from 'puppeteer';
-import { launchBrowser, type RenderGpuMode } from './chrome';
+import { type RenderGpuMode, VIEWPORT_PAD, launchBrowser } from './chrome';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-async function loadEnv(): Promise<string> {
-  const envPath = resolve(__dirname, '../../.env');
-  try {
-    const contents = readFileSync(envPath, 'utf8');
-    for (const line of contents.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const eq = trimmed.indexOf('=');
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const raw = trimmed.slice(eq + 1).trim();
-      const value = raw.replace(/^['"]|['"]$/g, '');
-      if (!process.env[key]) process.env[key] = value;
-    }
-  } catch {
-    // .env not found, using process.env directly
-  }
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error('GOOGLE_MAPS_API_KEY not set in .env or environment');
-  return key;
-}
 
 interface PhaseTiming {
   navigationMs: number;
@@ -57,24 +36,18 @@ async function renderTile(
   mode: RenderGpuMode,
   outputDir: string,
 ): Promise<TileResult> {
-  const url = `${baseUrl}?lat=${lat}&lng=${lng}&pitch=${pitch}&yaw=${yaw}&zoom=${zoom}&size=${size}`;
+  const url = `${baseUrl}?lat=${lat}&lng=${lng}&pitch=${pitch}&yaw=${yaw}&zoom=${zoom}&size=${size}&token=${process.env.RENDER_WORKER_TOKEN ?? 'dev-token-placeholder'}`;
   const page = await browser.newPage();
 
   try {
     const t0 = Date.now();
 
-    await page.setViewport({ width: size + 100, height: size + 100 });
+    await page.setViewport({ width: size + VIEWPORT_PAD, height: size + VIEWPORT_PAD });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     const t1 = Date.now();
 
-    await page.waitForFunction(
-      () => window.__sceneReady === true,
-      { timeout: 10000 },
-    );
-    await page.waitForFunction(
-      () => window.__scene?.isReady?.() === true,
-      { timeout: 30000 },
-    );
+    await page.waitForFunction(() => window.__sceneReady === true, { timeout: 10000 });
+    await page.waitForFunction(() => window.__scene?.isReady?.() === true, { timeout: 30000 });
     const t2 = Date.now();
 
     await page.evaluate(() => {
@@ -94,7 +67,10 @@ async function renderTile(
     const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
     const buf = Buffer.from(base64, 'base64');
     const suffix = mode === 'gpu' ? '_gpu' : '_cpu';
-    const pngPath = resolve(outputDir, `tile_${lat.toFixed(4)}_${lng.toFixed(4)}_p${pitch}_y${yaw}${suffix}.png`);
+    const pngPath = resolve(
+      outputDir,
+      `tile_${lat.toFixed(4)}_${lng.toFixed(4)}_p${pitch}_y${yaw}${suffix}.png`,
+    );
     await writeFile(pngPath, buf);
 
     return {
@@ -112,20 +88,20 @@ async function renderTile(
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     console.error(`  [${mode}] FAILED: ${error}`);
-    return { mode, phases: { navigationMs: 0, sceneReadyMs: 0, tilesSettledMs: 0, captureMs: 0, totalMs: 0 }, pngPath: '', pngBytes: 0, error };
+    return {
+      mode,
+      phases: { navigationMs: 0, sceneReadyMs: 0, tilesSettledMs: 0, captureMs: 0, totalMs: 0 },
+      pngPath: '',
+      pngBytes: 0,
+      error,
+    };
   } finally {
     await page.close();
   }
 }
 
-function formatPhase(label: string, ms: number): string {
-  return `${label}: ${ms}ms`.padEnd(30);
-}
-
 async function main() {
-  await loadEnv();
-
-  const baseUrl = process.env.RENDER_WORKER_URL ?? 'http://localhost:3210/render-worker';
+  const baseUrl = env.renderWorkerUrl ?? 'http://localhost:3210/render-worker';
   const outputDir = resolve(__dirname, '../../data/spike-renders');
   await mkdir(outputDir, { recursive: true });
 
@@ -139,11 +115,33 @@ async function main() {
   console.log('=== Render Worker — CPU vs GPU Comparison ===\n');
 
   const cpuBrowser = await launchBrowser('cpu');
-  const cpuResult = await renderTile(cpuBrowser, baseUrl, LAT, LNG, PITCH, YAW, ZOOM, SIZE, 'cpu', outputDir);
+  const cpuResult = await renderTile(
+    cpuBrowser,
+    baseUrl,
+    LAT,
+    LNG,
+    PITCH,
+    YAW,
+    ZOOM,
+    SIZE,
+    'cpu',
+    outputDir,
+  );
   await cpuBrowser.close();
 
   const gpuBrowser = await launchBrowser('gpu');
-  const gpuResult = await renderTile(gpuBrowser, baseUrl, LAT, LNG, PITCH, YAW, ZOOM, SIZE, 'gpu', outputDir);
+  const gpuResult = await renderTile(
+    gpuBrowser,
+    baseUrl,
+    LAT,
+    LNG,
+    PITCH,
+    YAW,
+    ZOOM,
+    SIZE,
+    'gpu',
+    outputDir,
+  );
   await gpuBrowser.close();
 
   const results = [cpuResult, gpuResult];
@@ -152,7 +150,13 @@ async function main() {
   console.log('Phase'.padEnd(30), 'CPU (SwiftShader)'.padEnd(22), 'GPU (Metal)'.padEnd(22));
   console.log('-'.repeat(74));
 
-  const phases: (keyof PhaseTiming)[] = ['navigationMs', 'sceneReadyMs', 'tilesSettledMs', 'captureMs', 'totalMs'];
+  const phases: (keyof PhaseTiming)[] = [
+    'navigationMs',
+    'sceneReadyMs',
+    'tilesSettledMs',
+    'captureMs',
+    'totalMs',
+  ];
   const phaseLabels: Record<string, string> = {
     navigationMs: 'page load',
     sceneReadyMs: 'scene init',
