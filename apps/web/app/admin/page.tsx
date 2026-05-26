@@ -1,89 +1,199 @@
-import Link from 'next/link';
+import { Card, Metric } from '@/components/admin/card';
+import {
+  IconCamera,
+  IconDatabase,
+  IconEnv,
+  IconGrid,
+  IconLayers,
+  IconMap,
+  IconSparkles,
+  IconStorage,
+  IconWorkflow,
+} from '@/components/admin/icons';
+import { Section } from '@/components/admin/section';
+import { repos } from '@mapart/db';
+import { env, getEnvStatus } from '@mapart/env';
+import { getStorage } from '@mapart/storage';
 
-const tools: {
-  slug: string;
-  title: string;
-  description: string;
-  status: 'stub' | 'wip' | 'ready';
-}[] = [
-  {
-    slug: 'env',
-    title: 'env',
-    description: 'Status of environment variables (set / unset / default). Values never shown.',
-    status: 'ready',
-  },
-  {
-    slug: 'renderer',
-    title: 'renderer',
-    description:
-      'Live Three.js scene streaming Google Photorealistic 3D Tiles. Tune params, capture canvas to PNG.',
-    status: 'ready',
-  },
-  {
-    slug: 'models',
-    title: 'models',
-    description:
-      'Run an input PNG through a model (stub or nano-banana) with a prompt. Use "latest capture" to chain from the renderer.',
-    status: 'ready',
-  },
-  {
-    slug: 'storage',
-    title: 'storage',
-    description:
-      'Browse persisted PNGs written by the renderer/models panels. Preview, delete, find by prefix.',
-    status: 'ready',
-  },
-  {
-    slug: 'db',
-    title: 'db',
-    description:
-      'Postgres+PostGIS status, row counts, model registry, and projects CRUD. First DB-backed screen.',
-    status: 'ready',
-  },
-  {
-    slug: 'tiles',
-    title: 'tiles',
-    description:
-      'Web-mercator tile math. Visualize which (x, y) tiles cover a bbox or circle at a given zoom.',
-    status: 'ready',
-  },
-  {
-    slug: 'pipeline',
-    title: 'pipeline',
-    description:
-      'Generation-strategy research. Phase 1 renders N tiles; Phase 2 runs a strategy over them and stitches.',
-    status: 'wip',
-  },
-];
+export const dynamic = 'force-dynamic';
 
-const STATUS_CLASS: Record<(typeof tools)[number]['status'], string> = {
-  ready: 'bg-emerald-100 text-neutral-700',
-  wip: 'bg-amber-100 text-neutral-700',
-  stub: 'bg-neutral-200 text-neutral-700',
-};
+interface Stats {
+  projects: number;
+  recentProjects: { id: string; slug: string; name: string }[];
+  tiles: number;
+  tileVersions: number;
+  jobs: number;
+  models: number;
+  pgVersion: string | null;
+  postgisInstalled: boolean;
+  storageFiles: number;
+  storageBytes: number;
+  envSet: number;
+  envDefault: number;
+  envUnset: number;
+}
 
-export default function DebugIndex() {
+async function loadStats(): Promise<Stats> {
+  const fallback: Stats = {
+    projects: 0,
+    recentProjects: [],
+    tiles: 0,
+    tileVersions: 0,
+    jobs: 0,
+    models: 0,
+    pgVersion: null,
+    postgisInstalled: false,
+    storageFiles: 0,
+    storageBytes: 0,
+    envSet: 0,
+    envDefault: 0,
+    envUnset: 0,
+  };
+
+  const envStatus = getEnvStatus();
+  fallback.envSet = envStatus.filter((e) => e.isSet && !e.usingDefault).length;
+  fallback.envDefault = envStatus.filter((e) => e.usingDefault).length;
+  fallback.envUnset = envStatus.filter((e) => !e.isSet).length;
+
+  try {
+    const [projectsList, counts, pg] = await Promise.all([
+      repos.listProjects(),
+      repos.getTableCounts(),
+      repos.getPostgresInfo(),
+    ]);
+    fallback.projects = counts.projects;
+    fallback.tiles = counts.tiles;
+    fallback.tileVersions = counts.tileVersions;
+    fallback.jobs = counts.jobs;
+    fallback.models = counts.models;
+    fallback.recentProjects = projectsList.slice(0, 3).map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+    }));
+    fallback.pgVersion = shortPgVersion(pg.version);
+    fallback.postgisInstalled = pg.postgisVersion !== null;
+  } catch {
+    // DB not running — keep zeros, don't fail the page.
+  }
+
+  try {
+    const entries = await getStorage().list('');
+    fallback.storageFiles = entries.length;
+    fallback.storageBytes = entries.reduce((acc, e) => acc + e.size, 0);
+  } catch {
+    // Storage not configured — keep zeros.
+  }
+
+  return fallback;
+}
+
+export default async function AdminIndex() {
+  const s = await loadStats();
+
   return (
     <div>
-      <h1 className="mt-0">debug</h1>
-      <p className="max-w-[640px] opacity-70">
-        One panel per package. Use these to exercise individual modules in isolation.
-      </p>
-      <ul className="grid max-w-[640px] list-none gap-3 p-0">
-        {tools.map((t) => (
-          <li key={t.slug} className="rounded-lg border border-neutral-200 bg-white p-4">
-            <div className="flex items-center gap-2">
-              <Link href={`/admin/${t.slug}`} className="text-base font-semibold">
-                {t.title}
-              </Link>
-              <span className={`rounded px-1.5 py-0.5 text-[11px] ${STATUS_CLASS[t.status]}`}>
-                {t.status}
-              </span>
-            </div>
-            <p className="mt-1 mb-0 text-sm opacity-70">{t.description}</p>
-          </li>
-        ))}
-      </ul>
+      <Section label="Projects" description="state of the work">
+        <div className="grid grid-cols-4 gap-4">
+          <Card
+            icon={IconLayers}
+            label="Total projects"
+            href="/admin/projects"
+            className="col-span-2 row-span-2 min-h-[280px]"
+          >
+            <Metric
+              value={s.projects}
+              caption={
+                s.recentProjects.length > 0
+                  ? `Latest: ${s.recentProjects.map((p) => p.slug).join(' · ')}`
+                  : 'No projects yet'
+              }
+            />
+          </Card>
+          <Card icon={IconGrid} label="Tile rows">
+            <Metric value={s.tiles.toLocaleString()} caption="seeded across all projects" />
+          </Card>
+          <Card icon={IconSparkles} label="Tile versions">
+            <Metric value={s.tileVersions.toLocaleString()} caption="rendered + stylized" />
+          </Card>
+          <Card icon={IconWorkflow} label="Jobs">
+            <Metric value={s.jobs.toLocaleString()} caption="render / stylize queue" />
+          </Card>
+          <Card icon={IconSparkles} label="Models">
+            <Metric value={s.models} caption="registered in db" />
+          </Card>
+        </div>
+      </Section>
+
+      <Section label="Infra" description="data + config">
+        <div className="grid grid-cols-3 gap-4">
+          <Card
+            icon={IconDatabase}
+            label="Database"
+            href="/admin/db"
+            badge={s.pgVersion ? 'live' : 'down'}
+          >
+            <Metric
+              value={s.pgVersion ?? '—'}
+              caption={s.postgisInstalled ? 'with PostGIS' : 'PostGIS missing'}
+            />
+          </Card>
+          <Card icon={IconStorage} label="Storage" href="/admin/storage" badge={env.storageBackend}>
+            <Metric
+              value={s.storageFiles.toLocaleString()}
+              caption={`${formatBytes(s.storageBytes)} across all blobs`}
+            />
+          </Card>
+          <Card
+            icon={IconEnv}
+            label="Env"
+            href="/admin/env"
+            badge={`${s.envSet + s.envDefault}/${s.envSet + s.envDefault + s.envUnset}`}
+          >
+            <Metric
+              value={s.envSet + s.envDefault}
+              caption={`${s.envDefault} default · ${s.envUnset} unset`}
+            />
+          </Card>
+        </div>
+      </Section>
+
+      <Section label="Packages" description="tooling per module">
+        <div className="grid grid-cols-4 gap-4">
+          <Card icon={IconMap} label="Tiles" href="/admin/tiles">
+            <Caption>Web-mercator tile math. Pick an area, see the tile coverage at z.</Caption>
+          </Card>
+          <Card icon={IconSparkles} label="Models" href="/admin/models">
+            <Caption>Run an input PNG through an image-edit model with a prompt.</Caption>
+          </Card>
+          <Card icon={IconCamera} label="Renderer" href="/admin/renderer">
+            <Caption>Live Three.js scene streaming Google Photorealistic 3D Tiles.</Caption>
+          </Card>
+          <Card icon={IconWorkflow} label="Pipeline" href="/admin/pipeline" badge="wip">
+            <Caption>
+              Generation strategies. Phase 1 renders N tiles, Phase 2 stylizes & stitches.
+            </Caption>
+          </Card>
+        </div>
+      </Section>
     </div>
   );
+}
+
+function Caption({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-3 mb-0 max-w-[28ch] text-[13px] leading-snug text-stone-500">{children}</p>
+  );
+}
+
+function shortPgVersion(v: string): string {
+  const m = v.match(/PostgreSQL\s+(\d+(?:\.\d+)?)/i);
+  return m ? `pg ${m[1]}` : v.split(' ').slice(0, 2).join(' ');
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
