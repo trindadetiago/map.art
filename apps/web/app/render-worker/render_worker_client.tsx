@@ -24,13 +24,16 @@ declare global {
 export function RenderWorkerClient({ apiKey, lat, lng, pitch, yaw, zoom, size }: Props) {
   const sceneRef = useRef<SceneHandle>(null);
 
-  const params: RenderParams = useMemo(() => ({
-    center: { lat, lng },
-    pitch,
-    yaw,
-    size,
-    zoom,
-  }), [lat, lng, pitch, yaw, size, zoom]);
+  const params: RenderParams = useMemo(
+    () => ({
+      center: { lat, lng },
+      pitch,
+      yaw,
+      size,
+      zoom,
+    }),
+    [lat, lng, pitch, yaw, size, zoom],
+  );
 
   useEffect(() => {
     window.__scene = sceneRef.current;
