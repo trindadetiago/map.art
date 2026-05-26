@@ -9,7 +9,6 @@
   "dependencies": {
     "@mapart/shared": "workspace:*",
     "3d-tiles-renderer": "^0.4.8",
-    "sharp": "^0.33.5",
     "three": "^0.169.0"
   },
   "devDependencies": {

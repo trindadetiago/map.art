@@ -19,7 +19,7 @@ That boundary is load-bearing. Don't add React or Next-isms inside `packages/*`.
 
 | Path | What | Runtime shape |
 |---|---|---|
-| `apps/web` | Next.js 15 (App Router). Main UI on `:3210`. Admin/inspector pages at `/admin/*` (one per package: db, storage, env, models, renderer, tiles, pipeline). | long-running service |
+| `apps/web` | Next.js 15 (App Router). Main UI on `:3210`. Admin pages at `/admin/*` (projects, storage, env, models, renderer, tiles, pipeline). Database has no panel — its card on the dashboard links to Drizzle Studio at https://local.drizzle.studio. | long-running service |
 | `apps/worker` | Background job process. **Placeholder today** — ticks every 5s, logs heartbeat. Eventually consumes from the Postgres `jobs` table (render/stylize). | long-running service |
 | `apps/cli` | `mapart` binary. Single entry, subcommands per domain. Imports from `packages/*`. | short-lived tool |
 
@@ -33,9 +33,9 @@ All pure Node libraries. No React. Tree-shake-friendly imports.
 |---|---|
 | `@mapart/db` | Drizzle ORM schema + repos + migrations. Postgres + PostGIS. Sub-paths: `./schema`, `./repos`. |
 | `@mapart/env` | Typed env loader. Reads `.env`, validates per-key, exposes `env` + `requireEnv()`. Schema in `src/schema.ts`. |
-| `@mapart/models` | Image-edit model clients (`stub`, `nano-banana`/Gemini, `openai`). Common `ModelClient` interface. Factory: `getModel(name, opts)`. |
+| `@mapart/models` | OpenAI image-edit clients (`gpt-image-1.5`, `gpt-image-2`) behind a common `ModelClient` interface. Factory: `getModel(name, opts)`. Requires `OPENAI_API_KEY`. |
 | `@mapart/pipeline` | Generation-strategy harness — turns N rendered tiles into N stylized tiles. Strategy modules under `src/strategies/`. |
-| `@mapart/renderer` | Three.js + Google 3D Tiles tile renderer. Server-side `renderTile()` is a simple SVG placeholder (sharp-based, useful for dev/tests); real Three.js rendering happens client-side via `<Scene>` (lives in `apps/web/components/Scene.tsx`, not in this package). |
+| `@mapart/renderer` | Shared Three.js + Google 3D Tiles helpers. Exports `createTilesRenderer(apiKey, center)` (configured TilesRenderer with auth + reorientation + compression + update-on-change plugins) plus camera-math helpers (`positionCamera`, `applyFrustum`). Consumed by `apps/web/components/scene.tsx` today; designed to be the shared core for a future `apps/worker-render`. |
 | `@mapart/shared` | Shared types + small pure utilities used across packages. |
 | `@mapart/storage` | Blob storage. Two backends: `local` (`<repo>/data/`) or `s3` (MinIO/AWS). Selected by `STORAGE_BACKEND`. Singleton via `getStorage()`. |
 | `@mapart/tiles` | Web-mercator tile math (point/bbox/circle/polygon → tiles, tile → bounds/center/WKT). |
@@ -85,7 +85,6 @@ pnpm mapart db projects list
 pnpm mapart storage list
 pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 pnpm mapart models generate --input … --prompt … --out …
-pnpm mapart renderer render --lat … --lng … --out …
 ```
 
 If you need a *new* command, add it under `apps/cli/src/commands/<domain>.ts` and register it in `apps/cli/bin/mapart.ts`. Don't add new `bin/` folders inside packages — packages stay library-only.
