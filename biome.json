@@ -36,6 +36,14 @@
           "style": { "noNonNullAssertion": "off" }
         }
       }
+    },
+    {
+      "include": ["apps/web/components/admin/icons.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": { "noSvgWithoutTitle": "off" }
+        }
+      }
     }
   ]
 }
