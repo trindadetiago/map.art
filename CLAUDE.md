@@ -64,12 +64,12 @@ Local services for dev. Root `docker-compose.yml` uses `include:` to pull both i
 ```bash
 pnpm install
 pnpm run-setup    # one-time: Docker, services, .env, migrations
-pnpm dev          # mprocs TUI: apps/web (:3210) + apps/worker
+pnpm dev          # mprocs TUI: apps/web (:3210) + apps/worker + drizzle studio (:4983)
 ```
 
 Inside the TUI: `j`/`k` switch procs, `r` restart, `x` stop, `q` quit. Each proc also streams to `.logs/<name>.log` for searching from another terminal (`grep ERROR .logs/web.log`, `tail -f .logs/worker.log`).
 
-Escape hatches (no TUI): `pnpm dev:web` or `pnpm dev:worker` standalone.
+Escape hatches (no TUI): `pnpm dev:web`, `pnpm dev:worker`, or `pnpm dev:studio` standalone. Drizzle Studio prints a URL (usually https://local.drizzle.studio) that proxies to the local server — open it in a browser to browse rows.
 
 ---
 

@@ -46,6 +46,19 @@ export function Card({ icon: Icon, label, href, badge, className = '', children 
   const classes = `group relative flex flex-col rounded-2xl border border-stone-200/70 bg-white p-6 transition hover:border-stone-300 ${className}`;
 
   if (href) {
+    const isExternal = /^https?:\/\//.test(href);
+    if (isExternal) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${classes} no-underline`}
+        >
+          {inner}
+        </a>
+      );
+    }
     return (
       <Link href={href} className={`${classes} no-underline`}>
         {inner}
