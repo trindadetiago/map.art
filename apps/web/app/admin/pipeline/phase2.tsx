@@ -26,7 +26,7 @@ export function Phase2({
   runStrategyAction: PipelinePanelProps['runStrategyAction'];
 }) {
   const [strategyName, setStrategyName] = useState(strategies[0]?.name ?? 'independent');
-  const [modelName, setModelName] = useState(availableModels[0] ?? 'stub');
+  const [modelName, setModelName] = useState(availableModels[0] ?? 'gpt-image-1.5');
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<StrategyRunResult | null>(null);

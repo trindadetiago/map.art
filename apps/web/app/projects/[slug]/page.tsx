@@ -84,8 +84,8 @@ async function generateTileAction(
       return { ok: false, error: `rendered tile missing: ${renderedKey}` };
     }
     const input = await storage.get(renderedKey);
-    const apiKey = modelName.startsWith('gpt-image') ? env.openaiApiKey : env.geminiApiKey;
-    const model = getModel(modelName, apiKey ? { apiKey } : {});
+    if (!env.openaiApiKey) return { ok: false, error: 'OPENAI_API_KEY not set' };
+    const model = getModel(modelName, { apiKey: env.openaiApiKey });
     const result = await model.generate({ input, prompt });
     const key = generatedTileKey(projectId, col, row);
     await storage.put(key, result.image);

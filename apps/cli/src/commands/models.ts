@@ -11,7 +11,7 @@ export function registerModelsCommands(parent: Command): void {
     .requiredOption('--input <path>', 'input PNG path')
     .requiredOption('--prompt <text>', 'text prompt')
     .option('--reference <path>', 'optional reference PNG path')
-    .option('--model <name>', 'model name (stub | nano-banana)', 'stub')
+    .option('--model <name>', 'model name (gpt-image-1.5 | gpt-image-2)', 'gpt-image-1.5')
     .option('--seed <number>', 'optional seed', Number.parseInt)
     .requiredOption('--out <path>', 'output PNG path')
     .action(async (opts) => {
@@ -19,10 +19,10 @@ export function registerModelsCommands(parent: Command): void {
       const reference = opts.reference
         ? await readFile(resolve(process.cwd(), opts.reference))
         : undefined;
-      const model = getModel(
-        opts.model as ModelName,
-        env.geminiApiKey ? { apiKey: env.geminiApiKey } : {},
-      );
+      if (!env.openaiApiKey) {
+        throw new Error('OPENAI_API_KEY is not set. Add it to .env and retry.');
+      }
+      const model = getModel(opts.model as ModelName, { apiKey: env.openaiApiKey });
       const result = await model.generate({
         input,
         prompt: opts.prompt,

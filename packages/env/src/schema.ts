@@ -16,10 +16,6 @@ export const SCHEMA = {
     envKey: 'GOOGLE_MAPS_API_KEY',
     description: 'Google Maps Platform key with Map Tiles API enabled. Used by the renderer.',
   },
-  geminiApiKey: {
-    envKey: 'GEMINI_API_KEY',
-    description: 'Google AI Studio key for Gemini 2.5 Flash Image (nano-banana).',
-  },
   openaiApiKey: {
     envKey: 'OPENAI_API_KEY',
     description: 'OpenAI API key for gpt-image-1 (image-to-image editing).',

@@ -4,8 +4,8 @@ import type { GenerateParams, GenerateResult, ModelClient } from './types';
 const EDITS_URL = 'https://api.openai.com/v1/images/edits';
 
 export const OPENAI_IMAGE_MODELS = {
-  'gpt-image-1': 'gpt-image-1',
   'gpt-image-1.5': 'gpt-image-1.5',
+  'gpt-image-2': 'gpt-image-2',
 } as const;
 export type OpenAIName = keyof typeof OPENAI_IMAGE_MODELS;
 

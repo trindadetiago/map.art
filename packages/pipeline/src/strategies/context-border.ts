@@ -170,16 +170,20 @@ export const contextBorderStrategy: GenerationStrategy = {
       const k = keyOf(tile.col, tile.row);
       pending.delete(k);
 
-      const composites: sharp.OverlayOptions[] = [
-        { input: rendered.get(k)!, left: b, top: b },
-      ];
+      const renderedTile = rendered.get(k);
+      if (!renderedTile) continue;
+      const composites: sharp.OverlayOptions[] = [{ input: renderedTile, left: b, top: b }];
       const neighborSources: Record<string, 'generated' | 'rendered' | 'missing'> = {};
       for (const n of NEIGHBORS) {
         const nk = keyOf(tile.col + n.dc, tile.row + n.dr);
         const genPng = generated.get(nk);
         const rendPng = rendered.get(nk);
         const src = genPng ?? rendPng;
-        neighborSources[`${n.dc},${n.dr}`] = genPng ? 'generated' : rendPng ? 'rendered' : 'missing';
+        neighborSources[`${n.dc},${n.dr}`] = genPng
+          ? 'generated'
+          : rendPng
+            ? 'rendered'
+            : 'missing';
         if (!src) continue;
         const strip = await sharp(src)
           .extract({

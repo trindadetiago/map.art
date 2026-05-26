@@ -21,12 +21,8 @@ const DEFAULT_PROMPT =
   'Convert this aerial isometric city render into a 16-bit isometric pixel-art tile in the visual style of SimCity 2000, RollerCoaster Tycoon 2, and Theme Hospital. Late-1990s simulation game aesthetic: limited saturated palette, crisp aliased pixel edges, simple flat shading with a single top-left light direction. While keeping the exact building footprints, road grid, and layout identical to the input, re-render every surface as pixel art. Treat low-poly artifacts in the input as cues about real-world content, not features to copy: blocky tree shapes are trees (round pixel-art crowns), shimmering surfaces are water (flat color + 2-pixel checkerboard), stretched facades are buildings (clean rectangular pixel-art walls). Do not invent, move, or remove buildings.';
 
 const MODEL_OPTIONS: { value: ModelName; label: string }[] = [
-  { value: 'stub', label: 'stub (fast, no API)' },
-  { value: 'nano-banana', label: 'nano-banana (Gemini 2.5)' },
-  { value: 'nano-banana-pro', label: 'nano-banana-pro (Gemini 3 pro)' },
-  { value: 'gemini-3.1-flash-image', label: 'gemini-3.1-flash-image' },
-  { value: 'gpt-image-1', label: 'gpt-image-1 (OpenAI)' },
   { value: 'gpt-image-1.5', label: 'gpt-image-1.5 (OpenAI)' },
+  { value: 'gpt-image-2', label: 'gpt-image-2 (OpenAI)' },
 ];
 
 const NEIGHBOR_OFFSETS: ReadonlyArray<{ dc: number; dr: number }> = [

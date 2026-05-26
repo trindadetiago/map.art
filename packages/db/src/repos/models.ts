@@ -33,45 +33,17 @@ export async function upsertModel(input: NewModel): Promise<Model> {
 export async function seedDefaultModels(): Promise<number> {
   const defaults: NewModel[] = [
     {
-      id: 'stub',
-      kind: 'edit',
-      endpoint: 'local://stub',
-      notes: 'Pixelate + hue-shift. Local only, no API.',
-      active: false,
-    },
-    {
-      id: 'nano-banana',
-      kind: 'edit',
-      endpoint: 'gemini:gemini-2.5-flash-image',
-      notes: 'Gemini 2.5 Flash Image — cheap/fast, conservative edits.',
-      active: false,
-    },
-    {
-      id: 'nano-banana-pro',
-      kind: 'edit',
-      endpoint: 'gemini:gemini-3-pro-image-preview',
-      notes: 'Gemini 3 Pro Image — stronger stylization, what Cannon Eyed used.',
-      active: true,
-    },
-    {
-      id: 'gemini-3.1-flash-image',
-      kind: 'edit',
-      endpoint: 'gemini:gemini-3.1-flash-image-preview',
-      notes: 'Newer Flash variant — speed/quality sweet spot.',
-      active: false,
-    },
-    {
-      id: 'gpt-image-1',
-      kind: 'edit',
-      endpoint: 'openai:gpt-image-1',
-      notes: 'OpenAI gpt-image-1, supports masked edits (infill).',
-      active: false,
-    },
-    {
       id: 'gpt-image-1.5',
       kind: 'edit',
       endpoint: 'openai:gpt-image-1.5',
       notes: 'OpenAI gpt-image-1.5, supports masked edits (infill).',
+      active: true,
+    },
+    {
+      id: 'gpt-image-2',
+      kind: 'edit',
+      endpoint: 'openai:gpt-image-2',
+      notes: 'OpenAI gpt-image-2, supports masked edits (infill).',
       active: false,
     },
   ];

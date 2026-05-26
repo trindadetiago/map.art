@@ -150,11 +150,11 @@ async function runStrategyAction(
     }
 
     // Model client
-    const apiKey = env.geminiApiKey;
-    if (modelName !== 'stub' && !apiKey) {
-      return { ok: false, error: 'GEMINI_API_KEY missing; only stub works without it' };
+    const apiKey = env.openaiApiKey;
+    if (!apiKey) {
+      return { ok: false, error: 'OPENAI_API_KEY missing' };
     }
-    const model = getModel(modelName as ModelName, apiKey ? { apiKey } : {});
+    const model = getModel(modelName as ModelName, { apiKey });
 
     console.log(
       `[pipeline] phase 2 — strategy=${strategyName} model=${modelName} tiles=${inputs.length}`,
@@ -223,10 +223,7 @@ export default async function PipelineDebugPage() {
     tilePixelSize: p.tilePixelSize,
   }));
 
-  // Models — include stub always; include Gemini variants only if we have a key.
-  const availableModels = env.geminiApiKey
-    ? [...MODEL_NAMES]
-    : MODEL_NAMES.filter((m) => m === 'stub');
+  const availableModels = [...MODEL_NAMES];
 
   const strategyDescriptors = strategies.map((s) => ({
     name: s.name,
