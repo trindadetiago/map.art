@@ -35,7 +35,7 @@ All pure Node libraries. No React. Tree-shake-friendly imports.
 | `@mapart/env` | Typed env loader. Reads `.env`, validates per-key, exposes `env` + `requireEnv()`. Schema in `src/schema.ts`. |
 | `@mapart/models` | Image-edit model clients (`stub`, `nano-banana`/Gemini, `openai`). Common `ModelClient` interface. Factory: `getModel(name, opts)`. |
 | `@mapart/pipeline` | Generation-strategy harness — turns N rendered tiles into N stylized tiles. Strategy modules under `src/strategies/`. |
-| `@mapart/renderer` | Three.js + Google 3D Tiles tile renderer. Server-side `renderTile()` is stub; real rendering happens client-side via `<Scene>` (lives in `apps/web/components/Scene.tsx`, not in this package). |
+| `@mapart/renderer` | Three.js + Google 3D Tiles tile renderer. Server-side `renderTile()` is a simple SVG placeholder (sharp-based, useful for dev/tests); real Three.js rendering happens client-side via `<Scene>` (lives in `apps/web/components/Scene.tsx`, not in this package). |
 | `@mapart/shared` | Shared types + small pure utilities used across packages. |
 | `@mapart/storage` | Blob storage. Two backends: `local` (`<repo>/data/`) or `s3` (MinIO/AWS). Selected by `STORAGE_BACKEND`. Singleton via `getStorage()`. |
 | `@mapart/tiles` | Web-mercator tile math (point/bbox/circle/polygon → tiles, tile → bounds/center/WKT). |
@@ -50,7 +50,7 @@ Local services for dev. Root `docker-compose.yml` uses `include:` to pull both i
 ### Other
 
 - `python/` — exploration scripts, data prep, training pipeline (separate Python venv at `.venv/`).
-- `data/` — local-mode storage backend root (gitignored sub-paths). When `STORAGE_BACKEND=s3`, this is unused.
+- `data/` — local-mode storage backend root (gitignored; created on demand by `@mapart/storage` when `STORAGE_BACKEND=local`). When `STORAGE_BACKEND=s3`, this is unused.
 - `scripts/setup.sh` — full bootstrap. Docker check, services up, .env sync, deps install, db migrate. Idempotent.
 - `scripts/run.mjs` — dev-runner log-tee wrapper (used by mprocs).
 - `mprocs.yaml` — dev process layout (one tab per long-running service).

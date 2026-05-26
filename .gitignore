@@ -31,7 +31,7 @@ python/training/*/_playground/
 __pycache__/
 *.pyc
 
-data/pipeline/
+data/
 
 # Dev runner per-process logs (mprocs + scripts/run.mjs); truncated each run.
 .logs/
