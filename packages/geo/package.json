@@ -1,12 +1,9 @@
 {
-  "name": "@mapart/tiles",
+  "name": "@mapart/geo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
-  },
-  "dependencies": {
-    "@mapart/shared": "workspace:*"
   }
 }

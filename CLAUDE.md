@@ -15,7 +15,7 @@ Monorepo. pnpm workspaces. Two top-level boundaries:
 
 That boundary is load-bearing. Don't add Next-isms inside `packages/*`. Don't write business logic that belongs in a package inside an app.
 
-**One documented exception**: `@mapart/scene` is a React-bearing package because `<Scene>` is shared between `apps/web` (interactive admin/projects) and `apps/worker-render/render-page` (the page headless Chrome navigates to). React there is intentional. New React-bearing packages need a similar "two-or-more consumers" justification — don't add React to other packages otherwise.
+`@mapart/renderer` is the only package that ships a React component (`<Scene>`) alongside pure helpers — Scene is shared by `apps/web` and `apps/worker-render/render-page` (the page headless Chrome navigates to). React is a peer dep there. Tree-shaking keeps non-React consumers from pulling Scene at runtime. New packages should follow the "no React" default unless there's a similar two-or-more-consumer justification.
 
 ### `apps/`
 
@@ -29,7 +29,7 @@ That boundary is load-bearing. Don't add Next-isms inside `packages/*`. Don't wr
 
 ### `packages/`
 
-Mostly pure Node libraries. Tree-shake-friendly imports. `@mapart/scene` is the one React-bearing package (see the exception above).
+Mostly pure Node libraries. Tree-shake-friendly imports.
 
 | Package | What |
 |---|---|
@@ -37,11 +37,9 @@ Mostly pure Node libraries. Tree-shake-friendly imports. `@mapart/scene` is the 
 | `@mapart/env` | Typed env loader. Reads `.env`, validates per-key, exposes `env` + `requireEnv()`. Schema in `src/schema.ts`. |
 | `@mapart/models` | OpenAI image-edit clients (`gpt-image-1.5`, `gpt-image-2`) behind a common `ModelClient` interface. Factory: `getModel(name, opts)`. Requires `OPENAI_API_KEY`. |
 | `@mapart/pipeline` | Generation-strategy harness — turns N rendered tiles into N stylized tiles. Strategy modules under `src/strategies/`. |
-| `@mapart/renderer` | Shared Three.js + Google 3D Tiles helpers (no React). Exports `createTilesRenderer(apiKey, center)` (configured TilesRenderer with auth + reorientation + compression + update-on-change plugins) plus camera-math helpers (`positionCamera`, `applyFrustum`). |
-| `@mapart/scene` | The React `<Scene>` component that mounts a Three.js + 3D Tiles renderer into a DOM container. Shared between `apps/web` and `apps/worker-render/render-page`. Wraps `@mapart/renderer` in a React lifecycle. |
-| `@mapart/shared` | Shared types + small pure utilities used across packages. |
+| `@mapart/geo` | Foundational geo primitives + web-mercator tile math. Types (`LatLng`, `Bbox`, `Polygon`, `TileCoord`). Tile math (`latLngToTile`, `tileToBounds`, `tileToCenter`, `tileToBoundsWkt`, `tileWidthMeters`). Coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`). No deps. |
+| `@mapart/renderer` | Three.js + Google 3D Tiles. Exports the React `<Scene>` component (for `apps/web` + `apps/worker-render/render-page`), the render-side types (`RenderParams`, `CameraGridParams`), and the pure helpers (`createTilesRenderer`, `positionCamera`, `applyFrustum`, `reorientTo`, `tileGroundCorners`, `renderParamsForTile`). Depends on `@mapart/geo` for `LatLng` + `tileWidthMeters`. React is a peer dep; pure helpers are usable without it (tree-shaken). |
 | `@mapart/storage` | Blob storage. Two backends: `local` (`<repo>/data/`) or `s3` (MinIO/AWS). Selected by `STORAGE_BACKEND`. Singleton via `getStorage()`. |
-| `@mapart/tiles` | Web-mercator tile math (point/bbox/circle/polygon → tiles, tile → bounds/center/WKT). |
 
 ### `infra/`
 

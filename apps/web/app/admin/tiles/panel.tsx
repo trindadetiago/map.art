@@ -1,13 +1,13 @@
 'use client';
 
-import { tileWidthMeters } from '@mapart/shared';
+import { tileWidthMeters } from '@mapart/geo';
 import {
   type TileCoord,
   bboxToTiles,
   circleToPolygon,
   polygonToTiles,
   tileToBounds,
-} from '@mapart/tiles';
+} from '@mapart/geo';
 import { useMemo, useState } from 'react';
 
 type Mode = 'bbox' | 'circle';

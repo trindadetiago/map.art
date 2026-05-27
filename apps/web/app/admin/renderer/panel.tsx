@@ -1,7 +1,7 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@mapart/scene';
-import { type RenderParams, renderParamsForTile } from '@mapart/shared';
+import { Scene, type SceneHandle } from '@mapart/renderer';
+import { type RenderParams, renderParamsForTile } from '@mapart/renderer';
 import { useRef, useState } from 'react';
 import { Field } from './field';
 import { TileGrid3x3 } from './tile_grid_3x3';

@@ -1,7 +1,4 @@
-export interface LatLng {
-  lat: number;
-  lng: number;
-}
+import type { LatLng } from '@mapart/geo';
 
 export interface RenderParams {
   center: LatLng;
@@ -10,14 +7,6 @@ export interface RenderParams {
   size: number;
   /** Web-mercator zoom level. Fractional values are allowed for fine-tuning the framing. */
   zoom: number;
-}
-
-const EARTH_CIRCUMFERENCE_M = 40075016.686;
-
-/** Width in meters of a web-mercator tile at a given zoom + latitude. Kept for the renderer CLI and minimap utilities. */
-export function tileWidthMeters(zoom: number, latDeg: number): number {
-  const latRad = (latDeg * Math.PI) / 180;
-  return (EARTH_CIRCUMFERENCE_M * Math.cos(latRad)) / 2 ** zoom;
 }
 
 export interface CameraGridParams {
@@ -32,6 +21,8 @@ export interface CameraGridParams {
   /** Width of one tile on the image plane, in ground meters. */
   tileWorldMeters: number;
 }
+
+const EARTH_CIRCUMFERENCE_M = 40075016.686;
 
 /**
  * Geographic offset (in meters) of tile (col, row)'s CENTER relative to the
@@ -54,7 +45,7 @@ export interface CameraGridParams {
  * with OBJECT_FRAME) is +X = west, +Z = north. Callers that draw in scene
  * coords must negate `east` before using it as scene-x.
  */
-export function tileGroundOffset(
+function tileGroundOffset(
   col: number,
   row: number,
   p: CameraGridParams,
@@ -64,8 +55,6 @@ export function tileGroundOffset(
   const sinPitch = Math.max(Math.sin(pitchRad), 0.01);
   const rightStep = p.tileWorldMeters;
   const forwardStep = p.tileWorldMeters / sinPitch;
-  // image-right direction on the ground in (east, north): (cos yaw, sin yaw).
-  // image-up direction on the ground in (east, north): (-sin yaw, cos yaw).
   const cos = Math.cos(yawRad);
   const sin = Math.sin(yawRad);
   return {

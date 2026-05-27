@@ -1,4 +1,7 @@
-import type { LatLng } from '@mapart/shared';
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
 
 export interface TileCoord {
   x: number;
@@ -14,5 +17,3 @@ export interface Bbox {
 
 /** Closed polygon in WGS84. First and last vertex should be equal (per GeoJSON convention); we normalize if not. */
 export type Polygon = LatLng[];
-
-export type { LatLng } from '@mapart/shared';

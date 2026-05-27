@@ -1,5 +1,5 @@
 import { env } from '@mapart/env';
-import type { RenderParams } from '@mapart/shared';
+import type { RenderParams } from '@mapart/renderer';
 import { getStorage } from '@mapart/storage';
 import { RendererPanel, type SaveError, type SaveResult } from './panel';
 

@@ -2,6 +2,8 @@
 
 Single CLI entry for everything ad-hoc. Run via `pnpm mapart <subcommand>` (or `tsx apps/cli/bin/mapart.ts` directly).
 
+This is meant for debugging only, specially for AI Coding Agents to easily test our code and packages without interacting with the UI.
+
 ```bash
 pnpm mapart --help
 pnpm mapart db --help

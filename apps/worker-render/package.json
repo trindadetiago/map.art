@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "@mapart/env": "workspace:*",
-    "@mapart/scene": "workspace:*",
-    "@mapart/shared": "workspace:*",
+    "@mapart/renderer": "workspace:*",
     "puppeteer": "^24.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
