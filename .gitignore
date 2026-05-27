@@ -33,5 +33,8 @@ __pycache__/
 
 data/
 
+# Local-only scratch dir for CLI render outputs etc. Use freely.
+debug/
+
 # Dev runner per-process logs (mprocs + scripts/run.mjs); truncated each run.
 .logs/

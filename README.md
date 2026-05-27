@@ -7,7 +7,7 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 ## Apps
 
 - `apps/web` — Next.js UI + thin API + `/admin` inspector pages
-- `apps/worker` — background-job process (placeholder; ticks every 5s, will consume from the Postgres jobs table)
+- `apps/worker-render` — server-side render service. Single process on `:9999`: hosts the render-page (Vite middleware), drives Puppeteer/Chromium, exposes `POST /render` returning a PNG
 - `apps/cli` — `mapart` binary (one entry, subcommands per domain)
 
 ## Packages
@@ -44,12 +44,12 @@ Also: `python/data_overview.html` documents the v01 training dataset pipeline.
 ```bash
 pnpm install
 pnpm run-setup    # Docker check, boots Postgres + MinIO, writes .env, installs deps, runs migrations
-pnpm dev          # mprocs TUI — runs apps/web (Next), apps/worker, and Drizzle Studio side-by-side
+pnpm dev          # mprocs TUI — runs apps/web (Next), Drizzle Studio, and apps/worker-render side-by-side
 ```
 
 In mprocs: `j`/`k` switch between procs, `r` restart, `x` stop, `q` quit. Each proc's live output is also streamed to `.logs/<name>.log` (gitignored, truncated on each run) — `grep`-able from any other terminal.
 
-Escape hatches if you don't want the TUI: `pnpm dev:web`, `pnpm dev:worker`, or `pnpm dev:studio` alone.
+Escape hatches if you don't want the TUI: `pnpm dev:web`, `pnpm dev:studio`, or `pnpm dev:worker-render` alone.
 
 `.env` keys to fill in:
 
@@ -72,23 +72,35 @@ pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 pnpm mapart models generate --input … --prompt …  --out …
 ```
 
-### Render worker (local test)
+### Render service (`apps/worker-render`)
 
-Requires `GOOGLE_MAPS_API_KEY` in `.env`. For the full worker (pg-boss queue consumer), set `RENDER_WORKER_TOKEN` in `.env` and run `pnpm worker:render`.
+Single Node process on `:9999`. Embeds Vite as middleware to serve the
+render-page (mounts `<Scene>` from `@mapart/scene`), launches a persistent
+Puppeteer/Chromium, and exposes `POST /render` returning PNG bytes.
+
+The same internal `renderTile()` is what the eventual pg-boss queue consumer
+will call. **`POST /render` is for dev / testing only** — in production,
+renders come from the queue, not over HTTP.
+
+Requires `VITE_GOOGLE_MAPS_API_KEY` in `.env` (Vite only exposes vars
+prefixed `VITE_` to the page bundle).
 
 ```bash
-# Terminal 1: start Next.js (just the web app; no TUI needed)
-pnpm dev:web
+# Start it (also a pane in `pnpm dev`)
+pnpm dev:worker-render
 
-# Terminal 2: render a single tile (comparison CPU vs GPU)
-pnpm spike:single
+# Open the page in your own browser to debug
+open "http://localhost:9999/?lat=-7.115&lng=-34.861&pitch=60&yaw=0&zoom=18&size=1024"
 
-# With only GPU acceleration (macOS Metal)
-RENDER_GPU_ENABLED=true pnpm spike:single
+# End-to-end test via the CLI (drives Puppeteer → Chromium → Scene → tiles → PNG)
+pnpm mapart render --lat -7.115 --lng -34.861 --zoom 18 --size 1024 --out tile.png && open tile.png
 
-# Batch: 100 tiles in the same page
-pnpm spike:batch
+# Or hit the endpoint with curl
+curl -X POST http://localhost:9999/render \
+  -H 'content-type: application/json' \
+  -d '{"lat":-7.115,"lng":-34.861,"pitch":60,"yaw":0,"zoom":18,"size":1024}' \
+  --output tile.png
 
-# Full worker (pg-boss queue consumer, requires DATABASE_URL + RENDER_WORKER_TOKEN)
-pnpm worker:render
+# GPU mode (Metal on macOS)
+RENDER_GPU_ENABLED=true pnpm dev:worker-render
 ```
