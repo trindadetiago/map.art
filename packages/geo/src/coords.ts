@@ -1,5 +1,13 @@
 import type { Bbox, LatLng, TileCoord } from './types';
 
+const EARTH_CIRCUMFERENCE_M = 40075016.686;
+
+/** Width in meters of a web-mercator tile at a given zoom + latitude. */
+export function tileWidthMeters(zoom: number, latDeg: number): number {
+  const latRad = (latDeg * Math.PI) / 180;
+  return (EARTH_CIRCUMFERENCE_M * Math.cos(latRad)) / 2 ** zoom;
+}
+
 /** Convert a WGS84 lat/lng to web-mercator tile coordinates at the given integer zoom. */
 export function latLngToTile(lat: number, lng: number, zoom: number): TileCoord {
   const z = Math.floor(zoom);

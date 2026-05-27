@@ -1,5 +1,5 @@
-import { Scene, type SceneHandle } from '@mapart/scene';
-import type { RenderParams } from '@mapart/shared';
+import { Scene, type SceneHandle } from '@mapart/renderer';
+import type { RenderParams } from '@mapart/renderer';
 import { StrictMode, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 

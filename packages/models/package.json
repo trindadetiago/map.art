@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "@mapart/env": "workspace:*",
-    "@mapart/shared": "workspace:*",
     "sharp": "^0.33.5"
   }
 }

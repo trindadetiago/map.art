@@ -12,16 +12,13 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 
 ## Packages
 
-Pure server-side libraries. No React, no UI code.
-
 - `db` — Drizzle schema + repos + migrations (Postgres + PostGIS)
 - `env` — typed env loader
+- `geo` — foundational geo primitives (`LatLng`, `Bbox`, `Polygon`, `TileCoord`) + web-mercator tile math + coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`)
 - `models` — OpenAI image-edit clients (gpt-image-1.5, gpt-image-2)
 - `pipeline` — generation-strategy harness (independent / infill / big-render / …)
-- `renderer` — shared Three.js + Google 3D Tiles helpers (consumed by `apps/web` today; designed for a future worker)
-- `shared` — shared types
+- `renderer` — Three.js + Google 3D Tiles. Ships the React `<Scene>` component plus pure render-side helpers + types
 - `storage` — blob storage (LocalFs + S3/MinIO backends)
-- `tiles` — web-mercator tile math
 
 ## Infra
 
