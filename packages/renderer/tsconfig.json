@@ -1,4 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*", "bin/**/*", "debug/**/*"]
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "jsx": "preserve"
+  },
+  "include": ["src/**/*"]
 }

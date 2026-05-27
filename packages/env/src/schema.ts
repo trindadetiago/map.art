@@ -68,10 +68,16 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required when STORAGE_BACKEND=s3.',
   },
-  s3ForcePathStyle: {
-    envKey: 'S3_FORCE_PATH_STYLE',
+  renderWorkerPort: {
+    envKey: 'RENDER_WORKER_PORT',
     description:
-      'Use path-style S3 URLs (bucket in path, not subdomain). Required "true" for MinIO.',
+      'Port apps/worker-render listens on. Serves the render-page on GET / (via embedded Vite in dev) and the render API on POST /render. Puppeteer also navigates to this same port internally.',
+    default: '9999',
+  },
+  renderGpuEnabled: {
+    envKey: 'RENDER_GPU_ENABLED',
+    description:
+      'Enable GPU acceleration in Chromium (Metal on macOS, EGL on Linux). Falsy values use SwiftShader CPU rendering.',
     default: 'false',
   },
 } as const satisfies Record<string, EnvFieldDef>;

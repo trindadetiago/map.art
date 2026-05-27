@@ -12,10 +12,9 @@
   "dependencies": {
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
+    "@mapart/geo": "workspace:*",
     "@mapart/models": "workspace:*",
-    "@mapart/shared": "workspace:*",
     "@mapart/storage": "workspace:*",
-    "@mapart/tiles": "workspace:*",
     "commander": "^12.1.0"
   }
 }

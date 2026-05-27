@@ -7,11 +7,15 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@mapart/shared": "workspace:*",
+    "@mapart/geo": "workspace:*",
     "3d-tiles-renderer": "^0.4.8",
     "three": "^0.169.0"
   },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
   "devDependencies": {
+    "@types/react": "^19.0.0",
     "@types/three": "^0.169.0"
   }
 }
