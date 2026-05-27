@@ -13,21 +13,23 @@ Monorepo. pnpm workspaces. Two top-level boundaries:
 - **`apps/*`** — things that *run* (services, daemons, CLIs, UIs). May import from `packages/*`.
 - **`packages/*`** — pure server-side TypeScript libraries. **No React, no UI code, no HTTP servers.** Shared across `apps/*`.
 
-That boundary is load-bearing. Don't add React or Next-isms inside `packages/*`. Don't write business logic that belongs in a package inside an app.
+That boundary is load-bearing. Don't add Next-isms inside `packages/*`. Don't write business logic that belongs in a package inside an app.
+
+**One documented exception**: `@mapart/scene` is a React-bearing package because `<Scene>` is shared between `apps/web` (interactive admin/projects) and `apps/worker-render/render-page` (the page headless Chrome navigates to). React there is intentional. New React-bearing packages need a similar "two-or-more consumers" justification — don't add React to other packages otherwise.
 
 ### `apps/`
 
 | Path | What | Runtime shape |
 |---|---|---|
 | `apps/web` | Next.js 15 (App Router). Main UI on `:3210`. Admin pages at `/admin/*` (projects, storage, env, models, renderer, tiles, pipeline). Database has no panel — its card on the dashboard links to Drizzle Studio at https://local.drizzle.studio. | long-running service |
-| `apps/worker` | Background job process. **Placeholder today** — ticks every 5s, logs heartbeat. Eventually consumes from the Postgres `jobs` table (render/stylize). | long-running service |
+| `apps/worker-render` | Server-side render service. Single Node process on `:9999`. Embeds Vite as middleware to serve `render-page/` (the page that mounts `<Scene>`), drives a persistent Puppeteer/Chromium that navigates to its own port, exposes `POST /render` to render one tile and return its PNG. Queue consumer can be layered on top later (call `renderTile()` from a pg-boss handler). | long-running service |
 | `apps/cli` | `mapart` binary. Single entry, subcommands per domain. Imports from `packages/*`. | short-lived tool |
 
-`apps/cli` is a *tool*, not a service — runs ad-hoc, exits. Not in `mprocs`. Future workers (`apps/worker-render`, `apps/worker-stylize`, `apps/model`) will be services.
+`apps/cli` is a *tool*, not a service — runs ad-hoc, exits. Not in `mprocs`. Future workers (`apps/worker-stylize`, `apps/model`) will also be services.
 
 ### `packages/`
 
-All pure Node libraries. No React. Tree-shake-friendly imports.
+Mostly pure Node libraries. Tree-shake-friendly imports. `@mapart/scene` is the one React-bearing package (see the exception above).
 
 | Package | What |
 |---|---|
@@ -35,7 +37,8 @@ All pure Node libraries. No React. Tree-shake-friendly imports.
 | `@mapart/env` | Typed env loader. Reads `.env`, validates per-key, exposes `env` + `requireEnv()`. Schema in `src/schema.ts`. |
 | `@mapart/models` | OpenAI image-edit clients (`gpt-image-1.5`, `gpt-image-2`) behind a common `ModelClient` interface. Factory: `getModel(name, opts)`. Requires `OPENAI_API_KEY`. |
 | `@mapart/pipeline` | Generation-strategy harness — turns N rendered tiles into N stylized tiles. Strategy modules under `src/strategies/`. |
-| `@mapart/renderer` | Shared Three.js + Google 3D Tiles helpers. Exports `createTilesRenderer(apiKey, center)` (configured TilesRenderer with auth + reorientation + compression + update-on-change plugins) plus camera-math helpers (`positionCamera`, `applyFrustum`). Consumed by `apps/web/components/scene.tsx` today; designed to be the shared core for a future `apps/worker-render`. |
+| `@mapart/renderer` | Shared Three.js + Google 3D Tiles helpers (no React). Exports `createTilesRenderer(apiKey, center)` (configured TilesRenderer with auth + reorientation + compression + update-on-change plugins) plus camera-math helpers (`positionCamera`, `applyFrustum`). |
+| `@mapart/scene` | The React `<Scene>` component that mounts a Three.js + 3D Tiles renderer into a DOM container. Shared between `apps/web` and `apps/worker-render/render-page`. Wraps `@mapart/renderer` in a React lifecycle. |
 | `@mapart/shared` | Shared types + small pure utilities used across packages. |
 | `@mapart/storage` | Blob storage. Two backends: `local` (`<repo>/data/`) or `s3` (MinIO/AWS). Selected by `STORAGE_BACKEND`. Singleton via `getStorage()`. |
 | `@mapart/tiles` | Web-mercator tile math (point/bbox/circle/polygon → tiles, tile → bounds/center/WKT). |
@@ -64,12 +67,12 @@ Local services for dev. Root `docker-compose.yml` uses `include:` to pull both i
 ```bash
 pnpm install
 pnpm run-setup    # one-time: Docker, services, .env, migrations
-pnpm dev          # mprocs TUI: apps/web (:3210) + apps/worker + drizzle studio (:4983)
+pnpm dev          # mprocs TUI: apps/web (:3210) + drizzle studio (:4983) + worker-render (:9999)
 ```
 
 Inside the TUI: `j`/`k` switch procs, `r` restart, `x` stop, `q` quit. Each proc also streams to `.logs/<name>.log` for searching from another terminal (`grep ERROR .logs/web.log`, `tail -f .logs/worker.log`).
 
-Escape hatches (no TUI): `pnpm dev:web`, `pnpm dev:worker`, or `pnpm dev:studio` standalone. Drizzle Studio prints a URL (usually https://local.drizzle.studio) that proxies to the local server — open it in a browser to browse rows.
+Escape hatches (no TUI): `pnpm dev:web`, `pnpm dev:studio`, or `pnpm dev:worker-render` standalone. Drizzle Studio prints a URL (usually https://local.drizzle.studio) that proxies to the local server — open it in a browser to browse rows. The worker-render serves the render-page on `http://localhost:9999/` (so you can open it manually in a browser to debug) and exposes `POST /render` for headless renders.
 
 ---
 
@@ -101,6 +104,7 @@ If you need a *new* command, add it under `apps/cli/src/commands/<domain>.ts` an
 - **Type-checking is the canonical correctness signal.** No tests yet. `pnpm exec tsc --noEmit -p apps/web/tsconfig.json` etc. Run after non-trivial changes.
 - **Lint runs on staged files via `lint-staged` + `biome`.** Pre-commit hook auto-fixes safe issues and blocks on real errors.
 - **Use `git mv`** to move files so history is preserved.
+- **No history-leaking comments.** A comment that only makes sense if you remember what was there before is rot. Examples to avoid: "no longer needed", "replaces the previous X", "was inlined before", "first/new package of its kind", "now uses Y instead". The code describes what it is now; the *why* (if non-obvious) is what comments are for, and that *why* must stand on its own without referring to a removed past. Same applies to docs/README files — describe current state, not the journey to it. Git log is the place for change history.
 
 ## Tools used
 

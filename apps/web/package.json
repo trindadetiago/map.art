@@ -15,6 +15,7 @@
     "@mapart/models": "workspace:*",
     "@mapart/pipeline": "workspace:*",
     "@mapart/renderer": "workspace:*",
+    "@mapart/scene": "workspace:*",
     "@mapart/shared": "workspace:*",
     "@mapart/storage": "workspace:*",
     "@mapart/tiles": "workspace:*",

@@ -1,6 +1,6 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@/components/scene';
+import { Scene, type SceneHandle } from '@mapart/scene';
 import { type RenderParams, renderParamsForTile } from '@mapart/shared';
 import { useMemo, useRef, useState } from 'react';
 import type { PipelinePanelProps, PipelineProject, RenderedTileInfo } from './panel';
