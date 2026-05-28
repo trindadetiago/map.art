@@ -22,6 +22,14 @@ export default function Home() {
             — dev hub for individual package panels
           </span>
         </li>
+        <li>
+          <Link href="/ui" style={{ fontSize: 16 }}>
+            /ui
+          </Link>
+          <span style={{ opacity: 0.6, marginLeft: 8, fontSize: 14 }}>
+            — component gallery / design system reference
+          </span>
+        </li>
       </ul>
     </main>
   );
