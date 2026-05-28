@@ -140,4 +140,32 @@ export const CATEGORIES: Category[] = [
       </div>
     ),
   },
+  {
+    slug: 'globe',
+    title: 'Globe',
+    blurb: 'A 3D globe built from real country geometry — realistic or pixelated.',
+    source: '@/components/globe · three.js + d3-geo',
+    Preview: () => (
+      <svg viewBox="0 0 96 96" className="h-24 w-24" role="img" aria-label="Globe illustration">
+        <defs>
+          <clipPath id="globe-preview-clip">
+            <circle cx="48" cy="48" r="40" />
+          </clipPath>
+        </defs>
+        <circle cx="48" cy="48" r="40" fill="#21496b" />
+        <g clipPath="url(#globe-preview-clip)">
+          <path d="M26 30h12v6h6v8h-8v6h-12v-8h-4v-8h6z" fill="#63b06d" />
+          <path d="M52 48h12v6h8v10h-12v6h-8V58h4z" fill="#63b06d" />
+          <g stroke="#3a6488" strokeWidth="1.5" fill="none" opacity="0.75">
+            <ellipse cx="48" cy="48" rx="40" ry="15" />
+            <ellipse cx="48" cy="48" rx="40" ry="30" />
+            <ellipse cx="48" cy="48" rx="15" ry="40" />
+            <ellipse cx="48" cy="48" rx="30" ry="40" />
+            <line x1="8" y1="48" x2="88" y2="48" />
+          </g>
+        </g>
+        <circle cx="48" cy="48" r="40" fill="none" stroke="#16324f" strokeWidth="2.5" />
+      </svg>
+    ),
+  },
 ];
