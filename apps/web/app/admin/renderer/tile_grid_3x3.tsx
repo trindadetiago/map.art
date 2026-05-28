@@ -15,13 +15,17 @@ export function TileGrid3x3({
     }
   }
   return (
-    <div className="grid grid-cols-3 gap-px">
+    <div className="grid grid-cols-3 gap-px bg-stone-200">
       {slots.map((s) =>
         s.url ? (
           // biome-ignore lint/a11y/useAltText: sample thumb
-          <img key={`${s.col},${s.row}`} src={s.url} className="block h-auto w-full bg-black" />
+          <img
+            key={`${s.col},${s.row}`}
+            src={s.url}
+            className="block h-auto w-full bg-stone-900 [image-rendering:pixelated]"
+          />
         ) : (
-          <div key={`${s.col},${s.row}`} className="aspect-square bg-neutral-800" />
+          <div key={`${s.col},${s.row}`} className="aspect-square bg-stone-800" />
         ),
       )}
     </div>

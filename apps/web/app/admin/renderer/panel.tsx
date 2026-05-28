@@ -69,6 +69,19 @@ function nextFrame(): Promise<void> {
   return new Promise((res) => requestAnimationFrame(() => res()));
 }
 
+const CARD = 'rounded-2xl border border-stone-200/70 bg-white p-6';
+const SECTION_LABEL = 'text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500';
+const PILL =
+  'rounded-full border border-stone-200 bg-stone-50 px-3 py-1 font-mono text-[11px] text-stone-600';
+const BTN_PRIMARY =
+  'inline-flex h-10 items-center justify-center gap-2 rounded-full bg-stone-900 px-5 text-[13px] font-medium text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50';
+const BTN_SECONDARY =
+  'rounded-full border border-stone-200 bg-white px-4 py-1.5 text-[12px] text-stone-700 no-underline transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-50';
+
+// Live scene + captured PNG render at a fixed display size; the scene canvas is
+// scaled to fit so full-res capture is unaffected.
+const SCENE_DISPLAY = 380;
+
 export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererPanelProps) {
   const sceneRef = useRef<SceneHandle>(null);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
@@ -192,49 +205,66 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
 
   if (!apiKey) {
     return (
-      <div className="text-red-700">
-        <code>GOOGLE_MAPS_API_KEY</code> is not set. Add it to the root <code>.env</code> and
-        restart the dev server.
+      <div className="max-w-[520px] rounded-2xl border border-red-200 bg-red-50 p-6 text-[13px] leading-relaxed text-red-700">
+        <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-[12px]">
+          GOOGLE_MAPS_API_KEY
+        </code>{' '}
+        is not set. Add it to the root <code className="font-mono">.env</code> and restart the dev
+        server.
       </div>
     );
   }
 
   return (
     <div>
-      <div className="grid grid-cols-[320px_1fr_1fr] gap-6">
-        <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-2">
-          <Field label="lat" value={lat} onChange={setLat} step={0.0001} />
-          <Field label="lng" value={lng} onChange={setLng} step={0.0001} />
-          <Field label="pitch" value={pitch} onChange={setPitch} />
-          <Field label="yaw" value={yaw} onChange={setYaw} />
-          <Field label="size" value={size} onChange={setSize} step={1} />
-          <Field label="zoom" value={zoom} onChange={setZoom} step={0.5} />
-          <button
-            type="button"
-            disabled={sampleRunning}
-            onClick={() => {
-              const url = sceneRef.current?.capture();
-              if (url) {
-                setCapturedUrl(url);
-                try {
-                  localStorage.setItem('mapart:latest-capture', url);
-                } catch {
-                  // quota exceeded or storage unavailable — ignore, capture still works in-memory
+      <div className="flex flex-wrap items-start gap-4">
+        <section className={`${CARD} w-[260px] shrink-0`}>
+          <div className={`${SECTION_LABEL} mb-4`}>Camera</div>
+          <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-3">
+            <Field label="lat" value={lat} onChange={setLat} step={0.0001} />
+            <Field label="lng" value={lng} onChange={setLng} step={0.0001} />
+            <Field label="pitch" value={pitch} onChange={setPitch} />
+            <Field label="yaw" value={yaw} onChange={setYaw} />
+            <Field label="size" value={size} onChange={setSize} step={1} />
+            <Field label="zoom" value={zoom} onChange={setZoom} step={0.5} />
+            <button
+              type="button"
+              disabled={sampleRunning}
+              onClick={() => {
+                const url = sceneRef.current?.capture();
+                if (url) {
+                  setCapturedUrl(url);
+                  try {
+                    localStorage.setItem('mapart:latest-capture', url);
+                  } catch {
+                    // quota exceeded or storage unavailable — ignore, capture still works in-memory
+                  }
                 }
-              }
-            }}
-            className="mt-2 cursor-pointer rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+              }}
+              className={`${BTN_PRIMARY} mt-1 w-full`}
+            >
+              Capture
+            </button>
+          </form>
+        </section>
+
+        <section className={CARD}>
+          <div className={`${SECTION_LABEL} mb-3`}>Live scene</div>
+          <div
+            className="overflow-hidden rounded-xl border border-stone-200 bg-stone-900"
+            style={{ width: SCENE_DISPLAY, height: SCENE_DISPLAY }}
           >
-            capture
-          </button>
-        </form>
-        <div>
-          <div className="mb-1 text-xs opacity-60">live scene</div>
-          <Scene ref={sceneRef} apiKey={apiKey} params={activeParams} />
-        </div>
-        <div>
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="text-xs opacity-60">captured PNG</span>
+            <div
+              style={{ transform: `scale(${SCENE_DISPLAY / size})`, transformOrigin: 'top left' }}
+            >
+              <Scene ref={sceneRef} apiKey={apiKey} params={activeParams} />
+            </div>
+          </div>
+        </section>
+
+        <section className={CARD}>
+          <div className="mb-3 flex h-6 items-center justify-between gap-3">
+            <span className={SECTION_LABEL}>Captured PNG</span>
             {capturedUrl && (
               <div className="flex gap-1.5">
                 {saveAction && (
@@ -256,7 +286,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
                         setSaving(false);
                       }
                     }}
-                    className="cursor-pointer rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                    className={BTN_SECONDARY}
                   >
                     {saving ? 'saving…' : 'save'}
                   </button>
@@ -264,88 +294,117 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
                 <a
                   href={capturedUrl}
                   download={downloadFilename(liveParams)}
-                  className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-900 no-underline"
+                  className={BTN_SECONDARY}
                 >
                   download
                 </a>
               </div>
             )}
           </div>
-          {capturedUrl ? (
-            // biome-ignore lint/a11y/useAltText: debug surface
-            <img
-              src={capturedUrl}
-              width={size}
-              height={size}
-              className="max-w-full border border-neutral-300 [image-rendering:pixelated]"
-            />
-          ) : (
-            <div className="opacity-50">press "capture" once tiles have loaded</div>
+          <div
+            className="flex items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-900"
+            style={{ width: SCENE_DISPLAY, height: SCENE_DISPLAY }}
+          >
+            {capturedUrl ? (
+              // biome-ignore lint/a11y/useAltText: debug surface
+              <img
+                src={capturedUrl}
+                className="h-full w-full object-contain [image-rendering:pixelated]"
+              />
+            ) : (
+              <div className="px-6 text-center text-[12px] text-stone-400">
+                Press <span className="text-stone-300">Capture</span> once tiles have loaded
+              </div>
+            )}
+          </div>
+          {saveInfo && (
+            <div className="mt-3 font-mono text-[12px] text-emerald-700">{saveInfo}</div>
           )}
-          {saveInfo && <div className="mt-1.5 font-mono text-xs opacity-75">{saveInfo}</div>}
           {saveError && (
-            <pre className="mt-1.5 whitespace-pre-wrap text-xs text-red-700">{saveError}</pre>
+            <pre className="m-0 mt-3 whitespace-pre-wrap text-[12px] text-red-700">{saveError}</pre>
           )}
-        </div>
+        </section>
       </div>
 
-      <section className="mt-6 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-        <h3 className="m-0 mb-2 text-[13px]">random samples (João Pessoa)</h3>
-        <p className="m-0 mb-3 text-xs opacity-70">
+      <section className={`${CARD} mt-4`}>
+        <div className="mb-2 flex items-baseline gap-3">
+          <div className={SECTION_LABEL}>Random samples</div>
+          <span className="text-xs text-stone-400">João Pessoa</span>
+        </div>
+        <p className="m-0 mb-4 max-w-[68ch] text-[13px] leading-relaxed text-stone-500">
           Picks N random points in the JP bounding box and captures each + its 8 neighbours. Files
           land at{' '}
-          <code>
+          <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[12px] text-stone-700">
             renderer/samples/&lt;run&gt;/sampleN/c{'{'}col{'}'}_r{'{'}row{'}'}.png
           </code>
-          . Tile framing uses the current pitch/yaw/size plus the tileWorldMeters field below.
+          . Tile framing uses the current pitch/yaw/size plus tileWorldMeters below.
         </p>
-        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-end gap-3">
-          <Field
-            label="N samples"
-            value={sampleN}
-            onChange={(n) => setSampleN(Math.max(1, Math.round(n)))}
-            step={1}
-          />
-          <Field
-            label="seed"
-            value={sampleSeed}
-            onChange={(n) => setSampleSeed(Math.round(n))}
-            step={1}
-          />
-          <Field
-            label="tileWorldMeters"
-            value={sampleTileWorldMeters}
-            onChange={(n) => setSampleTileWorldMeters(Math.max(10, n))}
-            step={5}
-          />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-[140px]">
+            <Field
+              label="N samples"
+              value={sampleN}
+              onChange={(n) => setSampleN(Math.max(1, Math.round(n)))}
+              step={1}
+            />
+          </div>
+          <div className="w-[140px]">
+            <Field
+              label="seed"
+              value={sampleSeed}
+              onChange={(n) => setSampleSeed(Math.round(n))}
+              step={1}
+            />
+          </div>
+          <div className="w-[160px]">
+            <Field
+              label="tileWorldMeters"
+              value={sampleTileWorldMeters}
+              onChange={(n) => setSampleTileWorldMeters(Math.max(10, n))}
+              step={5}
+            />
+          </div>
           <button
             type="button"
             onClick={runRandomSamples}
             disabled={sampleRunning || !saveToKeyAction}
-            className="cursor-pointer rounded border px-3.5 py-2 text-xs enabled:border-neutral-900 enabled:bg-neutral-900 enabled:text-white disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400"
+            className={`${BTN_PRIMARY} px-6`}
           >
-            {sampleRunning ? 'rendering…' : 'render random samples'}
+            {sampleRunning ? 'rendering…' : 'Render random samples'}
           </button>
         </div>
-        {sampleProgress && <div className="mt-2 font-mono text-xs">{sampleProgress}</div>}
+        {sampleProgress && (
+          <div className="mt-3 inline-block rounded-lg bg-stone-50 px-3 py-1.5 font-mono text-[12px] text-stone-600">
+            {sampleProgress}
+          </div>
+        )}
         {sampleError && (
-          <pre className="mt-2 whitespace-pre-wrap text-xs text-red-700">{sampleError}</pre>
+          <pre className="m-0 mt-3 whitespace-pre-wrap rounded-lg bg-red-50 p-3 text-[12px] text-red-700">
+            {sampleError}
+          </pre>
         )}
         {sampleSummary && (
-          <div className="mt-2 font-mono text-xs text-green-700">{sampleSummary}</div>
+          <div className="mt-3 font-mono text-[12px] text-emerald-700">{sampleSummary}</div>
         )}
       </section>
 
       {sampleResults.length > 0 && (
-        <section className="mt-4">
-          <h3 className="m-0 mb-3 text-[13px]">rendered samples</h3>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+        <section className="mt-8">
+          <div className={`${SECTION_LABEL} mb-4`}>Rendered samples</div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
             {sampleResults.map((s) => (
-              <div key={s.sampleIdx} className="rounded-lg border border-neutral-200 p-3">
-                <div className="mb-2 font-mono text-xs opacity-70">
-                  sample {s.sampleIdx} · ({s.centerLat.toFixed(4)}, {s.centerLng.toFixed(4)})
+              <div key={s.sampleIdx} className={`${CARD} p-3`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[12px] font-medium text-stone-700">
+                    sample {s.sampleIdx}
+                  </span>
+                  <span className={PILL}>
+                    {s.centerLat.toFixed(4)}, {s.centerLng.toFixed(4)}
+                  </span>
                 </div>
-                <TileGrid3x3 tiles={s.tiles} />
+                <div className="overflow-hidden rounded-lg border border-stone-200">
+                  <TileGrid3x3 tiles={s.tiles} />
+                </div>
               </div>
             ))}
           </div>

@@ -52,19 +52,27 @@ function renderCaptureKey(p: RenderParams): string {
 }
 
 export default function RendererDebugPage() {
+  const apiKey = env.googleMapsApiKey ?? '';
   return (
     <div>
-      <h1 className="mt-0">renderer</h1>
-      <p className="opacity-70">
+      <div className="mb-8 flex items-baseline gap-4">
+        <h1 className="m-0 text-3xl font-light tracking-tight text-stone-900">Renderer</h1>
+        <span className="text-sm text-stone-500">
+          {apiKey ? 'Google Photorealistic 3D Tiles' : 'GOOGLE_MAPS_API_KEY not set'}
+        </span>
+        {!apiKey && (
+          <span className="ml-auto rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700">
+            scene will not load
+          </span>
+        )}
+      </div>
+      <p className="mb-8 max-w-[640px] text-[13px] leading-relaxed text-stone-500">
         Live Three.js scene streaming Google Photorealistic 3D Tiles. Adjust params, wait for tiles
-        to stream in, then <strong>capture</strong> to grab the canvas as a PNG. Use{' '}
-        <strong>save</strong> to persist into <code>/admin/storage</code>.
+        to stream in, then <strong className="font-medium text-stone-700">capture</strong> to grab
+        the canvas as a PNG. Use <strong className="font-medium text-stone-700">save</strong> to
+        persist into <code className="font-mono">/admin/storage</code>.
       </p>
-      <RendererPanel
-        apiKey={env.googleMapsApiKey ?? ''}
-        saveAction={saveAction}
-        saveToKeyAction={saveToKeyAction}
-      />
+      <RendererPanel apiKey={apiKey} saveAction={saveAction} saveToKeyAction={saveToKeyAction} />
     </div>
   );
 }

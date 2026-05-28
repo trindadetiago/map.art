@@ -39,50 +39,62 @@ export function TilesPanel() {
   }, [mode, zoom, west, south, east, north, centerLat, centerLng, radiusMeters]);
 
   return (
-    <div className="grid grid-cols-[320px_1fr] gap-6">
-      <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-2.5">
-        <div className="flex gap-2">
-          <label className="flex items-center gap-1">
-            <input type="radio" checked={mode === 'bbox'} onChange={() => setMode('bbox')} />
-            bbox
-          </label>
-          <label className="flex items-center gap-1">
-            <input type="radio" checked={mode === 'circle'} onChange={() => setMode('circle')} />
-            circle
-          </label>
-        </div>
-
-        <Field
-          label="zoom"
-          value={zoom}
-          onChange={(n) => setZoom(Math.max(1, Math.min(22, Math.round(n))))}
-          step={1}
-        />
-
-        {mode === 'bbox' ? (
-          <>
-            <Field label="west (lng)" value={west} onChange={setWest} step={0.0001} />
-            <Field label="south (lat)" value={south} onChange={setSouth} step={0.0001} />
-            <Field label="east (lng)" value={east} onChange={setEast} step={0.0001} />
-            <Field label="north (lat)" value={north} onChange={setNorth} step={0.0001} />
-          </>
-        ) : (
-          <>
-            <Field label="center lat" value={centerLat} onChange={setCenterLat} step={0.0001} />
-            <Field label="center lng" value={centerLng} onChange={setCenterLng} step={0.0001} />
-            <Field label="radius (m)" value={radiusMeters} onChange={setRadiusMeters} step={50} />
-          </>
-        )}
-
-        <div className="mt-3 rounded bg-neutral-50 p-2.5 text-[13px]">
-          <div>
-            <strong>{result.tiles.length}</strong> tiles at z={zoom}
+    <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-4">
+      <section className={CARD}>
+        <div className={`${SECTION_LABEL} mb-4`}>Area</div>
+        <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4">
+          <div className="inline-flex w-full rounded-lg border border-stone-200 bg-stone-50 p-0.5">
+            {(['bbox', 'circle'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium capitalize transition ${
+                  mode === m
+                    ? 'bg-white text-stone-900 shadow-sm'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
           </div>
-          <div className="font-mono text-xs opacity-70">
-            ~{result.width.toFixed(1)}m / tile at lat {result.lat.toFixed(3)}
+
+          <Field
+            label="zoom"
+            value={zoom}
+            onChange={(n) => setZoom(Math.max(1, Math.min(22, Math.round(n))))}
+            step={1}
+          />
+
+          {mode === 'bbox' ? (
+            <>
+              <Field label="west (lng)" value={west} onChange={setWest} step={0.0001} />
+              <Field label="south (lat)" value={south} onChange={setSouth} step={0.0001} />
+              <Field label="east (lng)" value={east} onChange={setEast} step={0.0001} />
+              <Field label="north (lat)" value={north} onChange={setNorth} step={0.0001} />
+            </>
+          ) : (
+            <>
+              <Field label="center lat" value={centerLat} onChange={setCenterLat} step={0.0001} />
+              <Field label="center lng" value={centerLng} onChange={setCenterLng} step={0.0001} />
+              <Field label="radius (m)" value={radiusMeters} onChange={setRadiusMeters} step={50} />
+            </>
+          )}
+
+          <div className="mt-1 rounded-xl border border-stone-200 bg-stone-50 p-4">
+            <div className="text-[28px] font-light leading-none tracking-tight text-stone-900">
+              {result.tiles.length.toLocaleString()}
+            </div>
+            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500">
+              tiles at z={zoom}
+            </div>
+            <div className="mt-2 font-mono text-[11px] text-stone-500">
+              ~{result.width.toFixed(1)} m / tile · lat {result.lat.toFixed(3)}
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </section>
 
       <TileOverlay
         tiles={result.tiles}
@@ -101,6 +113,9 @@ export function TilesPanel() {
   );
 }
 
+const CARD = 'rounded-2xl border border-stone-200/70 bg-white p-6';
+const SECTION_LABEL = 'text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500';
+
 type Highlight =
   | { type: 'bbox'; west: number; south: number; east: number; north: number }
   | { type: 'circle'; center: { lat: number; lng: number }; radiusMeters: number };
@@ -117,16 +132,22 @@ function TileOverlay({
   highlight: Highlight;
 }) {
   if (tiles.length === 0) {
-    return <div className="opacity-50">no tiles — adjust params</div>;
+    return (
+      <section className={`${CARD} flex min-h-[400px] items-center justify-center`}>
+        <div className="text-[13px] text-stone-400">No tiles — adjust the params.</div>
+      </section>
+    );
   }
 
   if (tiles.length > MAX_PREVIEW_TILES) {
     return (
-      <div className="max-w-[480px] rounded border border-amber-200 bg-amber-100 p-5 text-[13px]">
-        <strong>{tiles.length.toLocaleString()}</strong> tiles — too many to preview (cap{' '}
-        {MAX_PREVIEW_TILES.toLocaleString()}). The math is fine; it's just the SVG renderer that
-        would freeze. Reduce zoom or shrink the area.
-      </div>
+      <section className={`${CARD} flex min-h-[400px] items-center justify-center`}>
+        <div className="max-w-[420px] rounded-xl border border-amber-200 bg-amber-50 p-5 text-[13px] leading-relaxed text-amber-800">
+          <strong>{tiles.length.toLocaleString()}</strong> tiles — too many to preview (cap{' '}
+          {MAX_PREVIEW_TILES.toLocaleString()}). The math is fine; it's just the SVG renderer that
+          would freeze. Reduce zoom or shrink the area.
+        </div>
+      </section>
     );
   }
 
@@ -159,12 +180,24 @@ function TileOverlay({
   };
 
   return (
-    <div>
-      <div className="mb-1 text-xs opacity-60">tile coverage · blue = tiles, red = selection</div>
+    <section className={CARD}>
+      <div className="mb-4 flex items-baseline justify-between gap-4">
+        <div className={SECTION_LABEL}>Tile coverage</div>
+        <div className="flex items-center gap-4 text-[12px] text-stone-500">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-blue-500/30 ring-1 ring-blue-500" />
+            tiles
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-[3px] ring-2 ring-red-500" />
+            selection
+          </span>
+        </div>
+      </div>
       <svg
         width="100%"
         viewBox={`0 0 ${svgW} ${svgH}`}
-        className="rounded border border-neutral-300 bg-white"
+        className="rounded-xl border border-stone-200 bg-stone-50"
       >
         <title>Tile coverage preview</title>
         {tiles.map((t) => {
@@ -203,7 +236,7 @@ function TileOverlay({
         })}
         {renderHighlight(highlight, toSvg)}
       </svg>
-    </div>
+    </section>
   );
 }
 
@@ -248,13 +281,16 @@ function Field({
   step?: number;
 }) {
   return (
-    <label className="grid grid-cols-[110px_1fr] items-center gap-2">
-      <span className="font-mono text-[13px]">{label}</span>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500">
+        {label}
+      </span>
       <input
         type="number"
         value={value}
         step={step}
         onChange={(e) => onChange(Number.parseFloat(e.target.value))}
+        className="h-9 w-full rounded-lg border border-stone-200 bg-white px-3 text-[13px] text-stone-900 outline-none transition focus:border-stone-400"
       />
     </label>
   );
