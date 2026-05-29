@@ -3,6 +3,39 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  color: #14110d;
-  background: #f3f1ec;
+  color: #171717;
+  background: #fcfcfc;
+}
+
+@keyframes map-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(48px, 48px);
+  }
+}
+
+@keyframes map-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@keyframes map-ping {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.6;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-map-backdrop] * {
+    animation: none !important;
+  }
 }
