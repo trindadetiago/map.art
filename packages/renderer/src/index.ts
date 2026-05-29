@@ -1,8 +1,9 @@
 export { applyFrustum, cameraFrustumForZoom, positionCamera } from './camera';
 export {
-  type CameraGridParams,
+  RENDER_DEFAULTS,
   type RenderParams,
-  renderParamsForTile,
+  renderParamsForLatLng,
+  tileCenterLatLng,
   tileGroundCorners,
 } from './params';
 export { Scene, type SceneHandle, type SceneProps } from './scene';

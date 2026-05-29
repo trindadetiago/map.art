@@ -21,7 +21,7 @@ That boundary is load-bearing. Don't add Next-isms inside `packages/*`. Don't wr
 
 | Path | What | Runtime shape |
 |---|---|---|
-| `apps/web` | Next.js 15 (App Router). Main UI on `:3210`. Admin pages at `/admin/*` (projects, storage, env, models, renderer, tiles, pipeline). Database has no panel — its card on the dashboard links to Drizzle Studio at https://local.drizzle.studio. | long-running service |
+| `apps/web` | Next.js 15 (App Router). Main UI on `:3210`. Admin pages at `/admin/*` (projects, storage, env, models, renderer, tiles). Database has no panel — its card on the dashboard links to Drizzle Studio at https://local.drizzle.studio. | long-running service |
 | `apps/worker-render` | Server-side render service. Single Node process on `:9999`. Embeds Vite as middleware to serve `render-page/` (the page that mounts `<Scene>`), drives a persistent Puppeteer/Chromium that navigates to its own port, exposes `POST /render` to render one tile and return its PNG. Queue consumer can be layered on top later (call `renderTile()` from a pg-boss handler). | long-running service |
 | `apps/cli` | `mapart` binary. Single entry, subcommands per domain. Imports from `packages/*`. | short-lived tool |
 
@@ -36,9 +36,8 @@ Mostly pure Node libraries. Tree-shake-friendly imports.
 | `@mapart/db` | Drizzle ORM schema + repos + migrations. Postgres + PostGIS. Sub-paths: `./schema`, `./repos`. |
 | `@mapart/env` | Typed env loader. Reads `.env`, validates per-key, exposes `env` + `requireEnv()`. Schema in `src/schema.ts`. |
 | `@mapart/models` | OpenAI image-edit clients (`gpt-image-1.5`, `gpt-image-2`) behind a common `ModelClient` interface. Factory: `getModel(name, opts)`. Requires `OPENAI_API_KEY`. |
-| `@mapart/pipeline` | Generation-strategy harness — turns N rendered tiles into N stylized tiles. Strategy modules under `src/strategies/`. |
 | `@mapart/geo` | Foundational geo primitives + web-mercator tile math. Types (`LatLng`, `Bbox`, `Polygon`, `TileCoord`). Tile math (`latLngToTile`, `tileToBounds`, `tileToCenter`, `tileToBoundsWkt`, `tileWidthMeters`). Coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`). No deps. |
-| `@mapart/renderer` | Three.js + Google 3D Tiles. Exports the React `<Scene>` component (for `apps/web` + `apps/worker-render/render-page`), the render-side types (`RenderParams`, `CameraGridParams`), and the pure helpers (`createTilesRenderer`, `positionCamera`, `applyFrustum`, `reorientTo`, `tileGroundCorners`, `renderParamsForTile`). Depends on `@mapart/geo` for `LatLng` + `tileWidthMeters`. React is a peer dep; pure helpers are usable without it (tree-shaken). |
+| `@mapart/renderer` | Three.js + Google 3D Tiles. Exports the React `<Scene>` component (for `apps/web` + `apps/worker-render/render-page`), the render-side type `RenderParams`, the global render pose/output config `RENDER_DEFAULTS` (pitch 30, yaw 45, 150 m/tile, 512 px), and the pure helpers (`createTilesRenderer`, `positionCamera`, `applyFrustum`, `reorientTo`, `tileGroundCorners`, `tileCenterLatLng`, `renderParamsForLatLng`). Depends on `@mapart/geo` for `LatLng` + `tileWidthMeters`. React is a peer dep; pure helpers are usable without it (tree-shaken). |
 | `@mapart/storage` | Blob storage. Two backends: `local` (`<repo>/data/`) or `s3` (MinIO/AWS). Selected by `STORAGE_BACKEND`. Singleton via `getStorage()`. |
 
 ### `infra/`

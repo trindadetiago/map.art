@@ -68,9 +68,6 @@ importers:
       '@mapart/models':
         specifier: workspace:*
         version: link:../../packages/models
-      '@mapart/pipeline':
-        specifier: workspace:*
-        version: link:../../packages/pipeline
       '@mapart/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
@@ -198,18 +195,6 @@ importers:
       '@mapart/env':
         specifier: workspace:*
         version: link:../env
-      sharp:
-        specifier: ^0.33.5
-        version: 0.33.5
-
-  packages/pipeline:
-    dependencies:
-      '@mapart/models':
-        specifier: workspace:*
-        version: link:../models
-      '@mapart/storage':
-        specifier: workspace:*
-        version: link:../storage
       sharp:
         specifier: ^0.33.5
         version: 0.33.5

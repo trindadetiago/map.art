@@ -1,7 +1,7 @@
 'use client';
 
 import { Scene, type SceneHandle } from '@mapart/renderer';
-import { type RenderParams, renderParamsForTile } from '@mapart/renderer';
+import { type RenderParams, renderParamsForLatLng, tileCenterLatLng } from '@mapart/renderer';
 import { useRef, useState } from 'react';
 import { Field } from './field';
 import { TileGrid3x3 } from './tile_grid_3x3';
@@ -105,7 +105,6 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
 
   const [sampleN, setSampleN] = useState(50);
   const [sampleSeed, setSampleSeed] = useState(42);
-  const [sampleTileWorldMeters, setSampleTileWorldMeters] = useState(150);
   const [sampleRunning, setSampleRunning] = useState(false);
   const [sampleProgress, setSampleProgress] = useState<string | null>(null);
   const [sampleError, setSampleError] = useState<string | null>(null);
@@ -147,17 +146,8 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
         const sampleTiles: SampleTile[] = [];
 
         for (const [t, off] of TILE_OFFSETS.entries()) {
-          const p = renderParamsForTile(
-            {
-              centerLat: cLat,
-              centerLng: cLng,
-              cameraPitch: pitch,
-              cameraYaw: yaw,
-              tileWorldMeters: sampleTileWorldMeters,
-              tilePixelSize: size,
-            },
-            off.col,
-            off.row,
+          const p = renderParamsForLatLng(
+            tileCenterLatLng({ lat: cLat, lng: cLng }, off.col, off.row),
           );
 
           setSampleProgress(
@@ -255,7 +245,10 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
             style={{ width: SCENE_DISPLAY, height: SCENE_DISPLAY }}
           >
             <div
-              style={{ transform: `scale(${SCENE_DISPLAY / size})`, transformOrigin: 'top left' }}
+              style={{
+                transform: `scale(${SCENE_DISPLAY / activeParams.size})`,
+                transformOrigin: 'top left',
+              }}
             >
               <Scene ref={sceneRef} apiKey={apiKey} params={activeParams} />
             </div>
@@ -337,7 +330,7 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
           <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[12px] text-stone-700">
             renderer/samples/&lt;run&gt;/sampleN/c{'{'}col{'}'}_r{'{'}row{'}'}.png
           </code>
-          . Tile framing uses the current pitch/yaw/size plus tileWorldMeters below.
+          . Tile framing uses the global render defaults.
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-[140px]">
@@ -354,14 +347,6 @@ export function RendererPanel({ apiKey, saveAction, saveToKeyAction }: RendererP
               value={sampleSeed}
               onChange={(n) => setSampleSeed(Math.round(n))}
               step={1}
-            />
-          </div>
-          <div className="w-[160px]">
-            <Field
-              label="tileWorldMeters"
-              value={sampleTileWorldMeters}
-              onChange={(n) => setSampleTileWorldMeters(Math.max(10, n))}
-              step={5}
             />
           </div>
           <button

@@ -1,31 +1,21 @@
 import { sql } from 'drizzle-orm';
 import { getDb } from '../client';
-import { jobs, models, projects, tileVersions, tiles } from '../schema/index';
+import { jobs, projects, tiles } from '../schema/index';
 
 export interface TableCounts {
   projects: number;
   tiles: number;
-  tileVersions: number;
   jobs: number;
-  models: number;
 }
 
 export async function getTableCounts(): Promise<TableCounts> {
   const db = getDb();
-  const countOf = async (
-    tbl: typeof projects | typeof tiles | typeof tileVersions | typeof jobs | typeof models,
-  ) => {
+  const countOf = async (tbl: typeof projects | typeof tiles | typeof jobs) => {
     const rows = await db.select({ c: sql<number>`count(*)::int` }).from(tbl);
     return rows[0]?.c ?? 0;
   };
-  const [p, t, v, j, m] = await Promise.all([
-    countOf(projects),
-    countOf(tiles),
-    countOf(tileVersions),
-    countOf(jobs),
-    countOf(models),
-  ]);
-  return { projects: p, tiles: t, tileVersions: v, jobs: j, models: m };
+  const [p, t, j] = await Promise.all([countOf(projects), countOf(tiles), countOf(jobs)]);
+  return { projects: p, tiles: t, jobs: j };
 }
 
 export interface PostgresInfo {

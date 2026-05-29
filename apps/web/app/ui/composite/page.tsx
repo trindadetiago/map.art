@@ -11,13 +11,8 @@ export default function CompositePage() {
         <ProjectCard
           project={{
             id: 'demo',
-            slug: 'joao-pessoa',
             name: 'João Pessoa centro',
-            status: 'active',
-            centerLat: -7.115,
-            centerLng: -34.861,
-            cameraPitch: 30,
-            cameraYaw: 45,
+            description: 'Pixel-art map of the city center.',
             tileCount: 256,
             createdAt: new Date('2026-05-01'),
           }}

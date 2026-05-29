@@ -12,19 +12,11 @@ async function createProjectAction(
   'use server';
   try {
     const name = String(fd.get('name') ?? '').trim();
-    const slug = String(fd.get('slug') ?? '').trim();
-    if (!name || !slug) return { ok: false, error: 'name and slug are required' };
-    const pitch = numOrDefault(fd.get('pitch'), 30);
-    const yaw = numOrDefault(fd.get('yaw'), 45);
-    const centerLat = numOrDefault(fd.get('centerLat'), -7.115);
-    const centerLng = numOrDefault(fd.get('centerLng'), -34.861);
+    if (!name) return { ok: false, error: 'name is required' };
+    const description = String(fd.get('description') ?? '').trim();
     const row = await repos.createProject({
       name,
-      slug,
-      centerLat,
-      centerLng,
-      cameraPitch: pitch,
-      cameraYaw: yaw,
+      description: description || null,
     });
     revalidatePath('/admin/projects');
     return { ok: true, id: row.id };
@@ -39,12 +31,6 @@ async function deleteProjectAction(id: string): Promise<void> {
   revalidatePath('/admin/projects');
 }
 
-function numOrDefault(v: FormDataEntryValue | null, fallback: number): number {
-  if (v === null) return fallback;
-  const parsed = Number.parseFloat(String(v));
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 export default async function ProjectsPage() {
   let projects: ProjectCardData[] = [];
   let dbDown = false;
@@ -54,13 +40,8 @@ export default async function ProjectsPage() {
     projects = await Promise.all(
       rows.map(async (p) => ({
         id: p.id,
-        slug: p.slug,
         name: p.name,
-        status: p.status,
-        centerLat: p.centerLat,
-        centerLng: p.centerLng,
-        cameraPitch: p.cameraPitch,
-        cameraYaw: p.cameraYaw,
+        description: p.description,
         tileCount: await repos.countTilesForProject(p.id),
         createdAt: p.createdAt,
       })),

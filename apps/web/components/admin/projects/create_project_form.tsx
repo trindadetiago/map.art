@@ -17,8 +17,6 @@ export function CreateProjectForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
 
   return (
     <form
@@ -30,61 +28,19 @@ export function CreateProjectForm({
         startTransition(async () => {
           const result = await action(fd);
           if (result.ok) {
-            setName('');
-            setSlug('');
             form.reset();
           } else {
             setError(result.error);
           }
         });
       }}
-      className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr_auto] items-end gap-3"
+      className="grid grid-cols-[2fr_3fr_auto] items-end gap-3"
     >
       <Field label="name">
-        <input
-          name="name"
-          required
-          value={name}
-          onChange={(e) => {
-            const v = e.target.value;
-            setName(v);
-            if (!slug || slug === slugify(name)) setSlug(slugify(v));
-          }}
-          className={INPUT}
-        />
+        <input name="name" required className={INPUT} />
       </Field>
-      <Field label="slug">
-        <input
-          name="slug"
-          required
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          className={`${INPUT} font-mono`}
-        />
-      </Field>
-      <Field label="pitch°">
-        <input name="pitch" type="number" defaultValue={30} step={1} className={INPUT} />
-      </Field>
-      <Field label="yaw°">
-        <input name="yaw" type="number" defaultValue={45} step={1} className={INPUT} />
-      </Field>
-      <Field label="center lat">
-        <input
-          name="centerLat"
-          type="number"
-          defaultValue={-7.115}
-          step={0.0001}
-          className={INPUT}
-        />
-      </Field>
-      <Field label="center lng">
-        <input
-          name="centerLng"
-          type="number"
-          defaultValue={-34.861}
-          step={0.0001}
-          className={INPUT}
-        />
+      <Field label="description">
+        <input name="description" className={INPUT} />
       </Field>
       <button type="submit" disabled={pending} className={BTN_PRIMARY}>
         {pending ? '…' : 'create'}
@@ -104,13 +60,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }

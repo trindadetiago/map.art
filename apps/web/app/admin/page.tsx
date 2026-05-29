@@ -19,11 +19,9 @@ export const dynamic = 'force-dynamic';
 
 interface Stats {
   projects: number;
-  recentProjects: { id: string; slug: string; name: string }[];
+  recentProjects: { id: string; name: string }[];
   tiles: number;
-  tileVersions: number;
   jobs: number;
-  models: number;
   pgVersion: string | null;
   postgisInstalled: boolean;
   storageFiles: number;
@@ -38,9 +36,7 @@ async function loadStats(): Promise<Stats> {
     projects: 0,
     recentProjects: [],
     tiles: 0,
-    tileVersions: 0,
     jobs: 0,
-    models: 0,
     pgVersion: null,
     postgisInstalled: false,
     storageFiles: 0,
@@ -63,12 +59,9 @@ async function loadStats(): Promise<Stats> {
     ]);
     fallback.projects = counts.projects;
     fallback.tiles = counts.tiles;
-    fallback.tileVersions = counts.tileVersions;
     fallback.jobs = counts.jobs;
-    fallback.models = counts.models;
     fallback.recentProjects = projectsList.slice(0, 3).map((p) => ({
       id: p.id,
-      slug: p.slug,
       name: p.name,
     }));
     fallback.pgVersion = shortPgVersion(pg.version);
@@ -105,22 +98,16 @@ export default async function AdminIndex() {
               value={s.projects}
               caption={
                 s.recentProjects.length > 0
-                  ? `Latest: ${s.recentProjects.map((p) => p.slug).join(' · ')}`
+                  ? `Latest: ${s.recentProjects.map((p) => p.name).join(' · ')}`
                   : 'No projects yet'
               }
             />
           </Card>
           <Card icon={IconGrid} label="Tile rows">
-            <Metric value={s.tiles.toLocaleString()} caption="seeded across all projects" />
-          </Card>
-          <Card icon={IconSparkles} label="Tile versions">
-            <Metric value={s.tileVersions.toLocaleString()} caption="rendered + stylized" />
+            <Metric value={s.tiles.toLocaleString()} caption="rendered + stylized artifacts" />
           </Card>
           <Card icon={IconWorkflow} label="Jobs">
             <Metric value={s.jobs.toLocaleString()} caption="render / stylize queue" />
-          </Card>
-          <Card icon={IconSparkles} label="Models">
-            <Metric value={s.models} caption="registered in db" />
           </Card>
         </div>
       </Section>
@@ -168,11 +155,6 @@ export default async function AdminIndex() {
           </Card>
           <Card icon={IconCamera} label="Renderer" href="/admin/renderer">
             <Caption>Live Three.js scene streaming Google Photorealistic 3D Tiles.</Caption>
-          </Card>
-          <Card icon={IconWorkflow} label="Pipeline" href="/admin/pipeline" badge="wip">
-            <Caption>
-              Generation strategies. Phase 1 renders N tiles, Phase 2 stylizes & stitches.
-            </Caption>
           </Card>
         </div>
       </Section>

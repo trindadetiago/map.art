@@ -11,7 +11,7 @@ const program = new Command();
 program.name('mapart').description('map.art monorepo CLI');
 
 registerDbCommands(
-  program.command('db').description('database ops (status, migrate, projects, models, sql)'),
+  program.command('db').description('database ops (status, migrate, projects, sql)'),
 );
 registerStorageCommands(
   program.command('storage').description('blob storage (list, put, get, delete)'),

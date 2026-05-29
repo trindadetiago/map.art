@@ -63,9 +63,7 @@ export function registerDbCommands(parent: Command): void {
           return;
         }
         for (const p of rows) {
-          console.log(
-            `${p.id}  ${p.slug.padEnd(24)}  ${p.status.padEnd(10)}  pitch=${p.cameraPitch}° yaw=${p.cameraYaw}°  tile=${p.tileWorldMeters}m/${p.tilePixelSize}px  center=${p.centerLat.toFixed(4)},${p.centerLng.toFixed(4)}  ${p.name}`,
-          );
+          console.log(`${p.id}  ${p.name.padEnd(24)}  ${p.description ?? ''}`);
         }
       } finally {
         await closeDb();
@@ -73,33 +71,17 @@ export function registerDbCommands(parent: Command): void {
     });
 
   projectsCmd
-    .command('create-rect')
-    .description('Create a project + seed a cols × rows tile grid centered on lat/lng')
+    .command('create')
+    .description('Create a project')
     .requiredOption('--name <name>')
-    .requiredOption('--slug <slug>')
-    .requiredOption('--lat <n>', 'center latitude', Number.parseFloat)
-    .requiredOption('--lng <n>', 'center longitude', Number.parseFloat)
-    .option('--cols <n>', 'number of columns (width)', (v) => Number.parseInt(v, 10), 10)
-    .option('--rows <n>', 'number of rows (height)', (v) => Number.parseInt(v, 10), 10)
-    .option('--tile-meters <n>', 'ground width per tile (m)', Number.parseFloat, 150)
-    .option('--tile-pixels <n>', 'PNG size per tile', (v) => Number.parseInt(v, 10), 512)
-    .option('--pitch <n>', 'camera pitch (°)', Number.parseFloat, 30)
-    .option('--yaw <n>', 'camera yaw (°)', Number.parseFloat, 45)
+    .option('--description <text>')
     .action(async (opts) => {
       try {
-        const { project, tileCount } = await repos.createRectProject({
+        const project = await repos.createProject({
           name: opts.name,
-          slug: opts.slug,
-          centerLat: opts.lat,
-          centerLng: opts.lng,
-          cols: opts.cols,
-          rows: opts.rows,
-          tileWorldMeters: opts.tileMeters,
-          tilePixelSize: opts.tilePixels,
-          cameraPitch: opts.pitch,
-          cameraYaw: opts.yaw,
+          description: opts.description ?? null,
         });
-        console.log(`created ${project.id} (${project.slug})  seeded ${tileCount} tiles`);
+        console.log(`created ${project.id} (${project.name})`);
       } finally {
         await closeDb();
       }
@@ -126,62 +108,6 @@ export function registerDbCommands(parent: Command): void {
       try {
         await repos.deleteProject(opts.id);
         console.log(`deleted ${opts.id}`);
-      } finally {
-        await closeDb();
-      }
-    });
-
-  const modelsCmd = parent.command('models').description('Model registry');
-
-  modelsCmd
-    .command('list')
-    .description('List registered models')
-    .action(async () => {
-      try {
-        const rows = await repos.listModels();
-        if (rows.length === 0) {
-          console.log('(no models)');
-          return;
-        }
-        for (const m of rows) {
-          const active = m.active ? '*' : ' ';
-          console.log(`${active} ${m.id.padEnd(26)} ${m.kind.padEnd(9)} ${m.endpoint}`);
-        }
-      } finally {
-        await closeDb();
-      }
-    });
-
-  modelsCmd
-    .command('upsert')
-    .description('Insert or update a model row')
-    .requiredOption('--id <id>')
-    .requiredOption('--kind <kind>', 'generate | edit')
-    .requiredOption('--endpoint <endpoint>')
-    .option('--notes <text>')
-    .option('--active', 'mark as default/active', false)
-    .action(async (opts) => {
-      try {
-        const row = await repos.upsertModel({
-          id: opts.id,
-          kind: opts.kind,
-          endpoint: opts.endpoint,
-          notes: opts.notes,
-          active: !!opts.active,
-        });
-        console.log(`upserted ${row.id}`);
-      } finally {
-        await closeDb();
-      }
-    });
-
-  parent
-    .command('seed')
-    .description('Seed default model rows (OpenAI gpt-image variants)')
-    .action(async () => {
-      try {
-        const n = await repos.seedDefaultModels();
-        console.log(`seeded ${n} models`);
       } finally {
         await closeDb();
       }

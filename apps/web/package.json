@@ -14,7 +14,6 @@
     "@mapart/env": "workspace:*",
     "@mapart/geo": "workspace:*",
     "@mapart/models": "workspace:*",
-    "@mapart/pipeline": "workspace:*",
     "@mapart/renderer": "workspace:*",
     "@mapart/storage": "workspace:*",
     "@radix-ui/react-select": "^2.2.6",

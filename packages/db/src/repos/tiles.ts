@@ -1,6 +1,6 @@
-import { and, eq, sql } from 'drizzle-orm';
-import { getDb, getSql } from '../client';
-import { tiles } from '../schema/tiles';
+import { asc, eq, sql } from 'drizzle-orm';
+import { getDb } from '../client';
+import { type NewTile, type Tile, tiles } from '../schema/tiles';
 
 export async function countTilesForProject(projectId: string): Promise<number> {
   const rows = await getDb()
@@ -10,80 +10,24 @@ export async function countTilesForProject(projectId: string): Promise<number> {
   return rows[0]?.c ?? 0;
 }
 
-export async function listTilesForProject(
-  projectId: string,
-  limit = 5000,
-): Promise<{ col: number; row: number }[]> {
+export async function listTilesForProject(projectId: string, limit = 5000): Promise<Tile[]> {
   return getDb()
-    .select({ col: tiles.col, row: tiles.row })
+    .select()
     .from(tiles)
     .where(eq(tiles.projectId, projectId))
+    .orderBy(asc(tiles.createdAt))
     .limit(limit);
 }
 
-export async function getTile(
-  projectId: string,
-  col: number,
-  row: number,
-): Promise<{ col: number; row: number } | undefined> {
-  const rows = await getDb()
-    .select({ col: tiles.col, row: tiles.row })
-    .from(tiles)
-    .where(and(eq(tiles.projectId, projectId), eq(tiles.col, col), eq(tiles.row, row)))
-    .limit(1);
+export async function getTileById(id: string): Promise<Tile | undefined> {
+  const rows = await getDb().select().from(tiles).where(eq(tiles.id, id)).limit(1);
   return rows[0];
 }
 
-export type TileVersionSource = 'rendered' | 'generated' | 'manual';
-
-export interface CreateTileVersionInput {
-  projectId: string;
-  col: number;
-  row: number;
-  source: TileVersionSource;
-  storageKey: string;
-  modelId?: string | null;
-  prompt?: string | null;
-  referenceStorageKey?: string | null;
-}
-
-/**
- * Insert a tile_versions row and point tiles.current_version_id at it. If
- * modelId is provided we upsert a minimal models row first so the FK doesn't
- * break for users who skipped `seedDefaultModels`. Single transaction.
- */
-export async function createTileVersionAndSetCurrent(
-  input: CreateTileVersionInput,
-): Promise<string> {
-  const sqlTx = getSql();
-  return sqlTx.begin(async (tx) => {
-    if (input.modelId) {
-      await tx`
-        INSERT INTO models (id, kind, endpoint)
-        VALUES (${input.modelId}, 'edit', ${`auto:${input.modelId}`})
-        ON CONFLICT (id) DO NOTHING
-      `;
-    }
-    const rows = await tx<{ id: string }[]>`
-      INSERT INTO tile_versions (
-        project_id, col, row, source, storage_key, model_id, prompt, reference_storage_key
-      )
-      VALUES (
-        ${input.projectId}::uuid, ${input.col}, ${input.row},
-        ${input.source}, ${input.storageKey},
-        ${input.modelId ?? null}, ${input.prompt ?? null}, ${input.referenceStorageKey ?? null}
-      )
-      RETURNING id
-    `;
-    const row = rows[0];
-    if (!row) throw new Error('createTileVersion: insert returned no row');
-    await tx`
-      UPDATE tiles
-      SET current_version_id = ${row.id}::uuid, updated_at = now()
-      WHERE project_id = ${input.projectId}::uuid
-        AND col = ${input.col}
-        AND row = ${input.row}
-    `;
-    return row.id;
-  });
+/** Append a tile row. Render jobs set renderedImgPath; stylize jobs carry the
+ * source render inline and set stylizedImgPath. */
+export async function createTile(input: NewTile): Promise<Tile> {
+  const [row] = await getDb().insert(tiles).values(input).returning();
+  if (!row) throw new Error('createTile: insert returned no row');
+  return row;
 }
