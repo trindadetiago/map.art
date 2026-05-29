@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>map.art — architecture</title>
+    <style>
+      :root {
+        --bg: #f7f5ef;
+        --panel: #ffffff;
+        --ink: #14110d;
+        --ink-soft: #3f3a32;
+        --muted: #7a7368;
+        --line: #e7e2d4;
+        --line-strong: #d8d2c1;
+        --tint: #f0ece1;
+        --accent: #2563eb;
+        --good: #15803d;
+        --warn: #b45309;
+        --bad: #b91c1c;
+
+        --shadow-xs: 0 1px 2px rgba(20, 17, 13, 0.04);
+        --shadow-sm: 0 1px 2px rgba(20, 17, 13, 0.04), 0 2px 6px rgba(20, 17, 13, 0.04);
+        --shadow-md: 0 1px 2px rgba(20, 17, 13, 0.04), 0 8px 24px rgba(20, 17, 13, 0.06);
+        --shadow-lg: 0 2px 6px rgba(20, 17, 13, 0.05), 0 16px 40px rgba(20, 17, 13, 0.08);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; color: var(--ink); }
+      body {
+        font: 15px/1.6 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 56px 28px 96px;
+        background: var(--bg);
+      }
+      h1 {
+        font-size: 36px;
+        font-weight: 700;
+        margin: 0 0 6px;
+        letter-spacing: -0.025em;
+        background: linear-gradient(180deg, #14110d 0%, #4a443b 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 56px 0 14px;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line), transparent);
+        margin-left: 4px;
+      }
+      h3 {
+        font-size: 15.5px;
+        font-weight: 650;
+        margin: 14px 0 8px;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      p { margin: 6px 0; color: var(--ink-soft); }
+      .lede { color: var(--muted); margin-bottom: 32px; font-size: 16px; max-width: 760px; }
+
+      .diagram-wrap {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 28px 28px 20px;
+        overflow-x: auto;
+        box-shadow: var(--shadow-xs);
+      }
+      svg { display: block; max-width: 100%; height: auto; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px 22px 18px;
+        box-shadow: var(--shadow-xs);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .card:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+        border-color: var(--line-strong);
+      }
+      .card h3 { margin-top: 4px; }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px 3px 9px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        background: var(--tint);
+        color: var(--ink-soft);
+        border: 1px solid var(--line);
+      }
+      .tag::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .tag.good::before { background: #15803d; }
+      .tag.warn::before { background: #b45309; }
+      .tag.bad::before  { background: #b91c1c; }
+      .tag.info::before { background: #2563eb; }
+
+      ul, ol { padding-left: 20px; margin: 6px 0; color: var(--ink-soft); }
+      li { margin: 4px 0; }
+      code {
+        background: var(--tint);
+        padding: 1.5px 6px;
+        border-radius: 5px;
+        font: 12.5px/1.4 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #4a443b;
+        border: 1px solid #e6e0cf;
+      }
+      pre:not(.tree) {
+        background: linear-gradient(180deg, #1a1815 0%, #14110d 100%);
+        color: #eaeaea;
+        padding: 16px 18px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font: 12.5px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #0a0907;
+      }
+      pre .c { color: #807a70; }
+      pre .k { color: #93c5fd; }
+      pre .s { color: #fcd34d; }
+
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .legend {
+        display: flex;
+        gap: 22px;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px dashed var(--line);
+        font-size: 12px;
+        color: var(--muted);
+        flex-wrap: wrap;
+      }
+      .legend-item { display: flex; align-items: center; gap: 8px; }
+      .swatch {
+        width: 16px;
+        height: 3px;
+        border-radius: 2px;
+      }
+
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 760px) {
+        .two-col { grid-template-columns: 1fr; }
+      }
+
+      .summary { color: var(--ink-soft); margin: 6px 0 0; font-size: 14.5px; }
+
+      .steps {
+        counter-reset: step;
+        list-style: none;
+        padding-left: 0;
+        margin: 16px 0 0;
+      }
+      .steps > li {
+        position: relative;
+        padding: 0 0 18px 46px;
+        margin: 0;
+        border-left: 2px solid var(--line);
+        margin-left: 14px;
+      }
+      .steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+      .steps > li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: -15px;
+        top: -2px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        color: var(--ink-soft);
+        font: 700 12px/28px "Inter", sans-serif;
+        text-align: center;
+        box-shadow: var(--shadow-xs);
+      }
+      .steps .who {
+        display: inline-block;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: var(--tint);
+        border: 1px solid var(--line);
+        color: var(--ink-soft);
+        margin-bottom: 4px;
+      }
+      .steps .who.render { background: #eef4ff; border-color: #cfe0ff; color: #1e40af; }
+      .steps .who.stylize { background: #fef3e7; border-color: #f5dcbf; color: #92400e; }
+      .steps .who.web { background: #ecfdf3; border-color: #c5ead4; color: #15803d; }
+      .steps h3 { margin: 2px 0 4px; }
+      .steps p { margin: 2px 0; }
+
+      details.more { margin-top: 14px; }
+      details.more > summary {
+        list-style: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px 5px 13px;
+        border-radius: 999px;
+        background: var(--bg);
+        color: var(--ink-soft);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 600;
+        user-select: none;
+        transition: background 140ms, border-color 140ms, color 140ms;
+      }
+      details.more > summary::-webkit-details-marker { display: none; }
+      details.more > summary:hover {
+        background: var(--tint);
+        border-color: var(--line-strong);
+        color: var(--ink);
+      }
+      details.more > summary::before { content: "Read more"; }
+      details.more > summary::after {
+        content: "→";
+        transition: transform 220ms ease;
+        font-size: 13px;
+      }
+      details.more[open] > summary::before { content: "Show less"; }
+      details.more[open] > summary::after { transform: rotate(90deg); }
+      details.more .body {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px dashed var(--line);
+        color: var(--ink-soft);
+      }
+      details.more .body p { margin: 6px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>map.art — architecture</h1>
+    <p class="lede">
+      Three services, one Postgres, one blob store. The <code>tiles</code> table is both the data and the
+      job queue — workers poll it, claim rows with <code>SKIP LOCKED</code>, and never speak HTTP to anything.
+      This is the shape we're building toward.
+    </p>
+
+    <h2>Diagram</h2>
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 1200 1000" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#3f3a32" />
+          </marker>
+        </defs>
+
+        <!-- band labels -->
+        <g fill="#7a7368">
+          <text x="40" y="60" font-size="10" font-weight="700" letter-spacing="0.16em">01 · WEB</text>
+          <text x="40" y="290" font-size="10" font-weight="700" letter-spacing="0.16em">02 · POSTGRES</text>
+          <text x="40" y="480" font-size="10" font-weight="700" letter-spacing="0.16em">03 · WORKERS</text>
+          <text x="40" y="828" font-size="10" font-weight="700" letter-spacing="0.16em">04 · STORAGE</text>
+        </g>
+
+        <!-- band dividers -->
+        <g stroke="#ece8db" stroke-width="1">
+          <line x1="40" y1="250" x2="1160" y2="250"/>
+          <line x1="40" y1="440" x2="1160" y2="440"/>
+          <line x1="40" y1="790" x2="1160" y2="790"/>
+        </g>
+
+        <!-- =================== BAND 1: WEB =================== -->
+        <rect x="400" y="90" width="400" height="130" rx="12" fill="#ffffff" stroke="#d8d2c1" stroke-width="1"/>
+        <g transform="translate(422 112)" fill="none" stroke="#3f3a32" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="0" y="0" width="16" height="12" rx="2"/>
+          <path d="M0 9h16M5 16h6M5 12v4M11 12v4"/>
+        </g>
+        <text x="448" y="123" font-size="14" font-weight="700" fill="#14110d">web</text>
+        <text x="448" y="139" font-size="10" fill="#7a7368" letter-spacing="0.12em">NEXT.JS · UI + THIN API · :3210</text>
+        <text x="422" y="170" font-size="12" fill="#3f3a32">Pick area → create project, insert all tiles</text>
+        <text x="422" y="190" font-size="12" fill="#3f3a32">Read tile state + serve images for display</text>
+        <text x="422" y="208" font-size="11" font-style="italic" fill="#7a7368">No image generation here</text>
+
+        <!-- =================== BAND 2: POSTGRES =================== -->
+        <rect x="180" y="300" width="840" height="110" rx="12" fill="#ffffff" stroke="#d8d2c1" stroke-width="1"/>
+        <g transform="translate(202 324)" fill="none" stroke="#3f3a32" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="9" cy="3" rx="8" ry="2.6"/>
+          <path d="M1 3v10c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6V3"/>
+          <path d="M1 8c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6"/>
+        </g>
+        <text x="228" y="336" font-size="14" font-weight="700" fill="#14110d">Postgres</text>
+        <text x="228" y="352" font-size="10" fill="#7a7368" letter-spacing="0.12em">STATE + JOB QUEUE · ONE DB</text>
+
+        <rect x="430" y="324" width="150" height="32" rx="6" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="442" y="344" font-size="11.5" fill="#3f3a32">project</text>
+
+        <rect x="592" y="324" width="240" height="32" rx="6" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="604" y="344" font-size="11.5" fill="#3f3a32">tiles · data + queue</text>
+
+        <rect x="844" y="324" width="156" height="32" rx="6" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="856" y="344" font-size="11.5" font-weight="600" fill="#3f3a32">SKIP LOCKED</text>
+
+        <text x="202" y="392" font-size="11" fill="#7a7368" font-style="italic">No broker, no Redis — the table is the queue, and row locks are the concurrency primitive.</text>
+
+        <!-- =================== BAND 3: WORKERS =================== -->
+        <!-- worker-render -->
+        <rect x="260" y="500" width="300" height="240" rx="12" fill="#ffffff" stroke="#d8d2c1" stroke-width="1"/>
+        <g transform="translate(282 520)">
+          <rect x="0" y="0" width="92" height="18" rx="4" fill="#eef4ff" stroke="#cfe0ff"/>
+          <text x="46" y="13" font-size="9.5" font-weight="700" fill="#1e40af" text-anchor="middle" letter-spacing="0.08em">WORKER · RENDER</text>
+        </g>
+        <text x="282" y="558" font-size="13" font-weight="700" fill="#14110d">worker-render</text>
+        <text x="282" y="574" font-size="10.5" fill="#7a7368">Puppeteer + Three.js · :9999</text>
+
+        <rect x="282" y="588" width="256" height="70" rx="8" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="296" y="607" font-size="9.5" font-weight="700" fill="#7a7368" letter-spacing="0.12em">CLAIMS</text>
+        <text x="296" y="625" font-size="11.5" fill="#3f3a32">render · pending</text>
+        <text x="296" y="643" font-size="11.5" fill="#3f3a32">(lat, lng) → PNG → storage</text>
+
+        <rect x="282" y="668" width="256" height="56" rx="8" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="296" y="687" font-size="9.5" font-weight="700" fill="#7a7368" letter-spacing="0.12em">THEN WRITES</text>
+        <text x="296" y="704" font-size="11.5" fill="#3f3a32">rendered_img_path,</text>
+        <text x="296" y="718" font-size="11.5" fill="#3f3a32">status = done</text>
+
+        <!-- worker-stylize -->
+        <rect x="640" y="500" width="300" height="240" rx="12" fill="#ffffff" stroke="#d8d2c1" stroke-width="1"/>
+        <g transform="translate(662 520)">
+          <rect x="0" y="0" width="96" height="18" rx="4" fill="#fef3e7" stroke="#f5dcbf"/>
+          <text x="48" y="13" font-size="9.5" font-weight="700" fill="#92400e" text-anchor="middle" letter-spacing="0.08em">WORKER · STYLIZE</text>
+        </g>
+        <text x="662" y="558" font-size="13" font-weight="700" fill="#14110d">worker-stylize</text>
+        <text x="662" y="574" font-size="10.5" fill="#7a7368">@mapart/models · image-edit</text>
+
+        <rect x="662" y="588" width="256" height="70" rx="8" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="676" y="607" font-size="9.5" font-weight="700" fill="#7a7368" letter-spacing="0.12em">CLAIMS</text>
+        <text x="676" y="625" font-size="11.5" fill="#3f3a32">render · done, all neighbors</text>
+        <text x="676" y="643" font-size="11.5" fill="#3f3a32">rendered → stylize w/ context</text>
+
+        <rect x="662" y="668" width="256" height="56" rx="8" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="676" y="687" font-size="9.5" font-weight="700" fill="#7a7368" letter-spacing="0.12em">THEN WRITES</text>
+        <text x="676" y="704" font-size="11.5" fill="#3f3a32">stylized_img_path,</text>
+        <text x="676" y="718" font-size="11.5" fill="#3f3a32">type = stylize, status = done</text>
+
+        <!-- =================== BAND 4: STORAGE =================== -->
+        <rect x="180" y="850" width="840" height="100" rx="12" fill="#ffffff" stroke="#d8d2c1" stroke-width="1"/>
+        <g transform="translate(202 872)" fill="none" stroke="#3f3a32" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12a4 4 0 010-8 5 5 0 019.6 1.4A3.5 3.5 0 0117 12H4z"/>
+        </g>
+        <text x="228" y="884" font-size="14" font-weight="700" fill="#14110d">Blob storage</text>
+        <text x="228" y="900" font-size="10" fill="#7a7368" letter-spacing="0.12em">@mapart/storage · LOCAL or S3/MinIO</text>
+
+        <rect x="430" y="870" width="270" height="32" rx="6" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="442" y="890" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace" fill="#3f3a32">render/{project}/{x}_{y}.png</text>
+
+        <rect x="710" y="870" width="290" height="32" rx="6" fill="#fafaf6" stroke="#e7e2d4"/>
+        <text x="722" y="890" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace" fill="#3f3a32">stylize/{project}/{x}_{y}.png</text>
+
+        <text x="202" y="934" font-size="11" font-style="italic" fill="#7a7368">Workers write. web reads tile paths from Postgres and serves the images (omitted from the diagram).</text>
+
+        <!-- =================== ARROWS =================== -->
+        <!-- web ↕ Postgres -->
+        <path d="M 600 220 L 600 300" fill="none" stroke="#3f3a32" stroke-width="1.4" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+        <g transform="translate(612 254)">
+          <rect x="-2" y="-11" width="172" height="16" rx="3" fill="#ffffff" stroke="#e7e2d4"/>
+          <text x="84" y="1" font-size="11" fill="#3f3a32" text-anchor="middle">create project · insert tiles</text>
+        </g>
+
+        <!-- worker-render ↕ Postgres -->
+        <path d="M 410 500 L 410 410" fill="none" stroke="#3f3a32" stroke-width="1.4" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+        <g transform="translate(416 456)">
+          <rect x="-2" y="-11" width="116" height="16" rx="3" fill="#ffffff" stroke="#e7e2d4"/>
+          <text x="56" y="1" font-size="11" fill="#3f3a32" text-anchor="middle">poll · claim · update</text>
+        </g>
+
+        <!-- worker-stylize ↕ Postgres -->
+        <path d="M 790 500 L 790 410" fill="none" stroke="#3f3a32" stroke-width="1.4" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+        <g transform="translate(796 456)">
+          <rect x="-2" y="-11" width="116" height="16" rx="3" fill="#ffffff" stroke="#e7e2d4"/>
+          <text x="56" y="1" font-size="11" fill="#3f3a32" text-anchor="middle">poll · claim · update</text>
+        </g>
+
+        <!-- worker-render → Storage -->
+        <path d="M 410 740 L 410 850" fill="none" stroke="#3f3a32" stroke-width="1.4" marker-end="url(#arrow)"/>
+        <g transform="translate(416 794)">
+          <rect x="-2" y="-11" width="96" height="16" rx="3" fill="#ffffff" stroke="#e7e2d4"/>
+          <text x="46" y="1" font-size="11" fill="#3f3a32" text-anchor="middle">write render</text>
+        </g>
+
+        <!-- worker-stylize ↕ Storage -->
+        <path d="M 790 740 L 790 850" fill="none" stroke="#3f3a32" stroke-width="1.4" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+        <g transform="translate(796 794)">
+          <rect x="-2" y="-11" width="170" height="16" rx="3" fill="#ffffff" stroke="#e7e2d4"/>
+          <text x="84" y="1" font-size="11" fill="#3f3a32" text-anchor="middle">read neighbors · write stylized</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:#3f3a32"></span> data / job flow (DB + storage only)</div>
+        <div class="legend-item"><span class="swatch" style="background:#1e40af"></span> render phase</div>
+        <div class="legend-item"><span class="swatch" style="background:#92400e"></span> stylize phase</div>
+      </div>
+    </div>
+
+    <h2>The three services</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag info">service</span>
+        <h3>web</h3>
+        <p class="summary">Next.js. The only thing that speaks HTTP. UI + a thin API.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>User picks an area; web computes the grid, then inserts one <code>tiles</code> row per cell (all <code>render</code> / <code>pending</code>) plus the <code>project</code> row. After that web only <em>reads</em> tile state to show progress and serves the finished images.</p>
+            <p>web does no rendering and no generation — it never blocks on heavy work.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <span class="tag info">service</span>
+        <h3>worker-render</h3>
+        <p class="summary">Headless Chromium + Three.js. Turns <code>(lat, lng)</code> into a raw render PNG.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>Polls for <code>render</code> / <code>pending</code> tiles, claims one, renders it, writes the PNG to storage, then writes <code>rendered_img_path</code> and flips <code>status = done</code>. No HTTP in, no HTTP out — just Postgres and storage.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <span class="tag info">service · planned</span>
+        <h3>worker-stylize</h3>
+        <p class="summary">Calls the image-edit model. Turns a rendered tile + its neighbors into pixel-art.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>Polls for tiles that have finished rendering <em>and whose neighbors have all rendered too</em>, claims one, stylizes it using the neighbor tiles as context, writes <code>stylized_img_path</code>, flips <code>current_status_type = stylize</code> and <code>status = done</code>.</p>
+            <p>The generation itself goes through <code>@mapart/models</code> — the worker doesn't care which model is behind it.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+    <p class="summary" style="margin-top:14px">
+      <strong>The load-bearing rule:</strong> workers talk to Postgres and blob storage, nothing else. No worker calls
+      web, and web never calls a worker. All coordination happens through rows in the <code>tiles</code> table. That's
+      what lets us scale each worker pool independently and run them anywhere.
+    </p>
+
+    <h2>The two tables</h2>
+    <div class="two-col">
+      <div>
+        <h3>project</h3>
+        <pre><span class="k">create table</span> project (
+  id          <span class="k">uuid primary key default</span> gen_random_uuid(),
+  name        <span class="k">text not null</span>,
+  description <span class="k">text</span>,
+  created_at  <span class="k">timestamptz not null default</span> now(),
+  updated_at  <span class="k">timestamptz not null default</span> now()
+);</pre>
+        <p class="summary">Just a grouping + label. Everything operational lives on <code>tiles</code>. Progress (“42 of 900 done”) is a <code>group by status</code> over tiles — not stored, never out of sync.</p>
+      </div>
+      <div>
+        <h3>tiles — the core</h3>
+        <pre><span class="k">create table</span> tiles (
+  id                  <span class="k">uuid primary key default</span> gen_random_uuid(),
+  project_id          <span class="k">uuid not null references</span> project(id),
+  x                   <span class="k">int  not null</span>,            <span class="c">-- grid column</span>
+  y                   <span class="k">int  not null</span>,            <span class="c">-- grid row</span>
+  lat                 <span class="k">double precision not null</span>,
+  lng                 <span class="k">double precision not null</span>,
+  current_status_type <span class="k">text not null default</span> <span class="s">'render'</span>,
+                      <span class="c">-- 'render' | 'stylize'</span>
+  status              <span class="k">text not null default</span> <span class="s">'pending'</span>,
+                      <span class="c">-- pending|progress|done|error</span>
+  retry_attempt       <span class="k">int  not null default</span> 0,  <span class="c">-- 0..3 per phase</span>
+  neighbors           <span class="k">uuid[] not null default</span> <span class="s">'{}'</span>, <span class="c">-- ≤ 8</span>
+  rendered_img_path   <span class="k">text</span>,
+  stylized_img_path   <span class="k">text</span>,
+  created_at          <span class="k">timestamptz not null default</span> now(),
+  updated_at          <span class="k">timestamptz not null default</span> now(),
+  <span class="k">unique</span> (project_id, x, y)
+);</pre>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>One row, two lives</h3>
+        <p class="summary"><code>current_status_type</code> flips <code>render → stylize</code>; <code>status</code> cycles within each phase. A single row carries a tile from raw render all the way to finished pixel-art.</p>
+      </div>
+      <div class="card">
+        <h3>x / y / lat / lng</h3>
+        <p class="summary"><code>x, y</code> are the tile's index in the precomputed grid; <code>lat, lng</code> are its real-world center. web computes all four at insert time from the chosen area using <code>@mapart/geo</code> tile math + the hardcoded render params.</p>
+      </div>
+      <div class="card">
+        <h3>neighbors</h3>
+        <p class="summary">A list of adjacent tile <code>id</code>s — up to 8 (the diagonals count), fewer on edges and corners. Precomputed at insert time so the stylize gate is one cheap query, not a geometry calculation per poll.</p>
+      </div>
+      <div class="card">
+        <h3>the two paths</h3>
+        <p class="summary"><code>rendered_img_path</code> and <code>stylized_img_path</code> are blob keys, never image bytes. A non-null <code>rendered_img_path</code> is also the durable signal that “render finished here” — see the neighbor rule below.</p>
+      </div>
+    </div>
+
+    <h2>Lifecycle of a tile</h2>
+    <ol class="steps">
+      <li>
+        <span class="who web">web</span>
+        <h3>Project created → grid exploded into rows</h3>
+        <p>User picks an area. web inserts the <code>project</code> and one <code>tiles</code> row per grid cell, each with its <code>x, y, lat, lng</code> and precomputed <code>neighbors</code>, all at <code>render</code> / <code>pending</code>.</p>
+      </li>
+      <li>
+        <span class="who render">worker-render</span>
+        <h3>Claim a pending render</h3>
+        <p>Polls for <code>render</code> / <code>pending</code>, atomically claims one row with <code>FOR UPDATE SKIP LOCKED</code>, flips it to <code>progress</code>, commits. The lock is released the instant it commits — it does <em>not</em> hold a row lock during the render.</p>
+      </li>
+      <li>
+        <span class="who render">worker-render</span>
+        <h3>Render → store → mark done</h3>
+        <p>Renders <code>(lat, lng)</code> to a PNG, writes it to storage, then <code>update</code>s the row with <code>rendered_img_path</code> and <code>status = done</code>. On failure it bumps <code>retry_attempt</code> instead (see retries).</p>
+      </li>
+      <li>
+        <span class="who stylize">worker-stylize</span>
+        <h3>Find a render-done tile whose neighbors are all rendered</h3>
+        <p>Polls for <code>render</code> / <code>done</code> tiles where <strong>every</strong> neighbor already has an image path — one query, no exceptions. If even one neighbor hasn't rendered yet, the tile waits.</p>
+      </li>
+      <li>
+        <span class="who stylize">worker-stylize</span>
+        <h3>Claim, promote to the stylize phase</h3>
+        <p>Claims the tile with <code>SKIP LOCKED</code> and promotes it: <code>current_status_type = stylize</code>, <code>status = progress</code>, <code>retry_attempt = 0</code>. (Retries reset per phase.)</p>
+      </li>
+      <li>
+        <span class="who stylize">worker-stylize</span>
+        <h3>Stylize with neighbor context → store → done</h3>
+        <p>Reads the tile's render plus its neighbors' images from storage, generates the stylized tile through <code>@mapart/models</code>, writes the PNG, then sets <code>stylized_img_path</code> and <code>status = done</code>. Terminal state.</p>
+      </li>
+    </ol>
+
+    <h2>How the queue works</h2>
+    <div class="grid">
+      <div class="card good">
+        <span class="tag good">claiming</span>
+        <h3>SKIP LOCKED = safe concurrent claim</h3>
+        <p class="summary">Many worker instances poll the same table. The claim transaction locks one row and skips any row another worker already holds — no two workers ever grab the same tile.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>The whole trick: <code>FOR UPDATE</code> locks the rows a <code>SELECT</code> returns; <code>SKIP LOCKED</code> tells Postgres to step over rows someone else has locked instead of waiting. Three workers hitting it at once get three different tiles, with no central coordinator.</p>
+          </div>
+        </details>
+      </div>
+      <div class="card good">
+        <span class="tag good">lock lifetime</span>
+        <h3>The lock is held for milliseconds, not the whole job</h3>
+        <p class="summary">Lock → flip <code>status = progress</code> → commit. After commit the row is protected by <em>state</em>, not by a lock — the next poll skips it because it's no longer <code>pending</code>.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>Holding a row lock for a 30-second render would serialize everything and defeat the point. Instead the transaction is tiny: claim and mark <code>progress</code>, commit, <em>then</em> do the slow work outside any transaction.</p>
+          </div>
+        </details>
+      </div>
+      <div class="card good">
+        <span class="tag good">polling</span>
+        <h3>Adaptive polling</h3>
+        <p class="summary">Idle workers poll every ~30s. When a poll returns a tile, poll again immediately — drain the backlog fast, idle cheaply when there's nothing to do.</p>
+      </div>
+      <div class="card warn">
+        <span class="tag warn">retries</span>
+        <h3>retry_attempt 0 → 3, then error</h3>
+        <p class="summary">On failure, bump <code>retry_attempt</code> and drop back to <code>pending</code>. At the 4th failure (<code>retry_attempt = 3</code> and it fails again) set <code>status = error</code>.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>Workers only ever pick up <code>pending</code>. <code>error</code> is a dead end — never auto-retried, surfaced for a human. The counter is <strong>per phase</strong>: promoting a tile from render to stylize resets <code>retry_attempt</code> to 0, so render failures don't eat into the stylize budget.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <h3 style="margin-top:28px">Claim queries</h3>
+    <pre><span class="c">-- worker-render: grab the next pending render</span>
+<span class="k">begin</span>;
+  <span class="k">select</span> id <span class="k">from</span> tiles
+  <span class="k">where</span> current_status_type = <span class="s">'render'</span> <span class="k">and</span> status = <span class="s">'pending'</span>
+  <span class="k">order by</span> id <span class="k">limit</span> 1
+  <span class="k">for update skip locked</span>;
+  <span class="c">-- then, for the returned id:</span>
+  <span class="k">update</span> tiles <span class="k">set</span> status = <span class="s">'progress'</span>, updated_at = now() <span class="k">where</span> id = $1;
+<span class="k">commit</span>;  <span class="c">-- lock released here; render happens after, outside the txn</span>
+
+<span class="c">-- worker-stylize: a render-done tile whose neighbors have ALL rendered</span>
+<span class="k">begin</span>;
+  <span class="k">select</span> t.id <span class="k">from</span> tiles t
+  <span class="k">where</span> t.current_status_type = <span class="s">'render'</span> <span class="k">and</span> t.status = <span class="s">'done'</span>
+    <span class="k">and not exists</span> (
+      <span class="k">select</span> 1 <span class="k">from</span> tiles n
+      <span class="k">where</span> n.id = <span class="k">any</span>(t.neighbors)
+        <span class="k">and</span> n.rendered_img_path <span class="k">is null</span>   <span class="c">-- a neighbor not yet rendered</span>
+    )
+  <span class="k">order by</span> t.id <span class="k">limit</span> 1
+  <span class="k">for update skip locked</span>;
+  <span class="c">-- then promote the returned id into the stylize phase:</span>
+  <span class="k">update</span> tiles
+    <span class="k">set</span> current_status_type = <span class="s">'stylize'</span>, status = <span class="s">'progress'</span>,
+        retry_attempt = 0, updated_at = now()
+    <span class="k">where</span> id = $1;
+<span class="k">commit</span>;</pre>
+
+    <div class="two-col" style="margin-top:16px">
+      <div class="card bad">
+        <span class="tag bad">the rule that matters</span>
+        <h3>Neighbor readiness keys on the image path, not the phase</h3>
+        <p class="summary">Gate stylize on <code>rendered_img_path IS NOT NULL</code> for every neighbor — never on <code>current_status_type = 'render'</code>.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>If the gate checked the phase column, the first tile to get stylized would flip to <code>stylize</code> and then <em>fail</em> its neighbors' readiness checks forever — they'd never stylize. Starvation.</p>
+            <p><code>rendered_img_path</code> is set once and never cleared, so it stays a true “render finished here” signal regardless of what phase the neighbor later moves to. (A stylized neighbor has both paths set, so checking the rendered path alone is enough — it's equivalent to “has at least one image path”.)</p>
+          </div>
+        </details>
+      </div>
+      <div class="card warn">
+        <span class="tag warn">gotcha</span>
+        <h3>updated_at isn't free</h3>
+        <p class="summary">Workers claim and update with raw SQL, which bypasses Drizzle's <code>$onUpdate</code>. Set <code>updated_at = now()</code> explicitly in every worker write (or add a DB trigger).</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p><code>created_at</code> is a plain <code>default now()</code> and takes care of itself. <code>updated_at</code> only auto-fills on writes that go through the ORM; the worker claim/update path doesn't, so it has to set it by hand. The claim queries above do.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <h2>Out of scope for now</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag">later</span>
+        <h3>Cancel</h3>
+        <p class="summary">No <code>canceled</code> state yet — nothing cancels a tile today. If/when we add project cancellation, it becomes a status that the claim queries exclude.</p>
+      </div>
+      <div class="card">
+        <span class="tag">later</span>
+        <h3>Where the model runs</h3>
+        <p class="summary">worker-stylize calls <code>@mapart/models</code>; the hosting of the actual fine-tuned model (serverless GPU vs self-host) is a separate decision behind that interface.</p>
+      </div>
+      <div class="card">
+        <span class="tag">later</span>
+        <h3>Auth, billing, multi-tenancy</h3>
+        <p class="summary">The SaaS layer — accounts, quotas, payment — sits in front of this and doesn't change the worker/queue mechanics described here.</p>
+      </div>
+    </div>
+
+    <footer>
+      map.art · architecture
+    </footer>
+  </body>
+</html>
