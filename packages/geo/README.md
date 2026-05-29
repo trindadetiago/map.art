@@ -15,7 +15,7 @@ Tile math (`./coords`):
 - `tileToNW(x, y, zoom)` → NW corner LatLng
 - `tileToBounds(x, y, zoom)` → Bbox
 - `tileToCenter(x, y, zoom)` → LatLng
-- `tileToBoundsWkt(x, y, zoom)` → PostGIS WKT polygon
+- `tileToBoundsWkt(x, y, zoom)` → WKT polygon
 - `tileWidthMeters(zoom, lat)` → meters per tile at zoom + latitude
 
 Coverage (`./coords` + `./coverage`):

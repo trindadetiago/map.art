@@ -17,7 +17,7 @@ pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 apps/cli/
   bin/mapart.ts        # entry; wires register*(parent) calls
   src/commands/
-    db.ts              # mapart db status|migrate|reset|projects|models|seed|sql
+    db.ts              # mapart db status|migrate|reset|projects|sql
     storage.ts         # mapart storage list|put|get|delete
     models.ts          # mapart models generate
     render.ts          # mapart render (end-to-end test against apps/worker-render dev endpoint)
