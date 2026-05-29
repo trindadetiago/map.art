@@ -3,11 +3,9 @@ import { findRepoRoot } from '@mapart/env';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { getDb, getSql } from './client';
 
-/** Applies all pending migrations from packages/db/drizzle. Ensures PostGIS is enabled first. */
+/** Applies all pending migrations from packages/db/drizzle. */
 export async function runMigrations(): Promise<void> {
   const migrationsFolder = resolve(findRepoRoot(), 'packages/db/drizzle');
-  const sql = getSql();
-  await sql.unsafe('CREATE EXTENSION IF NOT EXISTS postgis');
   await migrate(getDb(), { migrationsFolder });
 }
 

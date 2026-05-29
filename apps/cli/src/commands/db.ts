@@ -4,12 +4,11 @@ import type { Command } from 'commander';
 export function registerDbCommands(parent: Command): void {
   parent
     .command('status')
-    .description('Connection check + PostGIS version + table counts')
+    .description('Connection check + table counts')
     .action(async () => {
       try {
         const info = await repos.getPostgresInfo();
         console.log(`postgres: ${info.version.split(' ').slice(0, 2).join(' ')}`);
-        console.log(`postgis:  ${info.postgisVersion ?? '(not installed)'}`);
         try {
           const counts = await repos.getTableCounts();
           console.log('tables:');
@@ -82,19 +81,6 @@ export function registerDbCommands(parent: Command): void {
           description: opts.description ?? null,
         });
         console.log(`created ${project.id} (${project.name})`);
-      } finally {
-        await closeDb();
-      }
-    });
-
-  projectsCmd
-    .command('tile-count')
-    .description('How many tile rows a project has')
-    .requiredOption('--id <uuid>')
-    .action(async (opts) => {
-      try {
-        const n = await repos.countTilesForProject(opts.id);
-        console.log(n);
       } finally {
         await closeDb();
       }

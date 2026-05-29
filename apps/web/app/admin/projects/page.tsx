@@ -37,15 +37,12 @@ export default async function ProjectsPage() {
 
   try {
     const rows = await repos.listProjects();
-    projects = await Promise.all(
-      rows.map(async (p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        tileCount: await repos.countTilesForProject(p.id),
-        createdAt: p.createdAt,
-      })),
-    );
+    projects = rows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      createdAt: p.createdAt,
+    }));
   } catch {
     dbDown = true;
   }

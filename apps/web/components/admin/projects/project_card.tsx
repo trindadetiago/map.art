@@ -5,7 +5,6 @@ export interface ProjectCardData {
   id: string;
   name: string;
   description: string | null;
-  tileCount: number;
   createdAt: Date;
 }
 
@@ -32,13 +31,6 @@ export function ProjectCard({
           <p className="mt-1 mb-0 line-clamp-2 text-[13px] text-stone-500">{project.description}</p>
         )}
       </div>
-
-      <dl className="mt-5 grid grid-cols-2 gap-y-2 text-[12px]">
-        <dt className="text-stone-400">tiles</dt>
-        <dd className="m-0 text-right font-mono tabular-nums text-stone-700">
-          {project.tileCount.toLocaleString()}
-        </dd>
-      </dl>
 
       <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-4 text-[11px] text-stone-400">
         <span>created {formatDate(project.createdAt)}</span>

@@ -13,7 +13,6 @@ export default function CompositePage() {
             id: 'demo',
             name: 'João Pessoa centro',
             description: 'Pixel-art map of the city center.',
-            tileCount: 256,
             createdAt: new Date('2026-05-01'),
           }}
           deleteAction={async () => {}}

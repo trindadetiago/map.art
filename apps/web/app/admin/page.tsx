@@ -3,12 +3,10 @@ import {
   IconCamera,
   IconDatabase,
   IconEnv,
-  IconGrid,
   IconLayers,
   IconMap,
   IconSparkles,
   IconStorage,
-  IconWorkflow,
 } from '@/components/admin/icons';
 import { Section } from '@/components/admin/section';
 import { repos } from '@mapart/db';
@@ -20,10 +18,7 @@ export const dynamic = 'force-dynamic';
 interface Stats {
   projects: number;
   recentProjects: { id: string; name: string }[];
-  tiles: number;
-  jobs: number;
   pgVersion: string | null;
-  postgisInstalled: boolean;
   storageFiles: number;
   storageBytes: number;
   envSet: number;
@@ -35,10 +30,7 @@ async function loadStats(): Promise<Stats> {
   const fallback: Stats = {
     projects: 0,
     recentProjects: [],
-    tiles: 0,
-    jobs: 0,
     pgVersion: null,
-    postgisInstalled: false,
     storageFiles: 0,
     storageBytes: 0,
     envSet: 0,
@@ -58,14 +50,11 @@ async function loadStats(): Promise<Stats> {
       repos.getPostgresInfo(),
     ]);
     fallback.projects = counts.projects;
-    fallback.tiles = counts.tiles;
-    fallback.jobs = counts.jobs;
     fallback.recentProjects = projectsList.slice(0, 3).map((p) => ({
       id: p.id,
       name: p.name,
     }));
     fallback.pgVersion = shortPgVersion(pg.version);
-    fallback.postgisInstalled = pg.postgisVersion !== null;
   } catch {
     // DB not running — keep zeros, don't fail the page.
   }
@@ -87,13 +76,8 @@ export default async function AdminIndex() {
   return (
     <div>
       <Section label="Projects" description="state of the work">
-        <div className="grid grid-cols-4 gap-4">
-          <Card
-            icon={IconLayers}
-            label="Total projects"
-            href="/admin/projects"
-            className="col-span-2 row-span-2 min-h-[280px]"
-          >
+        <div className="grid grid-cols-1 gap-4">
+          <Card icon={IconLayers} label="Total projects" href="/admin/projects">
             <Metric
               value={s.projects}
               caption={
@@ -102,12 +86,6 @@ export default async function AdminIndex() {
                   : 'No projects yet'
               }
             />
-          </Card>
-          <Card icon={IconGrid} label="Tile rows">
-            <Metric value={s.tiles.toLocaleString()} caption="rendered + stylized artifacts" />
-          </Card>
-          <Card icon={IconWorkflow} label="Jobs">
-            <Metric value={s.jobs.toLocaleString()} caption="render / stylize queue" />
           </Card>
         </div>
       </Section>
@@ -122,7 +100,7 @@ export default async function AdminIndex() {
           >
             <Metric
               value={s.pgVersion ?? '—'}
-              caption={s.postgisInstalled ? 'with PostGIS' : 'PostGIS missing'}
+              caption={s.pgVersion ? 'connected' : 'unreachable'}
             />
           </Card>
           <Card icon={IconStorage} label="Storage" href="/admin/storage" badge={env.storageBackend}>

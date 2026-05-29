@@ -33,7 +33,7 @@ Mostly pure Node libraries. Tree-shake-friendly imports.
 
 | Package | What |
 |---|---|
-| `@mapart/db` | Drizzle ORM schema + repos + migrations. Postgres + PostGIS. Sub-paths: `./schema`, `./repos`. |
+| `@mapart/db` | Drizzle ORM schema + repos + migrations. Postgres. Sub-paths: `./schema`, `./repos`. |
 | `@mapart/env` | Typed env loader. Reads `.env`, validates per-key, exposes `env` + `requireEnv()`. Schema in `src/schema.ts`. |
 | `@mapart/models` | OpenAI image-edit clients (`gpt-image-1.5`, `gpt-image-2`) behind a common `ModelClient` interface. Factory: `getModel(name, opts)`. Requires `OPENAI_API_KEY`. |
 | `@mapart/geo` | Foundational geo primitives + web-mercator tile math. Types (`LatLng`, `Bbox`, `Polygon`, `TileCoord`). Tile math (`latLngToTile`, `tileToBounds`, `tileToCenter`, `tileToBoundsWkt`, `tileWidthMeters`). Coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`). No deps. |
@@ -44,7 +44,7 @@ Mostly pure Node libraries. Tree-shake-friendly imports.
 
 Local services for dev. Root `docker-compose.yml` uses `include:` to pull both in.
 
-- `infra/db/` — Postgres + PostGIS on `localhost:5433`, user/pass/db all `jp`.
+- `infra/db/` — Postgres on `localhost:5433`, user/pass/db all `jp`.
 - `infra/storage/` — MinIO (S3-compatible) on `localhost:9000`, console `:9001`, root creds `mapart` / `mapartstorage`, bucket `mapart` auto-created.
 
 ### Other

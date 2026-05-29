@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProjectsListPage() {
   const projects = await repos.listProjects();
-  const counts = await Promise.all(projects.map((p) => repos.countTilesForProject(p.id)));
 
   return (
     <div>
@@ -18,7 +17,7 @@ export default async function ProjectsListPage() {
         </div>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 12, maxWidth: 720 }}>
-          {projects.map((p, i) => (
+          {projects.map((p) => (
             <li
               key={p.id}
               style={{
@@ -32,7 +31,6 @@ export default async function ProjectsListPage() {
               {p.description && (
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{p.description}</div>
               )}
-              <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{counts[i]} tiles</div>
             </li>
           ))}
         </ul>

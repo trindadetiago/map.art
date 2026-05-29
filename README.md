@@ -12,11 +12,10 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 
 ## Packages
 
-- `db` — Drizzle schema + repos + migrations (Postgres + PostGIS)
+- `db` — Drizzle schema + repos + migrations (Postgres)
 - `env` — typed env loader
 - `geo` — foundational geo primitives (`LatLng`, `Bbox`, `Polygon`, `TileCoord`) + web-mercator tile math + coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`)
 - `models` — OpenAI image-edit clients (gpt-image-1.5, gpt-image-2)
-- `pipeline` — generation-strategy harness (independent / infill / big-render / …)
 - `renderer` — Three.js + Google 3D Tiles. Ships the React `<Scene>` component plus pure render-side helpers + types
 - `storage` — blob storage (LocalFs + S3/MinIO backends)
 
@@ -24,7 +23,7 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 
 Local services run via `docker compose` (root `docker-compose.yml` uses `include:`):
 
-- `infra/db/` — Postgres + PostGIS on `localhost:5433`
+- `infra/db/` — Postgres on `localhost:5433`
 - `infra/storage/` — MinIO (S3-compatible) on `localhost:9000`, console `:9001`, bucket `mapart`
 
 ## Docs
