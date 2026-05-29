@@ -642,7 +642,7 @@
     <span class="k">where</span> id = $1;
 <span class="k">commit</span>;</pre>
 
-    <div class="two-col" style="margin-top:16px">
+    <div class="grid" style="margin-top:16px">
       <div class="card bad">
         <span class="tag bad">the rule that matters</span>
         <h3>Neighbor readiness keys on the image path, not the phase</h3>
@@ -651,16 +651,6 @@
           <div class="body">
             <p>If the gate checked the phase column, the first tile to get stylized would flip to <code>stylize</code> and then <em>fail</em> its neighbors' readiness checks forever — they'd never stylize. Starvation.</p>
             <p><code>rendered_img_path</code> is set once and never cleared, so it stays a true “render finished here” signal regardless of what phase the neighbor later moves to. (A stylized neighbor has both paths set, so checking the rendered path alone is enough — it's equivalent to “has at least one image path”.)</p>
-          </div>
-        </details>
-      </div>
-      <div class="card warn">
-        <span class="tag warn">gotcha</span>
-        <h3>updated_at isn't free</h3>
-        <p class="summary">Workers claim and update with raw SQL, which bypasses Drizzle's <code>$onUpdate</code>. Set <code>updated_at = now()</code> explicitly in every worker write (or add a DB trigger).</p>
-        <details class="more"><summary></summary>
-          <div class="body">
-            <p><code>created_at</code> is a plain <code>default now()</code> and takes care of itself. <code>updated_at</code> only auto-fills on writes that go through the ORM; the worker claim/update path doesn't, so it has to set it by hand. The claim queries above do.</p>
           </div>
         </details>
       </div>
