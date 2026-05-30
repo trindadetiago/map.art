@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./params": "./src/params.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@mapart/geo": "workspace:*",
     "3d-tiles-renderer": "^0.4.8",
+    "@mapart/geo": "workspace:*",
     "three": "^0.169.0"
   },
   "peerDependencies": {
@@ -16,6 +21,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
-    "@types/three": "^0.169.0"
+    "@types/three": "^0.169.0",
+    "vitest": "^4.1.7"
   }
 }

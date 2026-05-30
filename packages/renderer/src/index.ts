@@ -1,6 +1,8 @@
 export { applyFrustum, cameraFrustumForZoom, positionCamera } from './camera';
 export {
   RENDER_DEFAULTS,
+  type GridCell,
+  gridCells,
   type RenderParams,
   renderParamsForLatLng,
   tileCenterLatLng,

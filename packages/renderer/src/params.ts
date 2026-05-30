@@ -114,3 +114,27 @@ export function renderParamsForLatLng(center: LatLng): RenderParams {
     zoom,
   };
 }
+
+/** A grid cell: its index in the project grid plus its real-world center. */
+export interface GridCell {
+  x: number;
+  y: number;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Enumerate a `cols`×`rows` grid of tile centers, anchored at `origin` (tile
+ * 0,0), using the global camera pose so adjacent tiles abut seamlessly. Row-
+ * major order. The returned cells are ready to hand to `createProjectTiles`.
+ */
+export function gridCells(origin: LatLng, cols: number, rows: number): GridCell[] {
+  const cells: GridCell[] = [];
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const c = tileCenterLatLng(origin, x, y);
+      cells.push({ x, y, lat: c.lat, lng: c.lng });
+    }
+  }
+  return cells;
+}

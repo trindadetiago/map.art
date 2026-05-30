@@ -3,6 +3,7 @@ import '@mapart/env';
 import { Command } from 'commander';
 import { registerDbCommands } from '../src/commands/db';
 import { registerModelsCommands } from '../src/commands/models';
+import { registerProjectCommands } from '../src/commands/project';
 import { registerRenderCommands } from '../src/commands/render';
 import { registerStorageCommands } from '../src/commands/storage';
 import { registerTilesCommands } from '../src/commands/tiles';
@@ -18,6 +19,9 @@ registerStorageCommands(
 );
 registerModelsCommands(program.command('models').description('image-edit models (generate)'));
 registerTilesCommands(program.command('tiles').description('tile coordinate math'));
+registerProjectCommands(
+  program.command('project').description('projects + tile grids (create, status)'),
+);
 registerRenderCommands(program);
 
 await program.parseAsync();
