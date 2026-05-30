@@ -74,6 +74,7 @@ export async function createProjectTiles(
       }
       if (neighbors.length > 0) {
         await tx.update(tiles).set({ neighbors }).where(eq(tiles.id, t.id));
+        t.neighbors = neighbors; // keep the returned row in sync with the back-fill
       }
     }
     return inserted;

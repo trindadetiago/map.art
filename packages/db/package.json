@@ -9,7 +9,9 @@
     "./repos": "./src/repos/index.ts"
   },
   "scripts": {
-    "drizzle": "drizzle-kit"
+    "drizzle": "drizzle-kit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@mapart/env": "workspace:*",
@@ -17,6 +19,7 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.28.1"
+    "drizzle-kit": "^0.28.1",
+    "vitest": "^4.1.7"
   }
 }
