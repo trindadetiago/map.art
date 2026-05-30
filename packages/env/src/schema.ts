@@ -74,12 +74,6 @@ export const SCHEMA = {
       'Port apps/worker-render listens on. Serves the render-page on GET / (via embedded Vite in dev) and the render API on POST /render. Puppeteer also navigates to this same port internally.',
     default: '9999',
   },
-  renderGpuEnabled: {
-    envKey: 'RENDER_GPU_ENABLED',
-    description:
-      'Enable GPU acceleration in Chromium (Metal on macOS, EGL on Linux). Falsy values use SwiftShader CPU rendering.',
-    default: 'false',
-  },
 } as const satisfies Record<string, EnvFieldDef>;
 
 export type EnvKey = keyof typeof SCHEMA;
