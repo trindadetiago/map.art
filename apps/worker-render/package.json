@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx worker.ts",
-    "build:page": "vite build --root render-page --outDir dist --emptyOutDir"
+    "build:page": "vite build --root render-page --outDir dist --emptyOutDir",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
     "@mapart/renderer": "workspace:*",
+    "@mapart/storage": "workspace:*",
     "puppeteer": "^24.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -21,6 +25,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.7"
   }
 }

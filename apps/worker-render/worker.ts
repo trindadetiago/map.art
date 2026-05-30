@@ -1,23 +1,26 @@
 /**
  * apps/worker-render — server-side render service.
  *
- * Two roles, one process:
+ * Three roles, one process:
  *   1. Hosts the render-page (Vite middleware in dev; serves built static
  *      files in prod) on GET /. Puppeteer navigates here to execute Scene.
- *   2. Exposes POST /render — DEV / TESTING ONLY. Accepts a tile request,
- *      drives Puppeteer, returns PNG bytes. In production, render jobs come
- *      from the pg-boss queue, not over HTTP; this endpoint would be removed
- *      (or gated behind RENDER_HTTP_ENABLED). It exists today so we can smoke
- *      the pipeline end-to-end with `pnpm mapart render --lat … --out …`.
+ *   2. Runs the render-queue consumer (./consumer.ts): claims render/pending
+ *      tiles from the database, renders them, writes PNGs to storage, marks
+ *      them done. This is the worker's real job.
+ *   3. Exposes POST /render — DEV / TESTING ONLY. Same render path driven by an
+ *      HTTP request returning PNG bytes, for smoke tests like
+ *      `pnpm mapart render --lat … --out …`.
  */
 import { type IncomingMessage, type ServerResponse, createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import '@mapart/env';
+import { closeDb } from '@mapart/db';
 import { env } from '@mapart/env';
 import type { Browser } from 'puppeteer';
 import { type ViteDevServer, createServer as createViteServer } from 'vite';
 import { VIEWPORT_PAD, launchBrowser } from './chrome';
+import { IDLE_POLL_MS, type RenderConsumer, startRenderConsumer } from './consumer';
 
 interface RenderTileRequest {
   lat: number;
@@ -161,12 +164,17 @@ async function handleRender(req: IncomingMessage, res: ServerResponse): Promise<
 }
 
 let vite: ViteDevServer | null = null;
+let consumer: RenderConsumer | null = null;
 let shuttingDown = false;
 
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`\n[${WORKER_NAME}] shutting down (${signal})`);
+  if (consumer) {
+    consumer.stop();
+    await consumer.done.catch(() => {});
+  }
   if (vite) await vite.close().catch(() => {});
   if (browser) {
     try {
@@ -174,6 +182,7 @@ async function shutdown(signal: string): Promise<void> {
     } catch {}
     browser = null;
   }
+  await closeDb().catch(() => {});
   process.exit(0);
 }
 process.on('SIGINT', () => void shutdown('SIGINT'));
@@ -206,6 +215,10 @@ async function main(): Promise<void> {
     console.log(`[${WORKER_NAME}] render-page served at      GET  /`);
     console.log(`[${WORKER_NAME}] POST /render is DEV ONLY — prod renders come from the queue`);
     console.log(`[${WORKER_NAME}] health at                   GET  /health`);
+    // Start consuming the render queue. Needs the server up first — renderTile
+    // navigates Puppeteer to this same port to execute Scene.
+    consumer = startRenderConsumer(renderTile, (m) => console.log(`[${WORKER_NAME}] ${m}`));
+    console.log(`[${WORKER_NAME}] queue consumer started      (idle poll ${IDLE_POLL_MS / 1000}s)`);
   });
 }
 
