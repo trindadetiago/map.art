@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gridCells, tileCenterLatLng } from '../src/params';
+import { gridCells, tileCenterLatLng, tileFootprint } from '../src/params';
 
 const ORIGIN = { lat: 40.7484, lng: -73.9857 }; // arbitrary (Empire State-ish)
 
@@ -39,5 +39,31 @@ describe('gridCells', () => {
   it('returns nothing for an empty grid', () => {
     expect(gridCells(ORIGIN, 0, 5)).toHaveLength(0);
     expect(gridCells(ORIGIN, 5, 0)).toHaveLength(0);
+  });
+});
+
+describe('tileFootprint', () => {
+  it('gives 4 distinct, finite corners around the tile center', () => {
+    const corners = tileFootprint(ORIGIN, 0, 0);
+    expect(corners).toHaveLength(4);
+    const center = tileCenterLatLng(ORIGIN, 0, 0);
+    for (const c of corners) {
+      expect(Number.isFinite(c.lat)).toBe(true);
+      expect(Number.isFinite(c.lng)).toBe(true);
+      // each corner is within a tile's reach of the center
+      expect(Math.abs(c.lat - center.lat)).toBeLessThan(0.01);
+      expect(Math.abs(c.lng - center.lng)).toBeLessThan(0.01);
+    }
+    expect(new Set(corners.map((c) => `${c.lat},${c.lng}`)).size).toBe(4);
+  });
+
+  it("a tile's east edge matches its east neighbor's west edge (tiles abut)", () => {
+    // ne corner of (0,0) == nw corner of (1,0); se of (0,0) == sw of (1,0)
+    const a = tileFootprint(ORIGIN, 0, 0); // [nw, ne, se, sw]
+    const b = tileFootprint(ORIGIN, 1, 0);
+    expect(a[1]?.lat).toBeCloseTo(b[0]?.lat ?? Number.NaN, 9); // ne == nw
+    expect(a[1]?.lng).toBeCloseTo(b[0]?.lng ?? Number.NaN, 9);
+    expect(a[2]?.lat).toBeCloseTo(b[3]?.lat ?? Number.NaN, 9); // se == sw
+    expect(a[2]?.lng).toBeCloseTo(b[3]?.lng ?? Number.NaN, 9);
   });
 });

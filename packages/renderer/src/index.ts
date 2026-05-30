@@ -6,6 +6,7 @@ export {
   type RenderParams,
   renderParamsForLatLng,
   tileCenterLatLng,
+  tileFootprint,
   tileGroundCorners,
 } from './params';
 export { Scene, type SceneHandle, type SceneProps } from './scene';

@@ -138,3 +138,13 @@ export function gridCells(origin: LatLng, cols: number, rows: number): GridCell[
   }
   return cells;
 }
+
+/**
+ * The four geographic corners of grid tile (x, y) — the ground footprint the
+ * renderer captures, as `[nw, ne, se, sw]` (a closed quad for drawing on a map).
+ * Pose-rotated like the grid, so it shows true coverage, not a north-aligned box.
+ */
+export function tileFootprint(origin: LatLng, x: number, y: number): LatLng[] {
+  const c = tileGroundCorners(x, y);
+  return [c.nw, c.ne, c.se, c.sw].map((p) => offsetToLatLng(origin, p.east, p.north));
+}
