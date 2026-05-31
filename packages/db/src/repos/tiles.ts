@@ -1,4 +1,4 @@
-import { and, asc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from '../client';
 import { type Tile, type TilePhase, type TileStatus, tiles } from '../schema/tiles';
 
@@ -13,6 +13,15 @@ export async function tilesByProject(projectId: string): Promise<Tile[]> {
     .from(tiles)
     .where(eq(tiles.projectId, projectId))
     .orderBy(asc(tiles.y), asc(tiles.x));
+}
+
+/** Fetch tiles by id — resolves a tile's `neighbors` (uuid[]) into rows. Read-only. */
+export async function tilesByIds(ids: readonly string[]): Promise<Tile[]> {
+  if (ids.length === 0) return [];
+  return getDb()
+    .select()
+    .from(tiles)
+    .where(inArray(tiles.id, ids as string[]));
 }
 
 export interface TileStatusCount {

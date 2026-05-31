@@ -1,0 +1,26 @@
+{
+  "name": "@mapart/worker-stylize",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx worker.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@mapart/db": "workspace:*",
+    "@mapart/env": "workspace:*",
+    "@mapart/models": "workspace:*",
+    "@mapart/storage": "workspace:*",
+    "@mapart/stylize": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "drizzle-orm": "^0.36.4",
+    "sharp": "^0.33.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.7"
+  }
+}

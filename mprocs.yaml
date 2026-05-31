@@ -3,5 +3,7 @@ procs:
     shell: "node scripts/run.mjs web -- pnpm --filter @mapart/web dev"
   worker-render:
     shell: "node scripts/run.mjs worker-render -- pnpm --filter @mapart/worker-render dev"
+  worker-stylize:
+    shell: "node scripts/run.mjs worker-stylize -- pnpm --filter @mapart/worker-stylize dev"
   drizzle-studio:
     shell: "node scripts/run.mjs drizzle-studio -- pnpm --filter @mapart/db drizzle studio"
