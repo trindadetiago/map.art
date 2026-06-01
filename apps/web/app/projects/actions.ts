@@ -59,3 +59,18 @@ export async function restylizeTile(input: {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Re-queue a tile that errored out so its worker (render or stylize) retries it. */
+export async function retryTile(input: {
+  projectId: string;
+  x: number;
+  y: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const n = await repos.requeueErrored(input.projectId, input.x, input.y);
+    if (n === 0) return { ok: false, error: 'tile is not in an error state' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

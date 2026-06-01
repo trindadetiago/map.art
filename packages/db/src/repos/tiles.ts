@@ -206,6 +206,29 @@ export async function requeueStylize(projectId: string, x: number, y: number): P
   return rows.length;
 }
 
+/**
+ * Re-queue a tile that landed in `error`: drop it back to `pending` and reset
+ * its retry budget so the worker for its current phase re-claims it. Works in
+ * either phase — it matches only tiles whose status is `error`, leaving the
+ * phase and any rendered input intact. Returns how many rows changed (0 = no
+ * matching error tile).
+ */
+export async function requeueErrored(projectId: string, x: number, y: number): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', retryAttempt: 0, updatedAt: new Date() })
+    .where(
+      and(
+        eq(tiles.projectId, projectId),
+        eq(tiles.x, x),
+        eq(tiles.y, y),
+        eq(tiles.status, 'error'),
+      ),
+    )
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
 // ---- queue: failure handling (both workers) ------------------------------
 
 /**
