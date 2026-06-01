@@ -129,7 +129,7 @@ function Stepper({
   value: number;
   onChange: (n: number) => void;
 }) {
-  const clamp = (n: number) => Math.max(1, Math.min(30, n));
+  const clamp = (n: number) => Math.max(1, Math.min(200, n));
   return (
     <label className="block flex-1">
       <span className="block text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500">
