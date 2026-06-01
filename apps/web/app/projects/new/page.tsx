@@ -1,5 +1,5 @@
 import { env } from '@mapart/env';
-import { CreateProjectFlow } from './create_flow';
+import { ProjectFlow } from '../project_flow';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,5 +18,5 @@ export default function NewProjectPage() {
     );
   }
 
-  return <CreateProjectFlow apiKey={apiKey} />;
+  return <ProjectFlow mode="create" apiKey={apiKey} />;
 }
