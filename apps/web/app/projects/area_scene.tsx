@@ -63,6 +63,8 @@ export interface AreaSceneProps {
   showLines?: boolean;
   /** Right-click on a tile's footprint (build view). */
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void;
+  /** Pan + zoom the camera onto this tile. A new object (even same x,y) re-focuses. */
+  focusTarget?: { x: number; y: number } | null;
 }
 
 /** Per-tile footprint corners (scene coords) for a grid centered on the origin. */
@@ -224,6 +226,7 @@ interface SceneState {
   setOverlay: (tiles: OverlayTile[]) => void;
   setDimOutside: (on: boolean) => void;
   setShowLines: (on: boolean) => void;
+  focusTile: (x: number, y: number) => void;
   dispose: () => void;
 }
 
@@ -283,9 +286,11 @@ function createAreaScene(
   let cols = initial.cols;
   let rows = initial.rows;
   // Zoom multiplier: 1 = grid-fit framing (the most zoomed-out we allow); higher
-  // shrinks the ortho frustum to zoom in closer.
+  // shrinks the ortho frustum to zoom in closer. The cap scales with the grid so
+  // you can always zoom past a single tile — on a 200-wide grid, fit-of-one-tile
+  // is ~200x, so 8x would never reach it.
   let zoom = 1;
-  const MAX_ZOOM = 8;
+  const maxZoom = (): number => Math.max(8, Math.max(cols, rows) * 2);
   // Camera target offset on the ground (scene X/Z) for panning within the grid.
   let panX = 0;
   let panZ = 0;
@@ -460,7 +465,7 @@ function createAreaScene(
   // Scroll to zoom in toward the grid; clamped so it never zooms out past the fit.
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-    zoom = Math.min(MAX_ZOOM, Math.max(1, zoom * Math.exp(-e.deltaY * 0.0015)));
+    zoom = Math.min(maxZoom(), Math.max(1, zoom * Math.exp(-e.deltaY * 0.0015)));
     clampPan(); // zooming out shrinks the pan range
     frame();
   };
@@ -558,6 +563,24 @@ function createAreaScene(
       panGroup.position.set(0, 0, 0);
     },
     setOverlay,
+    focusTile(x, y) {
+      // Pan the camera target onto tile (x,y)'s footprint center and zoom in so
+      // it sits framed with a few neighbours of context around it.
+      const cx = (cols - 1) / 2;
+      const cy = (rows - 1) / 2;
+      const c = tileGroundCorners(x - cx, y - cy);
+      let ex = 0;
+      let ez = 0;
+      for (const p of [c.nw, c.ne, c.se, c.sw]) {
+        ex += -p.east;
+        ez += p.north;
+      }
+      panX = ex / 4;
+      panZ = ez / 4;
+      zoom = Math.min(maxZoom(), Math.max(4, Math.max(cols, rows) / 6));
+      clampPan();
+      frame();
+    },
     setDimOutside(on) {
       mask.visible = on;
     },
@@ -602,6 +625,7 @@ export function AreaScene({
   dimOutside,
   showLines,
   onTileContext,
+  focusTarget,
 }: AreaSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<SceneState | null>(null);
@@ -657,6 +681,10 @@ export function AreaScene({
   useEffect(() => {
     stateRef.current?.setShowLines(showLines ?? true);
   }, [showLines]);
+
+  useEffect(() => {
+    if (focusTarget) stateRef.current?.focusTile(focusTarget.x, focusTarget.y);
+  }, [focusTarget]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

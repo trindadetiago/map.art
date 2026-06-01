@@ -1,8 +1,8 @@
 'use client';
 
 import type { LatLng } from '@mapart/geo';
-import { useEffect, useMemo, useState } from 'react';
-import { restylizeTile } from './actions';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { restylizeTile, retryTile } from './actions';
 import { AreaScene, type OverlayTile } from './area_scene';
 
 export interface TileLite {
@@ -47,6 +47,9 @@ export function StepBuild({
   const [dimOutside, setDimOutside] = useState(false);
   const [showLines, setShowLines] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
+  const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
+  // Per-phase cursor so repeated clicks cycle through the in-progress tiles.
+  const focusCursor = useRef<{ render: number; stylize: number }>({ render: 0, stylize: 0 });
   // Bumping this re-arms the poll loop after a manual re-stylize (which makes a
   // finished project active again).
   const [pollNonce, setPollNonce] = useState(0);
@@ -110,6 +113,23 @@ export function StepBuild({
   const errors = tiles.filter((t) => t.status === 'error').length;
   const total = cols * rows;
 
+  const rendering = tiles.filter(
+    (t) => t.currentStatusType === 'render' && t.status === 'progress',
+  );
+  const stylizing = tiles.filter(
+    (t) => t.currentStatusType === 'stylize' && t.status === 'progress',
+  );
+
+  // Jump the camera to an in-progress tile, cycling through them on each click.
+  function focusInProgress(phase: 'render' | 'stylize'): void {
+    const list = phase === 'render' ? rendering : stylizing;
+    if (list.length === 0) return;
+    const i = focusCursor.current[phase] % list.length;
+    focusCursor.current[phase] = i + 1;
+    const t = list[i];
+    if (t) setFocusTarget({ x: t.x, y: t.y });
+  }
+
   async function doRestylize(x: number, y: number): Promise<void> {
     setMenu(null);
     // Optimistic: drop the tile back so it reads as re-queued immediately.
@@ -122,14 +142,38 @@ export function StepBuild({
     setPollNonce((n) => n + 1); // re-arm polling to follow the re-stylize
   }
 
+  async function doRetry(x: number, y: number): Promise<void> {
+    setMenu(null);
+    // Optimistic: clear the error so the tile reads as re-queued immediately.
+    setTiles((ts) => ts.map((t) => (t.x === x && t.y === y ? { ...t, status: 'pending' } : t)));
+    await retryTile({ projectId, x, y });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the retry
+  }
+
+  const menuTile = menu ? (tiles.find((t) => t.x === menu.x && t.y === menu.y) ?? null) : null;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3 border-stone-200 border-b px-5 py-4">
         <div>
           <div className="text-[15px] font-semibold text-stone-900">{projectName}</div>
-          <div className="text-[12px] text-stone-500">
-            {stylizedCount}/{total} stylized · {renderedCount}/{total} rendered
-            {errors > 0 && <span className="text-red-600"> · {errors} error</span>}
+          <div className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-stone-500">
+            <span>
+              {stylizedCount}/{total} stylized · {renderedCount}/{total} rendered
+            </span>
+            <InProgress
+              label="stylizing"
+              count={stylizing.length}
+              color="amber"
+              onClick={() => focusInProgress('stylize')}
+            />
+            <InProgress
+              label="rendering"
+              count={rendering.length}
+              color="sky"
+              onClick={() => focusInProgress('render')}
+            />
+            {errors > 0 && <span className="text-red-600">· {errors} error</span>}
           </div>
         </div>
 
@@ -161,9 +205,11 @@ export function StepBuild({
           overlay={overlay}
           dimOutside={dimOutside}
           showLines={showLines}
+          focusTarget={focusTarget}
           onTileContext={(x, y, clientX, clientY) => {
             const t = tiles.find((tile) => tile.x === x && tile.y === y);
-            if (t?.stylizedImgPath) setMenu({ x, y, clientX, clientY });
+            if (t && (t.status === 'error' || t.stylizedImgPath))
+              setMenu({ x, y, clientX, clientY });
           }}
         />
       </div>
@@ -176,17 +222,62 @@ export function StepBuild({
             className="fixed z-50 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg"
             style={{ left: menu.clientX, top: menu.clientY }}
           >
-            <button
-              type="button"
-              onClick={() => doRestylize(menu.x, menu.y)}
-              className="block w-full px-4 py-2 text-left text-[13px] text-stone-800 hover:bg-stone-100"
-            >
-              Re-stylize tile {menu.x},{menu.y}
-            </button>
+            {menuTile?.status === 'error' ? (
+              <button
+                type="button"
+                onClick={() => doRetry(menu.x, menu.y)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-red-700 hover:bg-red-50"
+              >
+                Retry tile {menu.x},{menu.y}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => doRestylize(menu.x, menu.y)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-stone-800 hover:bg-stone-100"
+              >
+                Re-stylize tile {menu.x},{menu.y}
+              </button>
+            )}
           </div>
         </>
       )}
     </div>
+  );
+}
+
+/** A live in-progress count. Clickable (when > 0) to jump the camera to one. */
+function InProgress({
+  label,
+  count,
+  color,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  color: 'amber' | 'sky';
+  onClick: () => void;
+}) {
+  const accent =
+    color === 'amber' ? 'text-amber-700 hover:bg-amber-50' : 'text-sky-700 hover:bg-sky-50';
+  const dot = color === 'amber' ? 'bg-amber-500' : 'bg-sky-500';
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="text-stone-300">·</span>
+      {count === 0 ? (
+        <span className="text-stone-400">0 {label}</span>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          title={`Jump to a ${label} tile`}
+          className={`inline-flex items-center gap-1 rounded px-1 ${accent}`}
+        >
+          <span className={`inline-block h-1.5 w-1.5 animate-pulse rounded-full ${dot}`} />
+          {count} {label}
+        </button>
+      )}
+    </span>
   );
 }
 
