@@ -23,7 +23,7 @@ export const SCHEMA = {
   oxenApiKey: {
     envKey: 'OXEN_API_KEY',
     description:
-      'oxen.ai API key for pushing training bundles to hub.oxen.ai and dedicated LoRA inference.',
+      'oxen.ai API key for pushing training bundles to hub.oxen.ai and dedicated LoRA inference. When set, worker-stylize runs the deployed model instead of the pass-through stub.',
   },
   databaseUrl: {
     envKey: 'DATABASE_URL',

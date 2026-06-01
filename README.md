@@ -47,6 +47,12 @@ In mprocs: `j`/`k` switch between procs, `r` restart, `x` stop, `q` quit. Each p
 
 Escape hatches if you don't want the TUI: `pnpm dev:web`, `pnpm dev:studio`, or `pnpm dev:worker-render` alone.
 
+### Tests
+
+Type-checking (`pnpm exec tsc --noEmit -p <tsconfig>`) is the primary correctness signal; some packages also have `vitest` tests (`pnpm --filter <pkg> test`).
+
+The `@mapart/db` tests are integration tests that wipe `tiles` + `projects` between runs — so they run against an **isolated `<devdb>_test` database** (e.g. `jp_test`), never the dev DB. It's created and migrated automatically on first run (only needs the Postgres container up); there's nothing to set up. Don't repoint the suite at the dev database.
+
 `.env` keys to fill in:
 
 - `GOOGLE_MAPS_API_KEY` — Map Tiles API key, used by the renderer

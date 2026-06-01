@@ -44,3 +44,18 @@ export async function createProjectWithGrid(input: {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Re-queue a single stylized tile so a worker stylizes it again. */
+export async function restylizeTile(input: {
+  projectId: string;
+  x: number;
+  y: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const n = await repos.requeueStylize(input.projectId, input.x, input.y);
+    if (n === 0) return { ok: false, error: 'tile is not in the stylize phase' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

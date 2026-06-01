@@ -5,5 +5,7 @@ procs:
     shell: "node scripts/run.mjs worker-render -- pnpm --filter @mapart/worker-render dev"
   worker-stylize:
     shell: "node scripts/run.mjs worker-stylize -- pnpm --filter @mapart/worker-stylize dev"
+  ngrok:
+    shell: "node scripts/run.mjs ngrok -- node scripts/ngrok.mjs"
   drizzle-studio:
     shell: "node scripts/run.mjs drizzle-studio -- pnpm --filter @mapart/db drizzle studio"

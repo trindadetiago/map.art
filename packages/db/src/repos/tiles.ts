@@ -103,7 +103,8 @@ export async function claimNextRender(): Promise<Tile | null> {
       .select({ id: tiles.id })
       .from(tiles)
       .where(and(eq(tiles.currentStatusType, 'render'), eq(tiles.status, 'pending')))
-      .orderBy(asc(tiles.id))
+      // Same anti-diagonal sweep as stylize, so both phases march in lockstep.
+      .orderBy(asc(sql`${tiles.x} + ${tiles.y}`), asc(tiles.y), asc(tiles.x))
       .limit(1)
       .for('update', { skipLocked: true });
     if (!claimed) return null;
@@ -154,7 +155,10 @@ export async function claimNextStylize(): Promise<Tile | null> {
           and(eq(tiles.currentStatusType, 'stylize'), eq(tiles.status, 'pending')),
         ),
       )
-      .orderBy(asc(tiles.id))
+      // Deterministic anti-diagonal sweep from the (0,0) corner — generalises
+      // the reference algorithm's order so a tile is reached after its up/left
+      // neighbours and stylized context grows outward (not random by uuid).
+      .orderBy(asc(sql`${tiles.x} + ${tiles.y}`), asc(tiles.y), asc(tiles.x))
       .limit(1)
       .for('update', { skipLocked: true });
     if (!claimed) return null;
@@ -179,6 +183,27 @@ export async function completeStylize(id: string, stylizedImgPath: string): Prom
     .update(tiles)
     .set({ stylizedImgPath, status: 'done', updatedAt: new Date() })
     .where(eq(tiles.id, id));
+}
+
+/**
+ * Re-queue a stylize-phase tile: drop it back to `pending`, clear its stylized
+ * output + retry budget so a worker stylizes it again. No-op on render-phase
+ * tiles. Returns how many rows changed (0 = no matching stylize tile).
+ */
+export async function requeueStylize(projectId: string, x: number, y: number): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', stylizedImgPath: null, retryAttempt: 0, updatedAt: new Date() })
+    .where(
+      and(
+        eq(tiles.projectId, projectId),
+        eq(tiles.x, x),
+        eq(tiles.y, y),
+        eq(tiles.currentStatusType, 'stylize'),
+      ),
+    )
+    .returning({ id: tiles.id });
+  return rows.length;
 }
 
 // ---- queue: failure handling (both workers) ------------------------------

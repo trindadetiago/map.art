@@ -21,9 +21,12 @@ import {
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
+  Path,
   Plane,
   Raycaster,
   SRGBColorSpace,
+  Shape,
+  ShapeGeometry,
   type Texture,
   TextureLoader,
   Scene as ThreeScene,
@@ -32,7 +35,7 @@ import {
   WebGLRenderer,
 } from 'three';
 
-export type TileState = 'pending' | 'progress' | 'rendered' | 'stylized' | 'error';
+export type TileState = 'pending' | 'progress' | 'rendered' | 'stylizing' | 'stylized' | 'error';
 
 /** A tile's footprint state for the Build map. `imageUrl` is set for rendered/stylized. */
 export interface OverlayTile {
@@ -54,6 +57,12 @@ export interface AreaSceneProps {
   onCenterChange?: (center: LatLng) => void;
   /** Stylized tiles painted onto their footprints over the live city. */
   overlay?: OverlayTile[];
+  /** Dim everything outside the grid footprint (build view). */
+  dimOutside?: boolean;
+  /** Draw the per-tile grid outline. Default true. */
+  showLines?: boolean;
+  /** Right-click on a tile's footprint (build view). */
+  onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void;
 }
 
 /** Per-tile footprint corners (scene coords) for a grid centered on the origin. */
@@ -114,6 +123,17 @@ function materialFor(state: TileState, texture: Texture | null): MeshBasicMateri
   if (texture && state === 'rendered') {
     return new MeshBasicMaterial({ ...base, map: texture, transparent: true, opacity: 0.5 });
   }
+  if (texture && state === 'stylizing') {
+    // Rendered preview washed amber and pulsed (opacity driven in the tick) so
+    // the tile being worked on is obvious.
+    return new MeshBasicMaterial({
+      ...base,
+      map: texture,
+      color: 0xffb84d,
+      transparent: true,
+      opacity: 0.75,
+    });
+  }
   const fill = STATE_FILL[state] ?? STATE_FILL.pending;
   return new MeshBasicMaterial({
     ...base,
@@ -121,6 +141,73 @@ function materialFor(state: TileState, texture: Texture | null): MeshBasicMateri
     transparent: true,
     opacity: fill?.opacity,
   });
+}
+
+/**
+ * A dark scrim covering the ground with the grid footprint punched out, so
+ * everything outside the selected area reads dimmer. Sits above the streamed
+ * tiles but below the grid lines + overlay.
+ */
+function buildMask(cols: number, rows: number): Mesh {
+  const cx = (cols - 1) / 2;
+  const cy = (rows - 1) / 2;
+  // Outer corners of the whole grid, scene coords (x = -east, z = north).
+  const sw = tileGroundCorners(0 - cx, 0 - cy).sw;
+  const se = tileGroundCorners(cols - 1 - cx, 0 - cy).se;
+  const ne = tileGroundCorners(cols - 1 - cx, rows - 1 - cy).ne;
+  const nw = tileGroundCorners(0 - cx, rows - 1 - cy).nw;
+  // ShapeGeometry lives in XY; rotateX(-90°) maps shape (x, y) → scene (x, 0, -y),
+  // so feed (sceneX, -sceneZ).
+  const half = gridGroundHalf(cols, rows);
+  const R = Math.max(half.x, half.z) * 20 + 1000;
+  const shape = new Shape();
+  shape.moveTo(-R, R);
+  shape.lineTo(R, R);
+  shape.lineTo(R, -R);
+  shape.lineTo(-R, -R);
+  shape.closePath();
+  const hole = new Path();
+  hole.moveTo(-sw.east, -sw.north);
+  hole.lineTo(-se.east, -se.north);
+  hole.lineTo(-ne.east, -ne.north);
+  hole.lineTo(-nw.east, -nw.north);
+  hole.closePath();
+  shape.holes.push(hole);
+  const mesh = new Mesh(
+    new ShapeGeometry(shape),
+    new MeshBasicMaterial({
+      color: 0x0c0a09,
+      transparent: true,
+      opacity: 0.6,
+      depthTest: false,
+      depthWrite: false,
+      side: DoubleSide,
+    }),
+  );
+  mesh.rotateX(-Math.PI / 2);
+  mesh.renderOrder = 500; // over the 3D tiles, under grid lines (999) + overlay (1000)
+  return mesh;
+}
+
+/** Half-extent of the grid's ground footprint (scene X/Z), for clamping pan. */
+function gridGroundHalf(cols: number, rows: number): { x: number; z: number } {
+  const cx = (cols - 1) / 2;
+  const cy = (rows - 1) / 2;
+  let mx = 0;
+  let mz = 0;
+  for (const [ix, iy] of [
+    [0, 0],
+    [cols - 1, 0],
+    [0, rows - 1],
+    [cols - 1, rows - 1],
+  ] as const) {
+    const c = tileGroundCorners(ix - cx, iy - cy);
+    for (const p of [c.nw, c.ne, c.se, c.sw]) {
+      mx = Math.max(mx, Math.abs(-p.east));
+      mz = Math.max(mz, Math.abs(p.north));
+    }
+  }
+  return { x: mx, z: mz };
 }
 
 function disposeGrid(group: Group): void {
@@ -135,6 +222,8 @@ interface SceneState {
   setSize: (cols: number, rows: number) => void;
   recenter: (center: LatLng) => void;
   setOverlay: (tiles: OverlayTile[]) => void;
+  setDimOutside: (on: boolean) => void;
+  setShowLines: (on: boolean) => void;
   dispose: () => void;
 }
 
@@ -147,8 +236,11 @@ function createAreaScene(
     rows: number;
     interactive: boolean;
     overlay?: OverlayTile[];
+    dimOutside?: boolean;
+    showLines?: boolean;
   },
   onCenterChange?: (center: LatLng) => void,
+  onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void,
 ): SceneState {
   const scene = new ThreeScene();
   scene.add(new AmbientLight(0xffffff, 1.0));
@@ -172,7 +264,12 @@ function createAreaScene(
   scene.add(panGroup);
 
   let grid = buildGrid(initial.cols, initial.rows);
+  grid.visible = initial.showLines ?? true;
   scene.add(grid);
+
+  let mask = buildMask(initial.cols, initial.rows);
+  mask.visible = initial.dimOutside ?? false;
+  scene.add(mask);
 
   // Finished stylized tiles, textured onto their footprints (build step).
   const overlayGroup = new Group();
@@ -189,9 +286,23 @@ function createAreaScene(
   // shrinks the ortho frustum to zoom in closer.
   let zoom = 1;
   const MAX_ZOOM = 8;
+  // Camera target offset on the ground (scene X/Z) for panning within the grid.
+  let panX = 0;
+  let panZ = 0;
+  let gridHalf = gridGroundHalf(initial.cols, initial.rows);
   // The center we last reoriented to — guards the React effect from re-firing a
   // reorient for a center this scene itself produced.
   let activeCenter: LatLng = initial.center;
+
+  // Keep the pan target inside the grid: at fit (zoom 1) it's locked to center;
+  // the deeper the zoom, the further it may roam, up to the grid half-extent.
+  const clampPan = (): void => {
+    const k = Math.max(0, 1 - 1 / zoom);
+    const mx = gridHalf.x * k;
+    const mz = gridHalf.z * k;
+    panX = Math.max(-mx, Math.min(mx, panX));
+    panZ = Math.max(-mz, Math.min(mz, panZ));
+  };
 
   // Frame the whole grid in the ortho iso pose, fit to the canvas aspect.
   const frame = (): void => {
@@ -211,9 +322,13 @@ function createAreaScene(
     camera.bottom = -halfH;
     camera.near = v.near;
     camera.far = v.far;
-    camera.position.set(v.dir[0] * v.distance, v.dir[1] * v.distance, v.dir[2] * v.distance);
+    camera.position.set(
+      panX + v.dir[0] * v.distance,
+      v.dir[1] * v.distance,
+      panZ + v.dir[2] * v.distance,
+    );
     camera.up.set(0, 1, 0);
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(panX, 0, panZ);
     camera.updateProjectionMatrix();
   };
 
@@ -236,7 +351,9 @@ function createAreaScene(
     const now = performance.now();
     const pulse = 0.3 + 0.3 * (0.5 + 0.5 * Math.sin(now / 280));
     for (const e of overlaid.values()) {
-      if (e.state === 'progress') (e.mesh.material as MeshBasicMaterial).opacity = pulse;
+      if (e.state === 'progress' || e.state === 'stylizing') {
+        (e.mesh.material as MeshBasicMaterial).opacity = pulse;
+      }
     }
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
@@ -255,6 +372,7 @@ function createAreaScene(
       ((clientX - rect.left) / rect.width) * 2 - 1,
       -((clientY - rect.top) / rect.height) * 2 + 1,
     );
+    camera.updateMatrixWorld();
     raycaster.setFromCamera(ndc, camera);
     const hit = new Vector3();
     return raycaster.ray.intersectPlane(groundPlane, hit) ? hit : null;
@@ -305,20 +423,65 @@ function createAreaScene(
     settleTimer = setTimeout(bakeRecenter, 400);
   };
 
+  // Drag-to-pan within the grid (view/build mode). The grabbed ground point
+  // stays under the cursor; the camera target shifts, clamped to the grid.
+  let grab: Vector3 | null = null;
+  const onPanDown = (e: PointerEvent): void => {
+    grab = groundAt(e.clientX, e.clientY);
+    if (grab) renderer.domElement.setPointerCapture(e.pointerId);
+  };
+  const onPanMove = (e: PointerEvent): void => {
+    if (!grab) return;
+    const cur = groundAt(e.clientX, e.clientY);
+    if (!cur) return;
+    panX += grab.x - cur.x;
+    panZ += grab.z - cur.z;
+    clampPan();
+    frame();
+  };
+  const onPanUp = (e: PointerEvent): void => {
+    if (!grab) return;
+    grab = null;
+    renderer.domElement.releasePointerCapture(e.pointerId);
+  };
+
   if (initial.interactive) {
     renderer.domElement.style.cursor = 'grab';
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointermove', onPointerMove);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
+  } else {
+    renderer.domElement.style.cursor = 'grab';
+    renderer.domElement.addEventListener('pointerdown', onPanDown);
+    renderer.domElement.addEventListener('pointermove', onPanMove);
+    renderer.domElement.addEventListener('pointerup', onPanUp);
   }
 
   // Scroll to zoom in toward the grid; clamped so it never zooms out past the fit.
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
     zoom = Math.min(MAX_ZOOM, Math.max(1, zoom * Math.exp(-e.deltaY * 0.0015)));
+    clampPan(); // zooming out shrinks the pan range
     frame();
   };
   renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+
+  // Right-click a tile's footprint → report which tile (build view).
+  const onContextMenu = (e: MouseEvent): void => {
+    if (!onTileContext) return;
+    e.preventDefault();
+    const rect = renderer.domElement.getBoundingClientRect();
+    ndc.set(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    camera.updateMatrixWorld();
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObjects(overlayGroup.children, false)[0];
+    const tile = hit?.object.userData.tile as { x: number; y: number } | undefined;
+    if (tile) onTileContext(tile.x, tile.y, e.clientX, e.clientY);
+  };
+  if (onTileContext) renderer.domElement.addEventListener('contextmenu', onContextMenu);
 
   const clearOverlay = (): void => {
     for (const { mesh, texture } of overlaid.values()) {
@@ -337,7 +500,10 @@ function createAreaScene(
       if (cur && cur.state === t.state && cur.url === t.imageUrl) continue; // unchanged
 
       let texture: Texture | null = null;
-      if (t.imageUrl && (t.state === 'rendered' || t.state === 'stylized')) {
+      if (
+        t.imageUrl &&
+        (t.state === 'rendered' || t.state === 'stylizing' || t.state === 'stylized')
+      ) {
         texture = loader.load(t.imageUrl);
         texture.colorSpace = SRGBColorSpace;
       }
@@ -351,6 +517,7 @@ function createAreaScene(
       } else {
         const mesh = new Mesh(quadGeometry(t.x, t.y, cols, rows), material);
         mesh.renderOrder = 1000; // above grid lines (999) and streamed tiles
+        mesh.userData.tile = { x: t.x, y: t.y };
         overlayGroup.add(mesh);
         overlaid.set(key, { mesh, state: t.state, url: t.imageUrl, texture });
       }
@@ -365,10 +532,22 @@ function createAreaScene(
       cols = nextCols;
       rows = nextRows;
       zoom = 1; // refit the resized grid
+      panX = 0;
+      panZ = 0;
+      gridHalf = gridGroundHalf(cols, rows);
+      const linesVisible = grid.visible;
+      const dimVisible = mask.visible;
       scene.remove(grid);
       disposeGrid(grid);
       grid = buildGrid(cols, rows);
+      grid.visible = linesVisible;
       scene.add(grid);
+      scene.remove(mask);
+      mask.geometry.dispose();
+      (mask.material as MeshBasicMaterial).dispose();
+      mask = buildMask(cols, rows);
+      mask.visible = dimVisible;
+      scene.add(mask);
       clearOverlay(); // centering changed — quads must be rebuilt by the caller
       frame();
     },
@@ -379,6 +558,12 @@ function createAreaScene(
       panGroup.position.set(0, 0, 0);
     },
     setOverlay,
+    setDimOutside(on) {
+      mask.visible = on;
+    },
+    setShowLines(on) {
+      grid.visible = on;
+    },
     dispose() {
       disposed = true;
       if (settleTimer) clearTimeout(settleTimer);
@@ -386,10 +571,17 @@ function createAreaScene(
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointermove', onPointerMove);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      renderer.domElement.removeEventListener('pointerdown', onPanDown);
+      renderer.domElement.removeEventListener('pointermove', onPanMove);
+      renderer.domElement.removeEventListener('pointerup', onPanUp);
       renderer.domElement.removeEventListener('wheel', onWheel);
+      renderer.domElement.removeEventListener('contextmenu', onContextMenu);
       clearOverlay();
       scene.remove(grid);
       disposeGrid(grid);
+      scene.remove(mask);
+      mask.geometry.dispose();
+      (mask.material as MeshBasicMaterial).dispose();
       tiles.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === container) {
@@ -407,18 +599,37 @@ export function AreaScene({
   interactive,
   onCenterChange,
   overlay,
+  dimOutside,
+  showLines,
+  onTileContext,
 }: AreaSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<SceneState | null>(null);
   // Freeze the construction-time values; later changes flow through effects.
-  const initialRef = useRef({ center, cols, rows, interactive, overlay: overlay ?? [] });
+  const initialRef = useRef({
+    center,
+    cols,
+    rows,
+    interactive,
+    overlay: overlay ?? [],
+    dimOutside: dimOutside ?? false,
+    showLines: showLines ?? true,
+  });
   const onCenterChangeRef = useRef(onCenterChange);
   onCenterChangeRef.current = onCenterChange;
+  const onTileContextRef = useRef(onTileContext);
+  onTileContextRef.current = onTileContext;
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const s = createAreaScene(containerRef.current, apiKey, initialRef.current, (c) =>
-      onCenterChangeRef.current?.(c),
+    const s = createAreaScene(
+      containerRef.current,
+      apiKey,
+      initialRef.current,
+      (c) => onCenterChangeRef.current?.(c),
+      onTileContextRef.current
+        ? (x, y, cx, cy) => onTileContextRef.current?.(x, y, cx, cy)
+        : undefined,
     );
     stateRef.current = s;
     return () => {
@@ -438,6 +649,14 @@ export function AreaScene({
   useEffect(() => {
     if (overlay) stateRef.current?.setOverlay(overlay);
   }, [overlay]);
+
+  useEffect(() => {
+    stateRef.current?.setDimOutside(dimOutside ?? false);
+  }, [dimOutside]);
+
+  useEffect(() => {
+    stateRef.current?.setShowLines(showLines ?? true);
+  }, [showLines]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
