@@ -38,3 +38,6 @@ debug/
 
 # Dev runner per-process logs (mprocs + scripts/run.mjs); truncated each run.
 .logs/
+
+# ngrok tunnel URL written by scripts/ngrok.mjs
+.ngrok-url

@@ -33,23 +33,37 @@ export interface StylizeConsumer {
 type ClaimedTile = NonNullable<Awaited<ReturnType<typeof claimNextStylize>>>;
 type Dir = keyof StylizedNeighbors;
 
-const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+/** Error message including the underlying `cause` — e.g. fetch's ECONNREFUSED. */
+const errMsg = (e: unknown): string => {
+  if (!(e instanceof Error)) return String(e);
+  const cause = (e as { cause?: unknown }).cause;
+  if (cause instanceof Error) return `${e.message} (${cause.message})`;
+  if (cause && typeof cause === 'object' && 'code' in cause) {
+    return `${e.message} (${(cause as { code: unknown }).code})`;
+  }
+  return e.message;
+};
 
 /** Storage key for a tile's stylized output. Mirrors docs/architecture.html. */
 export function stylizeKey(projectId: string, x: number, y: number): string {
   return `stylize/${projectId}/${x}_${y}.png`;
 }
 
-/** Map a grid offset to a neighbour slot. north = lower y, west = lower x. */
+/**
+ * Map a grid offset to a composite slot. The composite is built in render-image
+ * space, where +y is image-up (renderer row convention), so the y+1 neighbour
+ * is the one sitting ABOVE the tile and belongs in the top ("north") strip.
+ * west = lower x.
+ */
 function directionSlot(dx: number, dy: number): Dir | null {
-  if (dx === 0 && dy === -1) return 'north';
-  if (dx === 0 && dy === 1) return 'south';
+  if (dx === 0 && dy === 1) return 'north';
+  if (dx === 0 && dy === -1) return 'south';
   if (dx === -1 && dy === 0) return 'west';
   if (dx === 1 && dy === 0) return 'east';
-  if (dx === -1 && dy === -1) return 'northwest';
-  if (dx === 1 && dy === -1) return 'northeast';
-  if (dx === -1 && dy === 1) return 'southwest';
-  if (dx === 1 && dy === 1) return 'southeast';
+  if (dx === -1 && dy === 1) return 'northwest';
+  if (dx === 1 && dy === 1) return 'northeast';
+  if (dx === -1 && dy === -1) return 'southwest';
+  if (dx === 1 && dy === -1) return 'southeast';
   return null;
 }
 
@@ -89,6 +103,7 @@ export function startStylizeConsumer(
       };
     });
 
+  let idleLogged = false;
   const done = (async () => {
     while (!stopping) {
       let tile: Awaited<ReturnType<typeof claimNextStylize>>;
@@ -101,22 +116,42 @@ export function startStylizeConsumer(
       }
 
       if (!tile) {
+        if (!idleLogged) {
+          log(`no stylize-ready tiles — polling every ${IDLE_POLL_MS / 1000}s`);
+          idleLogged = true;
+        }
         await idle(); // empty queue — back off
         continue;
       }
+      idleLogged = false;
 
       const startedAt = Date.now();
+      const at = `${tile.x},${tile.y}`;
       try {
         if (!tile.renderedImgPath) throw new Error('claimed tile has no renderedImgPath');
+        log(`tile ${at}: claimed (attempt ${tile.retryAttempt}), loading render + neighbours`);
+
         const render = await getStorage().get(tile.renderedImgPath);
         const neighbors = await loadStylizedNeighbors(tile);
+        const slots = Object.keys(neighbors);
+        log(
+          `tile ${at}: ${slots.length}/${tile.neighbors.length} neighbours stylized${
+            slots.length ? ` [${slots.join(', ')}]` : ''
+          }`,
+        );
+
         const { composite, bbox } = await buildComposite(render, neighbors);
+        log(`tile ${at}: composite built (bbox ${bbox.join(',')}), calling ${model.name}`);
+
+        const genStart = Date.now();
         const { image } = await model.generate({ input: composite, prompt: STYLIZE_PROMPT });
         const stylized = await extractStylized(image, bbox);
         const key = stylizeKey(tile.projectId, tile.x, tile.y);
         await getStorage().put(key, stylized);
         await completeStylize(tile.id, key);
-        log(`tile ${tile.x},${tile.y} → ${key} (${Date.now() - startedAt}ms)`);
+        log(
+          `tile ${at} → ${key} (${Date.now() - startedAt}ms total, ${Date.now() - genStart}ms model)`,
+        );
       } catch (e) {
         let status = 'unknown';
         try {
@@ -124,7 +159,7 @@ export function startStylizeConsumer(
         } catch (err) {
           log(`failOrRetry failed for tile ${tile.id}: ${errMsg(err)}`);
         }
-        log(`tile ${tile.x},${tile.y} stylize failed: ${errMsg(e)} → ${status}`);
+        log(`tile ${at} stylize failed: ${errMsg(e)} → ${status}`);
       }
       // claimed a tile this round — loop straight back to drain the backlog
     }

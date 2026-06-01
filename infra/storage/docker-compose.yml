@@ -22,6 +22,7 @@ services:
         echo 'waiting for minio...'; sleep 1;
       done &&
       mc mb --ignore-existing local/mapart &&
+      mc anonymous set download local/mapart/oxen-input &&
       exit 0;
       "
 

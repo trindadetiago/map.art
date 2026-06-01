@@ -50,4 +50,24 @@ export function registerStorageCommands(parent: Command): void {
       await getStorage().delete(opts.key);
       console.log(`deleted ${opts.key}`);
     });
+
+  parent
+    .command('clear')
+    .description('Delete every object under a prefix (all storage if omitted). Destructive.')
+    .argument('[prefix]', 'only clear keys under this prefix', '')
+    .requiredOption('--yes', 'confirm destructive action')
+    .action(async (prefix: string) => {
+      const storage = getStorage();
+      const entries = await storage.list(prefix);
+      if (entries.length === 0) {
+        console.log(`nothing to clear${prefix ? ` under "${prefix}"` : ''}`);
+        return;
+      }
+      let n = 0;
+      for (const e of entries) {
+        await storage.delete(e.key);
+        n++;
+      }
+      console.log(`deleted ${n} object(s)${prefix ? ` under "${prefix}"` : ''}`);
+    });
 }

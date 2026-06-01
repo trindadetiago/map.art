@@ -80,7 +80,14 @@ export function tileGroundCorners(
   };
 }
 
-function offsetToLatLng(center: LatLng, east: number, north: number): LatLng {
+/**
+ * Convert an east/north meter offset (from `center`) back to a lat/lng. Inverse
+ * of the math `tileGroundOffset` feeds: east → longitude (scaled by cos lat),
+ * north → latitude. Exported so callers mapping a scene ground point back to a
+ * geographic point (e.g. a raycast hit in the area picker) share one source of
+ * truth for the conversion.
+ */
+export function offsetToLatLng(center: LatLng, east: number, north: number): LatLng {
   const latRad = (center.lat * Math.PI) / 180;
   const metersPerDegLat = EARTH_CIRCUMFERENCE_M / 360;
   const metersPerDegLng = (EARTH_CIRCUMFERENCE_M * Math.cos(latRad)) / 360;

@@ -1,8 +1,15 @@
-export { applyFrustum, cameraFrustumForZoom, positionCamera } from './camera';
+export {
+  applyFrustum,
+  cameraFrustumForZoom,
+  type GridView,
+  gridViewForSize,
+  positionCamera,
+} from './camera';
 export {
   RENDER_DEFAULTS,
   type GridCell,
   gridCells,
+  offsetToLatLng,
   type RenderParams,
   renderParamsForLatLng,
   tileCenterLatLng,
