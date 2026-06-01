@@ -13,6 +13,33 @@ export interface StoragePanelProps {
   deleteAction: (key: string) => Promise<void>;
   /** Public URL to serve a stored blob (e.g. `/api/storage/`). Appended with the key. */
   serveUrlPrefix: string;
+  /** Map of project UUID → name, so keys like `render/{id}/…` read as project names. */
+  projectNames: Record<string, string>;
+}
+
+/**
+ * Render a path segment as its project name when the segment is a known project
+ * UUID (with the id kept as a dim suffix); otherwise render the segment as-is.
+ */
+function SegmentLabel({
+  name,
+  projectNames,
+  dim,
+}: {
+  name: string;
+  projectNames: Record<string, string>;
+  dim?: boolean;
+}) {
+  const project = projectNames[name];
+  if (!project) return <>{name}</>;
+  return (
+    <>
+      {project}
+      <span className={`ml-1.5 font-mono text-[10px] ${dim ? 'opacity-60' : 'text-stone-400'}`}>
+        {name.slice(0, 8)}
+      </span>
+    </>
+  );
 }
 
 interface FileNode {
@@ -31,7 +58,12 @@ interface FolderNode {
 }
 type TreeNode = FileNode | FolderNode;
 
-export function StoragePanel({ entries, deleteAction, serveUrlPrefix }: StoragePanelProps) {
+export function StoragePanel({
+  entries,
+  deleteAction,
+  serveUrlPrefix,
+  projectNames,
+}: StoragePanelProps) {
   const tree = useMemo(() => buildTree(entries), [entries]);
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [expanded, setExpanded] = useState<Set<string>>(() => initialExpansion(tree));
@@ -60,6 +92,7 @@ export function StoragePanel({ entries, deleteAction, serveUrlPrefix }: StorageP
             expanded={expanded}
             onToggle={toggle}
             onSelect={(p) => setSelectedPath(p)}
+            projectNames={projectNames}
           />
         )}
       </aside>
@@ -78,6 +111,7 @@ export function StoragePanel({ entries, deleteAction, serveUrlPrefix }: StorageP
             node={selectedNode}
             serveUrlPrefix={serveUrlPrefix}
             onSelectFile={(p) => setSelectedPath(p)}
+            projectNames={projectNames}
           />
         )}
       </section>
@@ -92,6 +126,7 @@ function TreeView({
   expanded,
   onToggle,
   onSelect,
+  projectNames,
 }: {
   nodes: TreeNode[];
   depth: number;
@@ -99,6 +134,7 @@ function TreeView({
   expanded: Set<string>;
   onToggle: (p: string) => void;
   onSelect: (p: string) => void;
+  projectNames: Record<string, string>;
 }) {
   return (
     <ul className="m-0 list-none p-0">
@@ -128,7 +164,7 @@ function TreeView({
                 <span className="inline-block w-3" />
               )}
               <span className={n.type === 'folder' ? 'font-medium' : 'font-mono text-[12px]'}>
-                {n.name}
+                <SegmentLabel name={n.name} projectNames={projectNames} dim={isSelected} />
                 {n.type === 'folder' && (
                   <span
                     className={`ml-1.5 text-[11px] ${isSelected ? 'text-white/60' : 'text-stone-400'}`}
@@ -146,6 +182,7 @@ function TreeView({
                 expanded={expanded}
                 onToggle={onToggle}
                 onSelect={onSelect}
+                projectNames={projectNames}
               />
             )}
           </li>
@@ -233,10 +270,12 @@ function FolderGallery({
   node,
   serveUrlPrefix,
   onSelectFile,
+  projectNames,
 }: {
   node: FolderNode;
   serveUrlPrefix: string;
   onSelectFile: (path: string) => void;
+  projectNames: Record<string, string>;
 }) {
   const files = node.children.filter((c): c is FileNode => c.type === 'file');
   const subfolders = node.children.filter((c): c is FolderNode => c.type === 'folder');
@@ -244,7 +283,19 @@ function FolderGallery({
   return (
     <div>
       <div className="mb-4 flex items-baseline gap-3">
-        <div className="font-mono text-[13px] text-stone-900">{node.path || '/'}</div>
+        <div className="font-mono text-[13px] text-stone-900">
+          {node.path
+            ? node.path.split('/').map((seg, i, arr) => {
+                const cumulative = arr.slice(0, i + 1).join('/');
+                return (
+                  <span key={cumulative}>
+                    {i > 0 && <span className="text-stone-400">/</span>}
+                    <SegmentLabel name={seg} projectNames={projectNames} />
+                  </span>
+                );
+              })
+            : '/'}
+        </div>
         <div className="text-[12px] text-stone-500">
           {node.fileCount.toLocaleString()} files · {formatBytes(node.totalSize)}
         </div>
@@ -263,7 +314,7 @@ function FolderGallery({
                 onClick={() => onSelectFile(f.path)}
                 className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 font-mono text-[12px] text-stone-700 transition hover:border-stone-400 hover:bg-white"
               >
-                ▸ {f.name}
+                ▸ <SegmentLabel name={f.name} projectNames={projectNames} />
                 <span className="ml-1.5 text-stone-400">{f.fileCount}</span>
               </button>
             ))}

@@ -1,3 +1,4 @@
+import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
 import { getStorage } from '@mapart/storage';
 import { revalidatePath } from 'next/cache';
@@ -34,6 +35,15 @@ export default async function StoragePage() {
     }));
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
+  }
+
+  // Resolve the project UUIDs that appear in keys (render/{id}/…, stylize/{id}/…)
+  // to human names so the tree reads as project names, not opaque ids.
+  let projectNames: Record<string, string> = {};
+  try {
+    projectNames = Object.fromEntries((await repos.listProjects()).map((p) => [p.id, p.name]));
+  } catch {
+    // DB unreachable — fall back to showing raw ids.
   }
 
   const isS3 = env.storageBackend === 's3';
@@ -77,6 +87,7 @@ export default async function StoragePage() {
           entries={entries}
           deleteAction={deleteAction}
           serveUrlPrefix="/api/storage/"
+          projectNames={projectNames}
         />
       )}
     </div>

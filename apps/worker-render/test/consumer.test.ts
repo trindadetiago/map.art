@@ -79,6 +79,11 @@ beforeAll(() => {
   if (!/localhost|127\.0\.0\.1/.test(url)) {
     throw new Error(`refusing to run integration tests against non-local DB: ${url || '(unset)'}`);
   }
+  // The vitest setup repoints DATABASE_URL at the isolated `<devdb>_test` DB.
+  // If that didn't happen, the wipes would hit the dev DB — fail loudly instead.
+  if (!/_test(\b|$)/.test(new URL(url).pathname)) {
+    throw new Error(`refusing to wipe a non-test DB (expected name ending in _test): ${url}`);
+  }
 });
 
 beforeEach(async () => {

@@ -7,6 +7,7 @@ import {
   IconMap,
   IconSparkles,
   IconStorage,
+  IconWorkflow,
 } from '@/components/admin/icons';
 import { Section } from '@/components/admin/section';
 import { repos } from '@mapart/db';
@@ -133,6 +134,9 @@ export default async function AdminIndex() {
           </Card>
           <Card icon={IconCamera} label="Renderer" href="/admin/renderer">
             <Caption>Live Three.js scene streaming Google Photorealistic 3D Tiles.</Caption>
+          </Card>
+          <Card icon={IconWorkflow} label="Stylize history" href="/admin/stylize">
+            <Caption>Trace one tile through the stylizer: render, composite, raw + final.</Caption>
           </Card>
         </div>
       </Section>

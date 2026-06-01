@@ -16,6 +16,7 @@
     "@mapart/models": "workspace:*",
     "@mapart/renderer": "workspace:*",
     "@mapart/storage": "workspace:*",
+    "@mapart/stylize": "workspace:*",
     "@radix-ui/react-select": "^2.2.6",
     "@vis.gl/react-google-maps": "^1.8.3",
     "d3-geo": "^3.1.1",

@@ -18,7 +18,11 @@ import {
   type StylizedNeighbors,
   buildComposite,
   extractStylized,
+  stylizeKey,
+  stylizeStepKey,
 } from '@mapart/stylize';
+
+export { stylizeKey } from '@mapart/stylize';
 
 /** Wait between polls when the queue is empty. A claimed tile loops back with no wait. */
 export const IDLE_POLL_MS = 30_000;
@@ -43,11 +47,6 @@ const errMsg = (e: unknown): string => {
   }
   return e.message;
 };
-
-/** Storage key for a tile's stylized output. Mirrors docs/architecture.html. */
-export function stylizeKey(projectId: string, x: number, y: number): string {
-  return `stylize/${projectId}/${x}_${y}.png`;
-}
 
 /**
  * Map a grid offset to a composite slot. The composite is built in render-image
@@ -92,6 +91,13 @@ export function startStylizeConsumer(
   // Sleep that a stop() can cut short, so shutdown doesn't wait out the poll interval.
   const idle = (): Promise<void> =>
     new Promise((res) => {
+      // stop() may have landed during the claim that preceded us — when wake was
+      // still null and the signal was lost. Re-check here so we never start a full
+      // poll-interval sleep after a stop was already requested.
+      if (stopping) {
+        res();
+        return;
+      }
       const timer = setTimeout(() => {
         wake = null;
         res();
@@ -146,8 +152,17 @@ export function startStylizeConsumer(
         const genStart = Date.now();
         const { image } = await model.generate({ input: composite, prompt: STYLIZE_PROMPT });
         const stylized = await extractStylized(image, bbox);
+
+        // Persist the per-tile pipeline artifacts (composite fed to the model, raw
+        // model output before cropping) so a tile's whole history is inspectable.
+        const storage = getStorage();
+        await Promise.all([
+          storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'composite'), composite),
+          storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'raw-output'), image),
+        ]);
+
         const key = stylizeKey(tile.projectId, tile.x, tile.y);
-        await getStorage().put(key, stylized);
+        await storage.put(key, stylized);
         await completeStylize(tile.id, key);
         log(
           `tile ${at} → ${key} (${Date.now() - startedAt}ms total, ${Date.now() - genStart}ms model)`,
