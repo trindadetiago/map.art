@@ -38,7 +38,7 @@ Mostly pure Node libraries. Tree-shake-friendly imports.
 | `@mapart/models` | OpenAI image-edit clients (`gpt-image-1.5`, `gpt-image-2`) behind a common `ModelClient` interface. Factory: `getModel(name, opts)`. Requires `OPENAI_API_KEY`. |
 | `@mapart/geo` | Foundational geo primitives + web-mercator tile math. Types (`LatLng`, `Bbox`, `Polygon`, `TileCoord`). Tile math (`latLngToTile`, `tileToBounds`, `tileToCenter`, `tileToBoundsWkt`, `tileWidthMeters`). Coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`). No deps. |
 | `@mapart/renderer` | Three.js + Google 3D Tiles. Exports the React `<Scene>` component (for `apps/web` + `apps/worker-render/render-page`), the render-side type `RenderParams`, the global render pose/output config `RENDER_DEFAULTS` (pitch 30, yaw 45, 150 m/tile, 512 px), and the pure helpers (`createTilesRenderer`, `positionCamera`, `applyFrustum`, `reorientTo`, `tileGroundCorners`, `tileCenterLatLng`, `renderParamsForLatLng`). Depends on `@mapart/geo` for `LatLng` + `tileWidthMeters`. React is a peer dep; pure helpers are usable without it (tree-shaken). |
-| `@mapart/storage` | Blob storage. Two backends: `local` (`<repo>/data/`) or `s3` (MinIO/AWS). Selected by `STORAGE_BACKEND`. Singleton via `getStorage()`. |
+| `@mapart/storage` | Blob storage on S3 (MinIO locally, AWS in prod), configured by the `S3_*` env vars. Singleton via `getStorage()`. |
 
 ### `infra/`
 
@@ -50,7 +50,6 @@ Local services for dev. Root `docker-compose.yml` uses `include:` to pull both i
 ### Other
 
 - `python/` — exploration scripts, data prep, training pipeline (separate Python venv at `.venv/`).
-- `data/` — local-mode storage backend root (gitignored; created on demand by `@mapart/storage` when `STORAGE_BACKEND=local`). When `STORAGE_BACKEND=s3`, this is unused.
 - `scripts/setup.sh` — full bootstrap. Docker check, services up, .env sync, deps install, db migrate. Idempotent.
 - `scripts/run.mjs` — dev-runner log-tee wrapper (used by mprocs).
 - `mprocs.yaml` — dev process layout (one tab per long-running service).
@@ -96,7 +95,7 @@ If you need a *new* command, add it under `apps/cli/src/commands/<domain>.ts` an
 - **Packages are server-only.** No React, no Next imports, no UI. If a thing is UI, it lives in `apps/web` (or another app that hosts UI). The admin Panel pattern: each `apps/web/app/admin/<pkg>/panel.tsx` is the host for that package's inspector.
 - **`apps/web` files are snake_case.** All `.ts`/`.tsx` files under `apps/web/` (components, panels, helpers) use `snake_case.tsx` — exported React components themselves stay PascalCase. Exempt: Next.js routing conventions (`page.tsx`, `layout.tsx`, `route.ts`, `loading.tsx`, `error.tsx`, `not-found.tsx`, `template.tsx`, `default.tsx`, `global-error.tsx`) and Next auto-generated files (`next.config.ts`, `next-env.d.ts`). Enforced by `scripts/check-naming.sh` in the pre-commit hook.
 - **`@mapart/env` is the only place reading `process.env`.** Add new env vars to `packages/env/src/schema.ts`, then to `.env.example`. The setup script will sync existing dev `.env`s on next run.
-- **Storage call-sites are async and backend-agnostic.** Never reach into `LocalFs` or `S3Storage` directly; always go through `getStorage()`.
+- **Storage call-sites are async.** Never construct `S3Storage` directly; always go through `getStorage()`.
 - **Workers will be the only writers to blob storage** (per architecture doc) — once we get to production. For now `apps/web` server actions still write directly; that's a known transitional state.
 - **Type-checking is the primary correctness signal.** `pnpm exec tsc --noEmit -p apps/web/tsconfig.json` etc. Run after non-trivial changes. Some packages also have `vitest` tests (`pnpm --filter <pkg> test`).
 - **DB tests run against an isolated `jp_test` database, never the dev DB.** Any suite that wipes `tiles`/`projects` between runs — `@mapart/db`, `apps/worker-render`, `apps/worker-stylize` — must point at the throwaway DB. They share `packages/db/test/_global-setup.ts` + `_setup.ts`: `globalSetup` creates `<devdb>_test` (e.g. `jp_test`) and migrates it; `setupFiles` repoints `DATABASE_URL` per worker *before* `@mapart/env` loads. So each suite's vitest config references those two files (the worker configs via `../../packages/db/test/...`), and each `beforeAll` guard asserts the DB name ends in `_test` — fail loudly rather than wipe dev. It self-provisions on first run (only needs the Postgres container up); nothing to add to the setup script. Because all these suites share the one `jp_test` DB, the root `pnpm test` runs `--workspace-concurrency=1` so they don't wipe each other mid-run. Never point a wiping suite at the dev DB.

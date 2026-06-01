@@ -339,8 +339,8 @@ pnpm --filter @mapart/stylize test          <span class="c"># pure geometry pari
 pnpm --filter @mapart/worker-stylize test   <span class="c"># end-to-end against the queue</span></pre>
     <p class="summary">
       Storage keys follow the render convention: stylized tiles land at
-      <code>stylize/{projectId}/{x}_{y}.png</code> via <code>getStorage()</code> (local <code>data/</code> or
-      S3/MinIO, per <code>STORAGE_BACKEND</code>). Failures bump the per-phase retry budget; the 4th failure
+      <code>stylize/{projectId}/{x}_{y}.png</code> via <code>getStorage()</code> (S3/MinIO).
+      Failures bump the per-phase retry budget; the 4th failure
       is terminal (<code>error</code>).
     </p>
 

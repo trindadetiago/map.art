@@ -46,8 +46,7 @@ export default async function StoragePage() {
     // DB unreachable — fall back to showing raw ids.
   }
 
-  const isS3 = env.storageBackend === 's3';
-  const consoleUrl = isS3 ? deriveConsoleUrl(env.s3Endpoint) : null;
+  const consoleUrl = deriveConsoleUrl(env.s3Endpoint);
   const totalBytes = entries.reduce((a, e) => a + e.size, 0);
 
   return (
@@ -61,8 +60,7 @@ export default async function StoragePage() {
         </span>
         <span className="ml-auto flex items-center gap-2">
           <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 font-mono text-[11px] text-stone-600">
-            {env.storageBackend}
-            {isS3 && env.s3Bucket ? ` · ${env.s3Bucket}` : ''}
+            s3{env.s3Bucket ? ` · ${env.s3Bucket}` : ''}
           </span>
           {consoleUrl && (
             <a

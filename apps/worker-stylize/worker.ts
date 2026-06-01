@@ -53,9 +53,9 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 function buildModel(): ModelClient {
-  // oxen needs a publicly-fetchable input URL; that path is wired for the s3
-  // (MinIO) backend + ngrok tunnel only. Anything else stays on the stub.
-  if (env.oxenApiKey && env.storageBackend === 's3') {
+  // oxen needs a publicly-fetchable input URL, served from the S3 (MinIO) bucket
+  // via an ngrok tunnel. Without an oxen key we stay on the pass-through stub.
+  if (env.oxenApiKey) {
     const storage = getStorage();
     const bucket = requireEnv('s3Bucket');
     return new OxenImageModel({

@@ -31,8 +31,6 @@ python/training/*/_playground/
 __pycache__/
 *.pyc
 
-data/
-
 # Local-only scratch dir for CLI render outputs etc. Use freely.
 debug/
 

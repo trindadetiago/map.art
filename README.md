@@ -17,7 +17,7 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 - `geo` — foundational geo primitives (`LatLng`, `Bbox`, `Polygon`, `TileCoord`) + web-mercator tile math + coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`)
 - `models` — OpenAI image-edit clients (gpt-image-1.5, gpt-image-2)
 - `renderer` — Three.js + Google 3D Tiles. Ships the React `<Scene>` component plus pure render-side helpers + types
-- `storage` — blob storage (LocalFs + S3/MinIO backends)
+- `storage` — blob storage (S3/MinIO)
 
 ## Infra
 
@@ -59,7 +59,7 @@ The `@mapart/db` tests are integration tests that wipe `tiles` + `projects` betw
 - `OPENAI_API_KEY` — required by `@mapart/models` (gpt-image-1.5 / gpt-image-2)
 - `OXEN_API_KEY` — for the planned oxen.ai LoRA training/hosting workflow
 - `DATABASE_URL` — preset to local docker Postgres
-- `STORAGE_BACKEND=s3` + `S3_*` — preset to local MinIO
+- `S3_*` — blob storage, preset to local MinIO
 
 ## CLI
 

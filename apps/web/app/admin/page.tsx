@@ -11,7 +11,7 @@ import {
 } from '@/components/admin/icons';
 import { Section } from '@/components/admin/section';
 import { repos } from '@mapart/db';
-import { env, getEnvStatus } from '@mapart/env';
+import { getEnvStatus } from '@mapart/env';
 import { getStorage } from '@mapart/storage';
 
 export const dynamic = 'force-dynamic';
@@ -104,7 +104,7 @@ export default async function AdminIndex() {
               caption={s.pgVersion ? 'connected' : 'unreachable'}
             />
           </Card>
-          <Card icon={IconStorage} label="Storage" href="/admin/storage" badge={env.storageBackend}>
+          <Card icon={IconStorage} label="Storage" href="/admin/storage" badge="s3">
             <Metric
               value={s.storageFiles.toLocaleString()}
               caption={`${formatBytes(s.storageBytes)} across all blobs`}

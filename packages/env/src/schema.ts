@@ -35,17 +35,6 @@ export const SCHEMA = {
       return v;
     },
   },
-  storageBackend: {
-    envKey: 'STORAGE_BACKEND',
-    description: 'Storage driver. "s3" uses S3/MinIO, "local" uses the on-disk data/ folder.',
-    default: 'local',
-    validate: (v) => {
-      if (v !== 's3' && v !== 'local') {
-        throw new Error('STORAGE_BACKEND must be "s3" or "local"');
-      }
-      return v;
-    },
-  },
   s3Endpoint: {
     envKey: 'S3_ENDPOINT',
     description:
@@ -58,15 +47,15 @@ export const SCHEMA = {
   },
   s3AccessKeyId: {
     envKey: 'S3_ACCESS_KEY_ID',
-    description: 'S3 access key id. Required when STORAGE_BACKEND=s3.',
+    description: 'S3 access key id. Required for blob storage.',
   },
   s3SecretAccessKey: {
     envKey: 'S3_SECRET_ACCESS_KEY',
-    description: 'S3 secret access key. Required when STORAGE_BACKEND=s3.',
+    description: 'S3 secret access key. Required for blob storage.',
   },
   s3Bucket: {
     envKey: 'S3_BUCKET',
-    description: 'S3 bucket name. Required when STORAGE_BACKEND=s3.',
+    description: 'S3 bucket name. Required for blob storage.',
   },
   renderWorkerPort: {
     envKey: 'RENDER_WORKER_PORT',
