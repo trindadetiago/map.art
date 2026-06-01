@@ -48,6 +48,13 @@ export function startRenderConsumer(render: RenderFn, log: (msg: string) => void
   // Sleep that a stop() can cut short, so shutdown doesn't wait out the poll interval.
   const idle = (): Promise<void> =>
     new Promise((res) => {
+      // stop() may have landed during the claim that preceded us — when wake was
+      // still null and the signal was lost. Re-check here so we never start a full
+      // poll-interval sleep after a stop was already requested.
+      if (stopping) {
+        res();
+        return;
+      }
       const timer = setTimeout(() => {
         wake = null;
         res();

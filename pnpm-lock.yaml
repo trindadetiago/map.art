@@ -77,6 +77,9 @@ importers:
       '@mapart/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@mapart/stylize':
+        specifier: workspace:*
+        version: link:../../packages/stylize
       '@radix-ui/react-select':
         specifier: ^2.2.6
         version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
