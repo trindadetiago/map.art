@@ -66,19 +66,39 @@ function directionSlot(dx: number, dy: number): Dir | null {
   return null;
 }
 
-/** Load the direction-keyed buffers for the tile's ALREADY-stylized neighbours. */
-async function loadStylizedNeighbors(tile: ClaimedTile): Promise<StylizedNeighbors> {
-  if (tile.neighbors.length === 0) return {};
+interface NeighborContext {
+  /** Direction-keyed context images fed to the composite. */
+  buffers: StylizedNeighbors;
+  /** How many slots came from a stylized neighbour vs a raw-render fallback. */
+  stylized: number;
+  rendered: number;
+}
+
+/**
+ * Load the direction-keyed context buffers for a tile's neighbours. Prefers each
+ * neighbour's stylized output; falls back to its raw render when it has no
+ * stylization yet (or is being re-stylized — its stylizedImgPath was cleared), so
+ * the model still gets surrounding context instead of a bare border.
+ */
+async function loadNeighborContext(tile: ClaimedTile): Promise<NeighborContext> {
+  if (tile.neighbors.length === 0) return { buffers: {}, stylized: 0, rendered: 0 };
   const rows = await tilesByIds(tile.neighbors);
   const storage = getStorage();
-  const out: StylizedNeighbors = {};
+  const buffers: StylizedNeighbors = {};
+  let stylized = 0;
+  let rendered = 0;
   for (const n of rows) {
-    if (!n.stylizedImgPath) continue; // not stylized yet → treat as absent
     const slot = directionSlot(n.x - tile.x, n.y - tile.y);
     if (!slot) continue;
-    out[slot] = await storage.get(n.stylizedImgPath);
+    if (n.stylizedImgPath) {
+      buffers[slot] = await storage.get(n.stylizedImgPath);
+      stylized++;
+    } else if (n.renderedImgPath) {
+      buffers[slot] = await storage.get(n.renderedImgPath);
+      rendered++;
+    }
   }
-  return out;
+  return { buffers, stylized, rendered };
 }
 
 export function startStylizeConsumer(
@@ -138,15 +158,13 @@ export function startStylizeConsumer(
         log(`tile ${at}: claimed (attempt ${tile.retryAttempt}), loading render + neighbours`);
 
         const render = await getStorage().get(tile.renderedImgPath);
-        const neighbors = await loadStylizedNeighbors(tile);
-        const slots = Object.keys(neighbors);
+        const ctx = await loadNeighborContext(tile);
         log(
-          `tile ${at}: ${slots.length}/${tile.neighbors.length} neighbours stylized${
-            slots.length ? ` [${slots.join(', ')}]` : ''
-          }`,
+          `tile ${at}: ${ctx.stylized + ctx.rendered}/${tile.neighbors.length} neighbours as context ` +
+            `(${ctx.stylized} stylized, ${ctx.rendered} render)`,
         );
 
-        const { composite, bbox } = await buildComposite(render, neighbors);
+        const { composite, bbox } = await buildComposite(render, ctx.buffers);
         log(`tile ${at}: composite built (bbox ${bbox.join(',')}), calling ${model.name}`);
 
         const genStart = Date.now();
