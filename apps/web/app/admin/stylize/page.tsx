@@ -216,17 +216,19 @@ function TileGrid({
 
 function statusClass(phase: string, status: string): string {
   if (status === 'error') return 'bg-red-400 text-white hover:bg-red-500';
-  if (phase === 'stylize' && status === 'done')
-    return 'bg-emerald-500 text-white hover:bg-emerald-600';
-  if (phase === 'stylize') return 'bg-amber-300 hover:bg-amber-400';
-  if (status === 'done') return 'bg-sky-300 hover:bg-sky-400';
-  return 'bg-stone-200 hover:bg-stone-300';
+  if (phase === 'stylize') {
+    if (status === 'done') return 'bg-emerald-500 text-white hover:bg-emerald-600'; // stylized
+    if (status === 'progress') return 'bg-amber-300 hover:bg-amber-400'; // actively stylizing
+    return 'bg-sky-300 hover:bg-sky-400'; // stylize/pending → rendered, queued for stylize
+  }
+  if (status === 'done') return 'bg-sky-300 hover:bg-sky-400'; // rendered
+  return 'bg-stone-200 hover:bg-stone-300'; // render pending/progress
 }
 
 function Legend() {
   const items: [string, string][] = [
     ['bg-stone-200', 'render pending'],
-    ['bg-sky-300', 'rendered'],
+    ['bg-sky-300', 'rendered / queued'],
     ['bg-amber-300', 'stylizing'],
     ['bg-emerald-500', 'stylized'],
     ['bg-red-400', 'error'],
