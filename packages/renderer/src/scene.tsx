@@ -159,10 +159,14 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
             reject(new Error('Scene.waitForSettled: disposed'));
             return;
           }
-          const downloading = tiles.downloadQueue?.running ?? false;
-          const parsing = tiles.parseQueue?.running ?? false;
           const now = Date.now();
-          if (!downloading && !parsing) {
+          // Fully converged = nothing queued, downloading, or parsing
+          // (loadProgress === 1, i.e. queued + downloading + parsing === 0). The
+          // render loop keeps calling tiles.update() every frame, so any tile
+          // still needed to meet the error target gets re-queued and resets the
+          // window — we only resolve once the tileset has stayed fully loaded for
+          // `settleMs`, not merely when the download queue briefly drains.
+          if (tiles.loadProgress >= 1) {
             if (idleSince === null) idleSince = now;
             if (now - idleSince >= settleMs) {
               resolve();
@@ -172,7 +176,14 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
             idleSince = null;
           }
           if (now - started >= timeoutMs) {
-            reject(new Error(`Scene.waitForSettled: timeout after ${timeoutMs}ms`));
+            // Didn't fully converge within the budget (slow stream/network).
+            // Resolve best-effort and capture what's loaded rather than failing
+            // the render into a retry — a partial frame beats a wasted re-render.
+            console.warn(
+              `[scene] waitForSettled: capturing un-converged after ${timeoutMs}ms ` +
+                `(loadProgress ${tiles.loadProgress.toFixed(2)})`,
+            );
+            resolve();
             return;
           }
           setTimeout(poll, 100);
