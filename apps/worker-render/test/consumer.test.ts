@@ -168,4 +168,41 @@ describe('render-queue consumer (end-to-end)', () => {
     expect(tile?.renderedImgPath).toBeNull();
     expect(await mem.list()).toHaveLength(0); // never wrote a blob
   });
+
+  it('reuses an existing render for the same lat/lng instead of re-rendering', async () => {
+    const mem = new MemStorage();
+    __setStorageForTests(mem);
+
+    // Two projects whose 1×1 grids land on the exact same point (lat 40, lng -74).
+    const a = await project(grid(1, 1));
+    const b = await project(grid(1, 1));
+
+    const seen: RenderRequest[] = [];
+    const png = Buffer.from('\x89PNG\r\n shared render bytes');
+    const consumer = startRenderConsumer(
+      async (req) => {
+        seen.push(req);
+        return png;
+      },
+      () => {},
+    );
+
+    await waitFor(async () =>
+      [...(await tilesByProject(a)), ...(await tilesByProject(b))].every(
+        (t) => t.status === 'done',
+      ),
+    );
+    consumer.stop();
+    await consumer.done;
+
+    // One tile rendered; the second copied that blob → exactly one render call.
+    expect(seen).toHaveLength(1);
+
+    const [tb] = await tilesByProject(b);
+    expect(tb?.status).toBe('done');
+    expect(tb?.renderedImgPath).toBe(renderKey(b, 0, 0));
+    // Both projects have their own blob, with identical bytes.
+    expect(await mem.has(renderKey(a, 0, 0))).toBe(true);
+    expect((await mem.get(renderKey(b, 0, 0))).equals(png)).toBe(true);
+  });
 });

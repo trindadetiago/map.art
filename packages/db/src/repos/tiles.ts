@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { getDb } from '../client';
 import { type Tile, type TilePhase, type TileStatus, tiles } from '../schema/tiles';
 
@@ -22,6 +22,21 @@ export async function tilesByIds(ids: readonly string[]): Promise<Tile[]> {
     .select()
     .from(tiles)
     .where(inArray(tiles.id, ids as string[]));
+}
+
+/**
+ * Storage key of an existing render for this exact lat/lng, if any tile already
+ * has one. A render is a pure function of (lat, lng) + the fixed pose, so the
+ * same geographic point produces an identical PNG — the render worker reuses it
+ * instead of re-rendering. Returns null when no rendered tile shares the point.
+ */
+export async function findRenderedAt(lat: number, lng: number): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ renderedImgPath: tiles.renderedImgPath })
+    .from(tiles)
+    .where(and(eq(tiles.lat, lat), eq(tiles.lng, lng), isNotNull(tiles.renderedImgPath)))
+    .limit(1);
+  return row?.renderedImgPath ?? null;
 }
 
 export interface TileStatusCount {

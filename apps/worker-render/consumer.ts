@@ -9,7 +9,7 @@
  * Render pose/output is fixed (RENDER_DEFAULTS); only the tile center varies,
  * so each tile maps to a request through renderParamsForLatLng.
  */
-import { claimNextRender, completeRender, failOrRetry } from '@mapart/db/repos';
+import { claimNextRender, completeRender, failOrRetry, findRenderedAt } from '@mapart/db/repos';
 import { renderParamsForLatLng } from '@mapart/renderer';
 import { getStorage } from '@mapart/storage';
 
@@ -84,19 +84,34 @@ export function startRenderConsumer(render: RenderFn, log: (msg: string) => void
 
       const startedAt = Date.now();
       try {
-        const p = renderParamsForLatLng({ lat: tile.lat, lng: tile.lng });
-        const png = await render({
-          lat: tile.lat,
-          lng: tile.lng,
-          pitch: p.pitch,
-          yaw: p.yaw,
-          zoom: p.zoom,
-          size: p.size,
-        });
         const key = renderKey(tile.projectId, tile.x, tile.y);
-        await getStorage().put(key, png);
+        const storage = getStorage();
+
+        // A render is fully determined by (lat, lng) + the fixed pose, so if any
+        // tile already rendered this exact point and its blob still exists, copy
+        // that PNG instead of paying for another headless render.
+        const cachedKey = await findRenderedAt(tile.lat, tile.lng);
+        let png: Buffer;
+        let reusedFrom: string | null = null;
+        if (cachedKey && cachedKey !== key && (await storage.has(cachedKey))) {
+          png = await storage.get(cachedKey);
+          reusedFrom = cachedKey;
+        } else {
+          const p = renderParamsForLatLng({ lat: tile.lat, lng: tile.lng });
+          png = await render({
+            lat: tile.lat,
+            lng: tile.lng,
+            pitch: p.pitch,
+            yaw: p.yaw,
+            zoom: p.zoom,
+            size: p.size,
+          });
+        }
+
+        await storage.put(key, png);
         await completeRender(tile.id, key);
-        log(`tile ${tile.x},${tile.y} → ${key} (${Date.now() - startedAt}ms)`);
+        const how = reusedFrom ? `reused ${reusedFrom}` : 'rendered';
+        log(`tile ${tile.x},${tile.y} → ${key} (${how}, ${Date.now() - startedAt}ms)`);
       } catch (e) {
         let status = 'unknown';
         try {
