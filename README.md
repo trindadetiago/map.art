@@ -40,12 +40,15 @@ Also: `python/data_overview.html` documents the v01 training dataset pipeline.
 ```bash
 pnpm install
 pnpm run-setup    # Docker check, boots Postgres + MinIO, writes .env, installs deps, runs migrations
-pnpm dev          # mprocs TUI — runs apps/web (Next), Drizzle Studio, and apps/worker-render side-by-side
+pnpm dev          # mprocs TUI — runs apps/web (Next), Drizzle Studio, worker-render, worker-stylize side-by-side
+pnpm dev s5       # same, but 5 stylize workers (1–10) as their own panes
 ```
+
+`pnpm dev` takes an optional `s<N>` argument (1–10) for the number of stylize workers, each shown as its own mprocs pane. They parallelise safely — every worker claims tiles with `FOR UPDATE SKIP LOCKED`, so they never grab the same one. (`s=5` and `s 5` work too.)
 
 In mprocs: `j`/`k` switch between procs, `r` restart, `x` stop, `q` quit. Each proc's live output is also streamed to `.logs/<name>.log` (gitignored, truncated on each run) — `grep`-able from any other terminal.
 
-Escape hatches if you don't want the TUI: `pnpm dev:web`, `pnpm dev:studio`, or `pnpm dev:worker-render` alone.
+Escape hatches if you don't want the TUI: `pnpm dev:web`, `pnpm dev:studio`, `pnpm dev:worker-render`, or `pnpm dev:worker-stylize` alone.
 
 ### Tests
 

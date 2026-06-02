@@ -8,7 +8,7 @@
   },
   "scripts": {
     "run-setup": "bash scripts/setup.sh",
-    "dev": "mprocs",
+    "dev": "node scripts/dev.mjs",
     "dev:web": "pnpm --filter @mapart/web dev",
     "dev:studio": "pnpm --filter @mapart/db drizzle studio",
     "dev:worker-render": "pnpm --filter @mapart/worker-render dev",
