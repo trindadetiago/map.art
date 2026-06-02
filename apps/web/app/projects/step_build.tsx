@@ -2,7 +2,7 @@
 
 import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { restylizeTile, retryTile } from './actions';
+import { restylizeTile, retryProjectErrors, retryTile } from './actions';
 import { AreaScene, type OverlayTile } from './area_scene';
 
 export interface TileLite {
@@ -51,6 +51,7 @@ export function StepBuild({
   // nothing — overlays render on black.
   const [hideMap, setHideMap] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
+  const [errorMenu, setErrorMenu] = useState(false);
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
   // Per-phase cursor so repeated clicks cycle through the in-progress tiles.
   const focusCursor = useRef<{ render: number; stylize: number }>({ render: 0, stylize: 0 });
@@ -114,7 +115,13 @@ export function StepBuild({
 
   const stylizedCount = tiles.filter((t) => t.stylizedImgPath).length;
   const renderedCount = tiles.filter((t) => t.renderedImgPath).length;
-  const errors = tiles.filter((t) => t.status === 'error').length;
+  const renderErrors = tiles.filter(
+    (t) => t.status === 'error' && t.currentStatusType === 'render',
+  ).length;
+  const stylizeErrors = tiles.filter(
+    (t) => t.status === 'error' && t.currentStatusType === 'stylize',
+  ).length;
+  const errors = renderErrors + stylizeErrors;
   const total = cols * rows;
 
   const rendering = tiles.filter(
@@ -154,6 +161,20 @@ export function StepBuild({
     setPollNonce((n) => n + 1); // re-arm polling to follow the retry
   }
 
+  async function doRetryErrors(phase: 'all' | 'render' | 'stylize'): Promise<void> {
+    setErrorMenu(false);
+    // Optimistic: flip the matching errored tiles back to pending.
+    setTiles((ts) =>
+      ts.map((t) => {
+        if (t.status !== 'error') return t;
+        if (phase !== 'all' && t.currentStatusType !== phase) return t;
+        return { ...t, status: 'pending' };
+      }),
+    );
+    await retryProjectErrors({ projectId, phase });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the retries
+  }
+
   const menuTile = menu ? (tiles.find((t) => t.x === menu.x && t.y === menu.y) ?? null) : null;
 
   return (
@@ -177,7 +198,17 @@ export function StepBuild({
               color="sky"
               onClick={() => focusInProgress('render')}
             />
-            {errors > 0 && <span className="text-red-600">· {errors} error</span>}
+            {errors > 0 && (
+              <ErrorMenu
+                open={errorMenu}
+                onToggle={() => setErrorMenu((v) => !v)}
+                onClose={() => setErrorMenu(false)}
+                total={errors}
+                renderErrors={renderErrors}
+                stylizeErrors={stylizeErrors}
+                onRetry={doRetryErrors}
+              />
+            )}
           </div>
         </div>
 
@@ -253,6 +284,71 @@ export function StepBuild({
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * The error count, clickable to open a bulk-retry menu. Offers per-phase retries
+ * when both phases have errors; when only one phase does, just that option.
+ */
+function ErrorMenu({
+  open,
+  onToggle,
+  onClose,
+  total,
+  renderErrors,
+  stylizeErrors,
+  onRetry,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  total: number;
+  renderErrors: number;
+  stylizeErrors: number;
+  onRetry: (phase: 'all' | 'render' | 'stylize') => void;
+}) {
+  const options: { label: string; phase: 'all' | 'render' | 'stylize' }[] = [];
+  if (renderErrors > 0 && stylizeErrors > 0) {
+    options.push({ label: `Retry all (${total})`, phase: 'all' });
+    options.push({ label: `Retry all render errors (${renderErrors})`, phase: 'render' });
+    options.push({ label: `Retry all stylize errors (${stylizeErrors})`, phase: 'stylize' });
+  } else if (renderErrors > 0) {
+    options.push({ label: `Retry all render errors (${renderErrors})`, phase: 'render' });
+  } else if (stylizeErrors > 0) {
+    options.push({ label: `Retry all stylize errors (${stylizeErrors})`, phase: 'stylize' });
+  }
+
+  return (
+    <span className="relative inline-flex items-center gap-1.5">
+      <span className="text-stone-300">·</span>
+      <button
+        type="button"
+        onClick={onToggle}
+        title="Retry errored tiles"
+        className="rounded px-1 text-red-600 hover:bg-red-50"
+      >
+        {total} error
+      </button>
+      {open && (
+        <>
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: click-away backdrop */}
+          <div className="fixed inset-0 z-40" onClick={onClose} />
+          <div className="absolute top-full left-0 z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg">
+            {options.map((o) => (
+              <button
+                key={o.phase}
+                type="button"
+                onClick={() => onRetry(o.phase)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-stone-800 hover:bg-stone-100"
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </span>
   );
 }
 

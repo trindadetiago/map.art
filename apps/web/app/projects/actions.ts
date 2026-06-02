@@ -74,3 +74,17 @@ export async function retryTile(input: {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Bulk re-queue a project's errored tiles — all of them, or just one phase. */
+export async function retryProjectErrors(input: {
+  projectId: string;
+  phase: 'all' | 'render' | 'stylize';
+}): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  try {
+    const phase = input.phase === 'all' ? undefined : input.phase;
+    const count = await repos.requeueErroredByProject(input.projectId, phase);
+    return { ok: true, count };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

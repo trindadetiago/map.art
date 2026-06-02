@@ -244,6 +244,25 @@ export async function requeueErrored(projectId: string, x: number, y: number): P
   return rows.length;
 }
 
+/**
+ * Bulk re-queue every errored tile in a project, optionally restricted to one
+ * phase (`render` or `stylize`). Same reset as `requeueErrored` — back to
+ * `pending` with a fresh retry budget. Returns how many tiles were requeued.
+ */
+export async function requeueErroredByProject(
+  projectId: string,
+  phase?: TilePhase,
+): Promise<number> {
+  const conds = [eq(tiles.projectId, projectId), eq(tiles.status, 'error')];
+  if (phase) conds.push(eq(tiles.currentStatusType, phase));
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', retryAttempt: 0, updatedAt: new Date() })
+    .where(and(...conds))
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
 // ---- queue: failure handling (both workers) ------------------------------
 
 /**
