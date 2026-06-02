@@ -2,6 +2,7 @@
 
 import type { LatLng } from '@mapart/geo';
 import {
+  type ConfiguredTilesRenderer,
   createTilesRenderer,
   gridViewForSize,
   offsetToLatLng,
@@ -61,6 +62,13 @@ export interface AreaSceneProps {
   dimOutside?: boolean;
   /** Draw the per-tile grid outline. Default true. */
   showLines?: boolean;
+  /**
+   * Stream the Google Photorealistic 3D Tiles backdrop. Default true. When false
+   * the renderer is never created (or is torn down), so NO Map Tiles API calls
+   * are made — the overlays render on a black background. Used by the Build view
+   * to avoid paid API traffic while watching tile progress.
+   */
+  showMap?: boolean;
   /** Right-click on a tile's footprint (build view). */
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void;
   /** Pan + zoom the camera onto this tile. A new object (even same x,y) re-focuses. */
@@ -226,6 +234,7 @@ interface SceneState {
   setOverlay: (tiles: OverlayTile[]) => void;
   setDimOutside: (on: boolean) => void;
   setShowLines: (on: boolean) => void;
+  setMapVisible: (on: boolean) => void;
   focusTile: (x: number, y: number) => void;
   dispose: () => void;
 }
@@ -241,6 +250,7 @@ function createAreaScene(
     overlay?: OverlayTile[];
     dimOutside?: boolean;
     showLines?: boolean;
+    showMap?: boolean;
   },
   onCenterChange?: (center: LatLng) => void,
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void,
@@ -256,15 +266,16 @@ function createAreaScene(
   container.appendChild(renderer.domElement);
 
   const camera = new OrthographicCamera();
-  const { tiles, reorient } = createTilesRenderer({ apiKey, center: initial.center });
-  tiles.setCamera(camera);
-  tiles.setResolutionFromRenderer(camera, renderer);
   // Pan via a parent group, never `tiles.group` directly — the
   // ReorientationPlugin owns `tiles.group`'s transform and `tiles.update()`
   // would clobber a manual offset there.
   const panGroup = new Group();
-  panGroup.add(tiles.group);
   scene.add(panGroup);
+
+  // The Google 3D Tiles renderer is the ONLY thing here that hits the paid Map
+  // Tiles API. It's created lazily and disposed when hidden, so a Build view
+  // with the map hidden issues zero API calls until the map is turned on.
+  let tilesState: ConfiguredTilesRenderer | null = null;
 
   let grid = buildGrid(initial.cols, initial.rows);
   grid.visible = initial.showLines ?? true;
@@ -298,6 +309,23 @@ function createAreaScene(
   // The center we last reoriented to — guards the React effect from re-firing a
   // reorient for a center this scene itself produced.
   let activeCenter: LatLng = initial.center;
+
+  // Lazily attach/detach the streamed Google 3D Tiles. Attaching starts the only
+  // billable Map Tiles API traffic; detaching disposes the session entirely.
+  const createTiles = (): void => {
+    if (tilesState) return;
+    tilesState = createTilesRenderer({ apiKey, center: activeCenter });
+    tilesState.tiles.setCamera(camera);
+    tilesState.tiles.setResolutionFromRenderer(camera, renderer);
+    panGroup.add(tilesState.tiles.group);
+  };
+  const destroyTiles = (): void => {
+    if (!tilesState) return;
+    panGroup.remove(tilesState.tiles.group);
+    tilesState.tiles.dispose();
+    tilesState = null;
+  };
+  if (initial.showMap ?? true) createTiles();
 
   // Keep the pan target inside the grid: at fit (zoom 1) it's locked to center;
   // the deeper the zoom, the further it may roam, up to the grid half-extent.
@@ -350,8 +378,10 @@ function createAreaScene(
   let disposed = false;
   const tick = (): void => {
     if (disposed) return;
-    tiles.setResolutionFromRenderer(camera, renderer);
-    tiles.update();
+    if (tilesState) {
+      tilesState.tiles.setResolutionFromRenderer(camera, renderer);
+      tilesState.tiles.update();
+    }
     // Pulse in-progress tiles so active work reads at a glance.
     const now = performance.now();
     const pulse = 0.3 + 0.3 * (0.5 + 0.5 * Math.sin(now / 280));
@@ -396,7 +426,7 @@ function createAreaScene(
     if (east === 0 && north === 0) return;
     const next = offsetToLatLng(activeCenter, east, north);
     activeCenter = next;
-    reorientTo(reorient, next);
+    if (tilesState) reorientTo(tilesState.reorient, next);
     panGroup.position.set(0, 0, 0);
     onCenterChange?.(next);
   };
@@ -559,10 +589,14 @@ function createAreaScene(
     recenter(center) {
       if (center.lat === activeCenter.lat && center.lng === activeCenter.lng) return;
       activeCenter = center;
-      reorientTo(reorient, center);
+      if (tilesState) reorientTo(tilesState.reorient, center);
       panGroup.position.set(0, 0, 0);
     },
     setOverlay,
+    setMapVisible(on) {
+      if (on) createTiles();
+      else destroyTiles();
+    },
     focusTile(x, y) {
       // Pan the camera target onto tile (x,y)'s footprint center and zoom in so
       // it sits framed with a few neighbours of context around it.
@@ -605,7 +639,7 @@ function createAreaScene(
       scene.remove(mask);
       mask.geometry.dispose();
       (mask.material as MeshBasicMaterial).dispose();
-      tiles.dispose();
+      destroyTiles();
       renderer.dispose();
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
@@ -624,6 +658,7 @@ export function AreaScene({
   overlay,
   dimOutside,
   showLines,
+  showMap,
   onTileContext,
   focusTarget,
 }: AreaSceneProps) {
@@ -638,6 +673,7 @@ export function AreaScene({
     overlay: overlay ?? [],
     dimOutside: dimOutside ?? false,
     showLines: showLines ?? true,
+    showMap: showMap ?? true,
   });
   const onCenterChangeRef = useRef(onCenterChange);
   onCenterChangeRef.current = onCenterChange;
@@ -681,6 +717,10 @@ export function AreaScene({
   useEffect(() => {
     stateRef.current?.setShowLines(showLines ?? true);
   }, [showLines]);
+
+  useEffect(() => {
+    stateRef.current?.setMapVisible(showMap ?? true);
+  }, [showMap]);
 
   useEffect(() => {
     if (focusTarget) stateRef.current?.focusTile(focusTarget.x, focusTarget.y);

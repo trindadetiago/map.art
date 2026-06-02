@@ -46,6 +46,10 @@ export function StepBuild({
   const [view, setView] = useState<View>('stylized');
   const [dimOutside, setDimOutside] = useState(false);
   const [showLines, setShowLines] = useState(true);
+  // On by default: the live Google 3D map is the only paid (Map Tiles API) part
+  // of this view, and you don't need it to watch tile progress. Hiding it streams
+  // nothing — overlays render on black.
+  const [hideMap, setHideMap] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
   // Per-phase cursor so repeated clicks cycle through the in-progress tiles.
@@ -186,9 +190,14 @@ export function StepBuild({
               { value: 'render', label: 'Render' },
             ]}
           />
-          <Toggle on={dimOutside} onClick={() => setDimOutside((v) => !v)}>
-            Focus area
+          <Toggle on={hideMap} onClick={() => setHideMap((v) => !v)}>
+            Hide map
           </Toggle>
+          {!hideMap && (
+            <Toggle on={dimOutside} onClick={() => setDimOutside((v) => !v)}>
+              Focus area
+            </Toggle>
+          )}
           <Toggle on={showLines} onClick={() => setShowLines((v) => !v)}>
             Grid
           </Toggle>
@@ -205,6 +214,7 @@ export function StepBuild({
           overlay={overlay}
           dimOutside={dimOutside}
           showLines={showLines}
+          showMap={!hideMap}
           focusTarget={focusTarget}
           onTileContext={(x, y, clientX, clientY) => {
             const t = tiles.find((tile) => tile.x === x && tile.y === y);
