@@ -2,7 +2,7 @@
 
 import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { restylizeTile, retryProjectErrors, retryTile } from './actions';
+import { cancelAll, restyleAll, restylizeTile, retryProjectErrors, retryTile } from './actions';
 import { AreaScene, type OverlayTile } from './area_scene';
 
 export interface TileLite {
@@ -103,9 +103,15 @@ export function StepBuild({
           return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
         }
 
-        if (stylized) return { x: t.x, y: t.y, state: 'stylized', imageUrl: stylized };
+        // A tile actively (re)stylizing pulses amber even if it still holds an
+        // old image — otherwise a re-stylize looks like nothing is happening.
         if (t.currentStatusType === 'stylize' && t.status === 'progress')
-          return { x: t.x, y: t.y, state: 'stylizing', imageUrl: rendered };
+          return { x: t.x, y: t.y, state: 'stylizing', imageUrl: rendered ?? stylized };
+        // Re-queued for restyle: drop back to the render so it visibly reverts
+        // while it waits (the DB still keeps the old image for neighbour context).
+        if (t.currentStatusType === 'stylize' && t.status === 'pending' && rendered)
+          return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
+        if (stylized) return { x: t.x, y: t.y, state: 'stylized', imageUrl: stylized };
         if (rendered) return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
         if (t.status === 'progress') return { x: t.x, y: t.y, state: 'progress', imageUrl: null };
         return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
@@ -113,7 +119,9 @@ export function StepBuild({
     [tiles, view],
   );
 
-  const stylizedCount = tiles.filter((t) => t.stylizedImgPath).length;
+  // Counts a finished stylization only — re-queued tiles (still holding their old
+  // image in the DB) drop out until they're redone, matching the reverted view.
+  const stylizedCount = tiles.filter((t) => t.stylizedImgPath && t.status === 'done').length;
   const renderedCount = tiles.filter((t) => t.renderedImgPath).length;
   const renderErrors = tiles.filter(
     (t) => t.status === 'error' && t.currentStatusType === 'render',
@@ -130,6 +138,8 @@ export function StepBuild({
   const stylizing = tiles.filter(
     (t) => t.currentStatusType === 'stylize' && t.status === 'progress',
   );
+  const stylizePhase = tiles.filter((t) => t.currentStatusType === 'stylize');
+  const pendingStylize = stylizePhase.filter((t) => t.status === 'pending').length;
 
   // Jump the camera to an in-progress tile, cycling through them on each click.
   function focusInProgress(phase: 'render' | 'stylize'): void {
@@ -175,6 +185,31 @@ export function StepBuild({
     setPollNonce((n) => n + 1); // re-arm polling to follow the retries
   }
 
+  async function doRestyleAll(): Promise<void> {
+    if (stylizePhase.length === 0) return;
+    if (
+      !confirm(`Re-stylize all ${stylizePhase.length} tiles? This re-runs the model on every one.`)
+    )
+      return;
+    // Optimistic: re-queue (keep images so the view doesn't blank).
+    setTiles((ts) =>
+      ts.map((t) => (t.currentStatusType === 'stylize' ? { ...t, status: 'pending' } : t)),
+    );
+    await restyleAll({ projectId });
+    setPollNonce((n) => n + 1);
+  }
+
+  async function doCancelAll(): Promise<void> {
+    // Optimistic: drop pending stylize tiles to done so they stop being claimed.
+    setTiles((ts) =>
+      ts.map((t) =>
+        t.currentStatusType === 'stylize' && t.status === 'pending' ? { ...t, status: 'done' } : t,
+      ),
+    );
+    await cancelAll({ projectId });
+    setPollNonce((n) => n + 1);
+  }
+
   const menuTile = menu ? (tiles.find((t) => t.x === menu.x && t.y === menu.y) ?? null) : null;
 
   return (
@@ -198,6 +233,9 @@ export function StepBuild({
               color="sky"
               onClick={() => focusInProgress('render')}
             />
+            {pendingStylize > 0 && (
+              <span className="text-stone-400">· {pendingStylize} queued</span>
+            )}
             {errors > 0 && (
               <ErrorMenu
                 open={errorMenu}
@@ -232,6 +270,26 @@ export function StepBuild({
           <Toggle on={showLines} onClick={() => setShowLines((v) => !v)}>
             Grid
           </Toggle>
+
+          <span className="mx-1 h-5 w-px bg-stone-200" />
+
+          {pendingStylize > 0 && (
+            <button
+              type="button"
+              onClick={doCancelAll}
+              className="h-8 rounded-full border border-red-200 bg-red-50 px-3 text-[12px] text-red-700 transition hover:border-red-400 hover:bg-red-100"
+            >
+              Cancel all
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={doRestyleAll}
+            disabled={stylizePhase.length === 0}
+            className="h-8 rounded-full bg-stone-900 px-3 text-[12px] text-white transition hover:bg-stone-700 disabled:opacity-40"
+          >
+            Restyle all
+          </button>
         </div>
       </div>
 

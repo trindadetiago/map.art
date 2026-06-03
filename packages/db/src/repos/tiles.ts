@@ -263,6 +263,41 @@ export async function requeueErroredByProject(
   return rows.length;
 }
 
+/**
+ * Re-queue every stylize-phase tile in a project for a fresh stylize pass: back
+ * to `pending` with a reset retry budget. The existing stylized output is kept
+ * (not nulled), so the view stays populated and neighbours still contribute
+ * context until each tile is overwritten. Returns how many were re-queued.
+ */
+export async function requeueAllStylize(projectId: string): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', retryAttempt: 0, updatedAt: new Date() })
+    .where(and(eq(tiles.projectId, projectId), eq(tiles.currentStatusType, 'stylize')))
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
+/**
+ * Cancel queued stylize work: flip every `stylize/pending` tile to `done` so the
+ * workers stop claiming them (each keeps whatever stylized output it has). A tile
+ * already in `progress` finishes on its own. Returns how many were cancelled.
+ */
+export async function cancelAllStylize(projectId: string): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'done', updatedAt: new Date() })
+    .where(
+      and(
+        eq(tiles.projectId, projectId),
+        eq(tiles.currentStatusType, 'stylize'),
+        eq(tiles.status, 'pending'),
+      ),
+    )
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
 // ---- queue: failure handling (both workers) ------------------------------
 
 /**

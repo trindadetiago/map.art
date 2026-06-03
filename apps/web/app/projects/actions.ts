@@ -88,3 +88,27 @@ export async function retryProjectErrors(input: {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Re-queue every stylize-phase tile in a project for a fresh stylize pass. */
+export async function restyleAll(input: {
+  projectId: string;
+}): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  try {
+    const count = await repos.requeueAllStylize(input.projectId);
+    return { ok: true, count };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Cancel queued stylize work: stop the workers from claiming pending tiles. */
+export async function cancelAll(input: {
+  projectId: string;
+}): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  try {
+    const count = await repos.cancelAllStylize(input.projectId);
+    return { ok: true, count };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
