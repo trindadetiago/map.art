@@ -8,16 +8,20 @@ let singleton: Storage | null = null;
 export function getStorage(): Storage {
   if (singleton) return singleton;
 
-  // Path-style addressing is required by MinIO and most other custom S3
-  // backends; AWS S3 uses virtual-hosted style. A custom S3_ENDPOINT
-  // reliably signals one of the former, so derive the toggle from it.
+  // Path-style addressing (bucket in the URL path) is required by MinIO;
+  // AWS S3 and Railway buckets use virtual-hosted style. S3_FORCE_PATH_STYLE
+  // sets it explicitly; when unset, default to path-style only when a custom
+  // S3_ENDPOINT is configured (the MinIO case).
+  const forcePathStyle =
+    env.s3ForcePathStyle !== undefined ? env.s3ForcePathStyle === 'true' : !!env.s3Endpoint;
+
   singleton = new S3Storage({
     ...(env.s3Endpoint ? { endpoint: env.s3Endpoint } : {}),
     region: env.s3Region,
     accessKeyId: requireEnv('s3AccessKeyId'),
     secretAccessKey: requireEnv('s3SecretAccessKey'),
     bucket: requireEnv('s3Bucket'),
-    forcePathStyle: !!env.s3Endpoint,
+    forcePathStyle,
   });
 
   return singleton;

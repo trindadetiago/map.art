@@ -57,6 +57,17 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  s3ForcePathStyle: {
+    envKey: 'S3_FORCE_PATH_STYLE',
+    description:
+      'Whether to use path-style addressing (bucket in the URL path). MinIO needs true; AWS S3 and Railway buckets use virtual-hosted style (false). When unset, defaults to true only if a custom S3_ENDPOINT is set.',
+    validate: (v) => {
+      if (v !== 'true' && v !== 'false') {
+        throw new Error('S3_FORCE_PATH_STYLE must be "true" or "false"');
+      }
+      return v;
+    },
+  },
   renderWorkerPort: {
     envKey: 'RENDER_WORKER_PORT',
     description:
