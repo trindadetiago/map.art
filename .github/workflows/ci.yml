@@ -44,3 +44,32 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      worker_render: ${{ steps.filter.outputs.worker_render }}
+      worker_stylize: ${{ steps.filter.outputs.worker_stylize }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared: &shared
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            web:
+              - *shared
+              - 'apps/web/**'
+            worker_render:
+              - *shared
+              - 'apps/worker-render/**'
+            worker_stylize:
+              - *shared
+              - 'apps/worker-stylize/**'
