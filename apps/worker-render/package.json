@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx worker.ts",
     "build:page": "vite build --root render-page --outDir dist --emptyOutDir",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

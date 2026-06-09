@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx worker.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -7,7 +7,8 @@
     "mapart": "./bin/mapart.ts"
   },
   "scripts": {
-    "start": "tsx bin/mapart.ts"
+    "start": "tsx bin/mapart.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mapart/db": "workspace:*",
