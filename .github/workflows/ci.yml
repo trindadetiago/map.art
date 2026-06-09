@@ -73,3 +73,23 @@ jobs:
             worker_stylize:
               - *shared
               - 'apps/worker-stylize/**'
+
+  deploy:
+    needs: [check, changes]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+      - name: Deploy web
+        if: needs.changes.outputs.web == 'true'
+        run: railway up --ci --service web
+      - name: Deploy worker-render
+        if: needs.changes.outputs.worker_render == 'true'
+        run: railway up --ci --service worker-render
+      - name: Deploy worker-stylize
+        if: needs.changes.outputs.worker_stylize == 'true'
+        run: railway up --ci --service worker-stylize
