@@ -54,9 +54,7 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      web: ${{ steps.filter.outputs.web }}
-      worker_render: ${{ steps.filter.outputs.worker_render }}
-      worker_stylize: ${{ steps.filter.outputs.worker_stylize }}
+      services: ${{ steps.services.outputs.list }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
@@ -77,15 +75,33 @@ jobs:
             worker_stylize:
               - *shared
               - 'apps/worker-stylize/**'
+      - name: List changed services
+        id: services
+        env:
+          WEB: ${{ steps.filter.outputs.web }}
+          WORKER_RENDER: ${{ steps.filter.outputs.worker_render }}
+          WORKER_STYLIZE: ${{ steps.filter.outputs.worker_stylize }}
+        run: |
+          services=()
+          if [ "$WEB" = "true" ]; then services+=('"web"'); fi
+          if [ "$WORKER_RENDER" = "true" ]; then services+=('"worker-render"'); fi
+          if [ "$WORKER_STYLIZE" = "true" ]; then services+=('"worker-stylize"'); fi
+          list=$(IFS=,; echo "[${services[*]}]")
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "changed services: $list"
 
   deploy:
     needs: [check, changes]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
     concurrency:
-      group: deploy-${{ github.ref }}
+      group: deploy-${{ github.ref }}-${{ matrix.service }}
       cancel-in-progress: false
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -93,12 +109,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Railway CLI
         run: npm i -g @railway/cli@5.7.0
-      - name: Deploy web
-        if: needs.changes.outputs.web == 'true'
-        run: railway up --ci --service web
-      - name: Deploy worker-render
-        if: needs.changes.outputs.worker_render == 'true'
-        run: railway up --ci --service worker-render
-      - name: Deploy worker-stylize
-        if: needs.changes.outputs.worker_stylize == 'true'
-        run: railway up --ci --service worker-stylize
+      - name: Deploy ${{ matrix.service }}
+        run: railway up --ci --service ${{ matrix.service }}
