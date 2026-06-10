@@ -125,6 +125,21 @@ export async function resumeAll(input: {
   }
 }
 
+/** Re-queue a tile stuck in progress (worker died mid-job) so it gets re-claimed. */
+export async function requeueStuckTile(input: {
+  projectId: string;
+  x: number;
+  y: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const n = await repos.requeueStuck(input.projectId, input.x, input.y);
+    if (n === 0) return { ok: false, error: 'tile is not in progress' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Resume one cancelled tile so a stylize worker picks it up again. */
 export async function resumeTile(input: {
   projectId: string;

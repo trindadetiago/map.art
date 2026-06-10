@@ -228,6 +228,29 @@ export async function requeueStylize(projectId: string, x: number, y: number): P
  * phase and any rendered input intact. Returns how many rows changed (0 = no
  * matching error tile).
  */
+/**
+ * Re-queue a tile stuck in `progress` (its worker died mid-job, e.g. during a
+ * deploy — nothing reclaims `progress` rows on its own): drop it back to
+ * `pending` in its current phase so a live worker re-claims it. Keeps the
+ * retry budget — stuckness is not a model failure. Returns how many rows
+ * changed (0 = the tile at x,y isn't in progress).
+ */
+export async function requeueStuck(projectId: string, x: number, y: number): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', updatedAt: new Date() })
+    .where(
+      and(
+        eq(tiles.projectId, projectId),
+        eq(tiles.x, x),
+        eq(tiles.y, y),
+        eq(tiles.status, 'progress'),
+      ),
+    )
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
 export async function requeueErrored(projectId: string, x: number, y: number): Promise<number> {
   const rows = await getDb()
     .update(tiles)

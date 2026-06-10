@@ -4,6 +4,7 @@ import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   cancelAll,
+  requeueStuckTile,
   restyleAll,
   restylizeTile,
   resumeAll,
@@ -194,6 +195,14 @@ export function StepBuild({
     setPollNonce((n) => n + 1); // re-arm polling to follow the retries
   }
 
+  async function doRequeueStuck(x: number, y: number): Promise<void> {
+    setMenu(null);
+    // Optimistic: drop the tile back to pending so it reads as re-queued.
+    setTiles((ts) => ts.map((t) => (t.x === x && t.y === y ? { ...t, status: 'pending' } : t)));
+    await requeueStuckTile({ projectId, x, y });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the re-claim
+  }
+
   async function doRestyleAll(): Promise<void> {
     if (stylizePhase.length === 0) return;
     if (
@@ -348,7 +357,13 @@ export function StepBuild({
           blend={blend}
           onTileContext={(x, y, clientX, clientY) => {
             const t = tiles.find((tile) => tile.x === x && tile.y === y);
-            if (t && (t.status === 'error' || t.stylizedImgPath || isCancelled(t)))
+            if (
+              t &&
+              (t.status === 'error' ||
+                t.status === 'progress' ||
+                t.stylizedImgPath ||
+                isCancelled(t))
+            )
               setMenu({ x, y, clientX, clientY });
           }}
         />
@@ -369,6 +384,14 @@ export function StepBuild({
                 className="block w-full px-4 py-2 text-left text-[13px] text-red-700 hover:bg-red-50"
               >
                 Retry tile {menu.x},{menu.y}
+              </button>
+            ) : menuTile?.status === 'progress' ? (
+              <button
+                type="button"
+                onClick={() => doRequeueStuck(menu.x, menu.y)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-amber-700 hover:bg-amber-50"
+              >
+                Requeue tile {menu.x},{menu.y} (stuck?)
               </button>
             ) : menuTile && isCancelled(menuTile) ? (
               <button
