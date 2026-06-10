@@ -33,6 +33,9 @@ class MemStorage implements Storage {
       .map(([key, data]) => ({ key, size: data.length, modifiedAt: new Date(0) }));
     return Promise.resolve(out);
   }
+  presignGet(key: string): Promise<string> {
+    return Promise.resolve(`mem://${key}`);
+  }
 }
 
 // ---- helpers -------------------------------------------------------------

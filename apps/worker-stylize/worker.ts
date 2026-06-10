@@ -53,8 +53,11 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 function buildModel(): ModelClient {
-  // oxen needs a publicly-fetchable input URL, served from the S3 (MinIO) bucket
-  // via an ngrok tunnel. Without an oxen key we stay on the pass-through stub.
+  // oxen needs a publicly-fetchable input URL for the composite in the S3
+  // bucket. On Railway the bucket endpoint is internet-reachable, so a
+  // presigned GET URL works directly; locally MinIO is not, so the URL goes
+  // through the ngrok tunnel. Without an oxen key we stay on the
+  // pass-through stub.
   if (env.oxenApiKey) {
     const storage = getStorage();
     const bucket = requireEnv('s3Bucket');
@@ -64,7 +67,9 @@ function buildModel(): ModelClient {
       uploadImage: async (image) => {
         const key = `oxen-input/${randomUUID()}.png`;
         await storage.put(key, image);
-        const url = `${ngrokBase()}/${bucket}/${key}`;
+        const url = env.railwayEnvironmentName
+          ? await storage.presignGet(key)
+          : `${ngrokBase()}/${bucket}/${key}`;
         console.log(`[${WORKER_NAME}] composite uploaded → ${url}`);
         return url;
       },

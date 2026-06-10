@@ -57,6 +57,11 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  railwayEnvironmentName: {
+    envKey: 'RAILWAY_ENVIRONMENT_NAME',
+    description:
+      'Injected automatically by Railway (e.g. "production"). Presence signals the process runs on Railway; leave unset locally.',
+  },
   renderWorkerPort: {
     envKey: 'RENDER_WORKER_PORT',
     description:
