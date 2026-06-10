@@ -2,7 +2,15 @@
 
 import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { cancelAll, restyleAll, restylizeTile, retryProjectErrors, retryTile } from './actions';
+import {
+  cancelAll,
+  restyleAll,
+  restylizeTile,
+  resumeAll,
+  resumeTile,
+  retryProjectErrors,
+  retryTile,
+} from './actions';
 import { AreaScene, type OverlayTile } from './area_scene';
 
 export interface TileLite {
@@ -24,6 +32,10 @@ interface Menu {
 
 const isTerminal = (t: TileLite): boolean =>
   (t.currentStatusType === 'stylize' && t.status === 'done') || t.status === 'error';
+
+/** Cancelled = the signature `Cancel all` leaves: stylize/done with no output. */
+const isCancelled = (t: TileLite): boolean =>
+  t.currentStatusType === 'stylize' && t.status === 'done' && !t.stylizedImgPath;
 
 export function StepBuild({
   apiKey,
@@ -140,6 +152,7 @@ export function StepBuild({
   );
   const stylizePhase = tiles.filter((t) => t.currentStatusType === 'stylize');
   const pendingStylize = stylizePhase.filter((t) => t.status === 'pending').length;
+  const cancelledCount = tiles.filter(isCancelled).length;
 
   // Jump the camera to an in-progress tile, cycling through them on each click.
   function focusInProgress(phase: 'render' | 'stylize'): void {
@@ -208,6 +221,21 @@ export function StepBuild({
     );
     await cancelAll({ projectId });
     setPollNonce((n) => n + 1);
+  }
+
+  async function doResumeAll(): Promise<void> {
+    // Optimistic: cancelled tiles drop back to pending so they read as queued.
+    setTiles((ts) => ts.map((t) => (isCancelled(t) ? { ...t, status: 'pending' } : t)));
+    await resumeAll({ projectId });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the resumed work
+  }
+
+  async function doResume(x: number, y: number): Promise<void> {
+    setMenu(null);
+    // Optimistic: the tile drops back to pending so it reads as queued immediately.
+    setTiles((ts) => ts.map((t) => (t.x === x && t.y === y ? { ...t, status: 'pending' } : t)));
+    await resumeTile({ projectId, x, y });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the resumed tile
   }
 
   const menuTile = menu ? (tiles.find((t) => t.x === menu.x && t.y === menu.y) ?? null) : null;
@@ -282,6 +310,15 @@ export function StepBuild({
               Cancel all
             </button>
           )}
+          {cancelledCount > 0 && (
+            <button
+              type="button"
+              onClick={doResumeAll}
+              className="h-8 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-[12px] text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100"
+            >
+              Resume all ({cancelledCount})
+            </button>
+          )}
           <button
             type="button"
             onClick={doRestyleAll}
@@ -307,7 +344,7 @@ export function StepBuild({
           focusTarget={focusTarget}
           onTileContext={(x, y, clientX, clientY) => {
             const t = tiles.find((tile) => tile.x === x && tile.y === y);
-            if (t && (t.status === 'error' || t.stylizedImgPath))
+            if (t && (t.status === 'error' || t.stylizedImgPath || isCancelled(t)))
               setMenu({ x, y, clientX, clientY });
           }}
         />
@@ -328,6 +365,14 @@ export function StepBuild({
                 className="block w-full px-4 py-2 text-left text-[13px] text-red-700 hover:bg-red-50"
               >
                 Retry tile {menu.x},{menu.y}
+              </button>
+            ) : menuTile && isCancelled(menuTile) ? (
+              <button
+                type="button"
+                onClick={() => doResume(menu.x, menu.y)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-emerald-700 hover:bg-emerald-50"
+              >
+                Resume tile {menu.x},{menu.y}
               </button>
             ) : (
               <button

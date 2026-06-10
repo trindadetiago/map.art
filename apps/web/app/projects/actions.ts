@@ -112,3 +112,30 @@ export async function cancelAll(input: {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Resume every cancelled tile: re-queue the stylize work that Cancel all stopped. */
+export async function resumeAll(input: {
+  projectId: string;
+}): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  try {
+    const count = await repos.resumeAllStylize(input.projectId);
+    return { ok: true, count };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Resume one cancelled tile so a stylize worker picks it up again. */
+export async function resumeTile(input: {
+  projectId: string;
+  x: number;
+  y: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const n = await repos.resumeStylize(input.projectId, input.x, input.y);
+    if (n === 0) return { ok: false, error: 'tile is not cancelled' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

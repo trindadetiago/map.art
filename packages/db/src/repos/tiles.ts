@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { getDb } from '../client';
 import { type Tile, type TilePhase, type TileStatus, tiles } from '../schema/tiles';
 
@@ -292,6 +292,51 @@ export async function cancelAllStylize(projectId: string): Promise<number> {
         eq(tiles.projectId, projectId),
         eq(tiles.currentStatusType, 'stylize'),
         eq(tiles.status, 'pending'),
+      ),
+    )
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
+/**
+ * Resume cancelled stylize work: a cancelled tile is `stylize/done` with no
+ * stylized output (the signature `cancelAllStylize` leaves behind). Drops every
+ * such tile back to `pending` with a fresh retry budget so the workers claim
+ * them again. Returns how many were resumed.
+ */
+export async function resumeAllStylize(projectId: string): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', retryAttempt: 0, updatedAt: new Date() })
+    .where(
+      and(
+        eq(tiles.projectId, projectId),
+        eq(tiles.currentStatusType, 'stylize'),
+        eq(tiles.status, 'done'),
+        isNull(tiles.stylizedImgPath),
+      ),
+    )
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
+/**
+ * Resume one cancelled tile (same signature match as `resumeAllStylize`):
+ * back to `pending` with a fresh retry budget. Returns how many rows changed
+ * (0 = the tile at x,y isn't cancelled).
+ */
+export async function resumeStylize(projectId: string, x: number, y: number): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({ status: 'pending', retryAttempt: 0, updatedAt: new Date() })
+    .where(
+      and(
+        eq(tiles.projectId, projectId),
+        eq(tiles.x, x),
+        eq(tiles.y, y),
+        eq(tiles.currentStatusType, 'stylize'),
+        eq(tiles.status, 'done'),
+        isNull(tiles.stylizedImgPath),
       ),
     )
     .returning({ id: tiles.id });
