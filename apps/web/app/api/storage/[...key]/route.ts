@@ -23,15 +23,30 @@ export async function GET(
   const key = parts.map((p) => decodeURIComponent(p)).join('/');
   // Storage keys are stable and overwritten in place, so a bare URL must not be
   // cached. A `?v=` URL embeds the object's version: the URL changes whenever
-  // the content does, making the response safe to cache forever.
-  const immutable = req.nextUrl.searchParams.has('v');
+  // the content does, making the response safe to cache.
+  //
+  // Versioned requests redirect to a presigned bucket URL instead of proxying
+  // the bytes: downloads from the bucket are free, while bytes proxied through
+  // this service are billed egress. The redirect's max-age stays safely below
+  // the presigned URL's 7-day validity so a cached redirect can never point at
+  // an expired signature; the bucket response itself is cached as immutable.
   try {
+    if (req.nextUrl.searchParams.has('v')) {
+      const url = await getStorage().presignGet(key, 7 * 24 * 3600, {
+        contentType: contentTypeFor(key),
+        cacheControl: 'public, max-age=31536000, immutable',
+      });
+      return NextResponse.redirect(url, {
+        status: 302,
+        headers: { 'cache-control': 'public, max-age=518400' },
+      });
+    }
     const buf = await getStorage().get(key);
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'content-type': contentTypeFor(key),
-        'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+        'cache-control': 'no-cache',
       },
     });
   } catch (e) {

@@ -86,12 +86,18 @@ export class S3Storage implements Storage {
     );
   }
 
-  async presignGet(key: string, expiresInSeconds = 900): Promise<string> {
+  async presignGet(
+    key: string,
+    expiresInSeconds = 900,
+    response?: { contentType?: string; cacheControl?: string },
+  ): Promise<string> {
     return getSignedUrl(
       this.client,
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: this.normalizeKey(key),
+        ...(response?.contentType ? { ResponseContentType: response.contentType } : {}),
+        ...(response?.cacheControl ? { ResponseCacheControl: response.cacheControl } : {}),
       }),
       { expiresIn: expiresInSeconds },
     );
