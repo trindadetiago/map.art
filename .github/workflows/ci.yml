@@ -32,7 +32,6 @@ jobs:
       S3_ACCESS_KEY_ID: ci
       S3_SECRET_ACCESS_KEY: ci-secret
       S3_BUCKET: ci-bucket
-      S3_FORCE_PATH_STYLE: "true"
       GOOGLE_MAPS_API_KEY: ci-dummy-key
     steps:
       - uses: actions/checkout@v4
