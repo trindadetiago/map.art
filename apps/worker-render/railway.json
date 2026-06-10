@@ -1,8 +1,7 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "RAILPACK",
-    "buildCommand": "pnpm install --frozen-lockfile --filter @mapart/worker-render..."
+    "builder": "RAILPACK"
   },
   "deploy": {
     "startCommand": "pnpm --filter @mapart/worker-render exec tsx worker.ts",
