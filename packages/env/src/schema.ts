@@ -57,6 +57,11 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  stylizeDebugArtifacts: {
+    envKey: 'STYLIZE_DEBUG_ARTIFACTS',
+    description:
+      'Set to "1" to make worker-stylize persist per-tile pipeline artifacts (model composite + raw output) to storage for inspection. Off by default — they double the upload volume per tile.',
+  },
   railwayEnvironmentName: {
     envKey: 'RAILWAY_ENVIRONMENT_NAME',
     description:

@@ -61,12 +61,17 @@ function buildModel(): ModelClient {
   if (env.oxenApiKey) {
     const storage = getStorage();
     const bucket = requireEnv('s3Bucket');
-    return new OxenImageModel({
+    // Inputs uploaded during a generate call, deleted once it returns — oxen
+    // fetches the composite during the call, so afterwards the object is dead
+    // weight in the bucket.
+    const pendingInputs = new Set<string>();
+    const oxen = new OxenImageModel({
       model: OXEN_MODEL_ID,
       apiKey: env.oxenApiKey,
       uploadImage: async (image) => {
         const key = `oxen-input/${randomUUID()}.png`;
         await storage.put(key, image);
+        pendingInputs.add(key);
         const url = env.railwayEnvironmentName
           ? await storage.presignGet(key)
           : `${ngrokBase()}/${bucket}/${key}`;
@@ -74,6 +79,18 @@ function buildModel(): ModelClient {
         return url;
       },
     });
+    return {
+      name: oxen.name,
+      async generate(params) {
+        try {
+          return await oxen.generate(params);
+        } finally {
+          const keys = [...pendingInputs];
+          pendingInputs.clear();
+          void Promise.all(keys.map((k) => storage.delete(k).catch(() => {})));
+        }
+      },
+    };
   }
   return new StubImageModel();
 }

@@ -11,6 +11,7 @@
  * Mirrors apps/worker-render/consumer.ts. No HTTP surface — this worker needs none.
  */
 import { claimNextStylize, completeStylize, failOrRetry, tilesByIds } from '@mapart/db/repos';
+import { env } from '@mapart/env';
 import type { ModelClient } from '@mapart/models';
 import { getStorage } from '@mapart/storage';
 import {
@@ -171,13 +172,16 @@ export function startStylizeConsumer(
         const { image } = await model.generate({ input: composite, prompt: STYLIZE_PROMPT });
         const stylized = await extractStylized(image, bbox);
 
-        // Persist the per-tile pipeline artifacts (composite fed to the model, raw
-        // model output before cropping) so a tile's whole history is inspectable.
+        // Per-tile pipeline artifacts (composite fed to the model, raw output
+        // before cropping) are persisted only when STYLIZE_DEBUG_ARTIFACTS=1 —
+        // they double the upload volume per tile, and uploads are billed egress.
         const storage = getStorage();
-        await Promise.all([
-          storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'composite'), composite),
-          storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'raw-output'), image),
-        ]);
+        if (env.stylizeDebugArtifacts === '1') {
+          await Promise.all([
+            storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'composite'), composite),
+            storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'raw-output'), image),
+          ]);
+        }
 
         const key = stylizeKey(tile.projectId, tile.x, tile.y);
         await storage.put(key, stylized);
