@@ -41,6 +41,7 @@ export default async function ProjectWorkspacePage({
         status: t.status,
         renderedImgPath: t.renderedImgPath,
         stylizedImgPath: t.stylizedImgPath,
+        v: t.updatedAt.getTime(),
       }))}
     />
   );

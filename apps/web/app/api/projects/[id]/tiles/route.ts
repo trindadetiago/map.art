@@ -27,6 +27,7 @@ export async function GET(
           status: t.status,
           renderedImgPath: t.renderedImgPath,
           stylizedImgPath: t.stylizedImgPath,
+          v: t.updatedAt.getTime(),
         })),
         counts,
       },

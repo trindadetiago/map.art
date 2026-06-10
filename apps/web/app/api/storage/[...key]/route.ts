@@ -16,18 +16,22 @@ function contentTypeFor(key: string): string {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ key: string[] }> },
 ): Promise<Response> {
   const { key: parts } = await params;
   const key = parts.map((p) => decodeURIComponent(p)).join('/');
+  // Storage keys are stable and overwritten in place, so a bare URL must not be
+  // cached. A `?v=` URL embeds the object's version: the URL changes whenever
+  // the content does, making the response safe to cache forever.
+  const immutable = req.nextUrl.searchParams.has('v');
   try {
     const buf = await getStorage().get(key);
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'content-type': contentTypeFor(key),
-        'cache-control': 'no-cache',
+        'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
       },
     });
   } catch (e) {

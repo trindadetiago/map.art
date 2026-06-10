@@ -20,6 +20,8 @@ export interface TileLite {
   status: 'pending' | 'progress' | 'done' | 'error';
   renderedImgPath: string | null;
   stylizedImgPath: string | null;
+  /** Row version (updatedAt epoch ms) — cache-busts image URLs on change. */
+  v: number;
 }
 
 type View = 'stylized' | 'render';
@@ -105,8 +107,8 @@ export function StepBuild({
   const overlay = useMemo<OverlayTile[]>(
     () =>
       tiles.map((t) => {
-        const rendered = t.renderedImgPath ? `/api/storage/${t.renderedImgPath}` : null;
-        const stylized = t.stylizedImgPath ? `/api/storage/${t.stylizedImgPath}` : null;
+        const rendered = t.renderedImgPath ? `/api/storage/${t.renderedImgPath}?v=${t.v}` : null;
+        const stylized = t.stylizedImgPath ? `/api/storage/${t.stylizedImgPath}?v=${t.v}` : null;
         if (t.status === 'error') return { x: t.x, y: t.y, state: 'error', imageUrl: null };
 
         if (view === 'render') {
