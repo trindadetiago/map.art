@@ -16,6 +16,7 @@
     "build": "pnpm -r build",
     "lint": "biome check .",
     "format": "biome format --write .",
+    "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --workspace-concurrency=1 --if-present test",
     "mapart": "tsx apps/cli/bin/mapart.ts",
     "db:generate": "pnpm --filter @mapart/db exec drizzle-kit generate",

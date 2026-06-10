@@ -10,6 +10,7 @@
   },
   "scripts": {
     "drizzle": "drizzle-kit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

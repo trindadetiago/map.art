@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev --port 3210",
     "build": "next build",
-    "start": "next start --port 3210"
+    "start": "next start --port 3210",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "3d-tiles-renderer": "^0.4.8",
