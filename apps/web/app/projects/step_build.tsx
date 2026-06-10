@@ -24,7 +24,6 @@ export interface TileLite {
   v: number;
 }
 
-type View = 'stylized' | 'render';
 interface Menu {
   x: number;
   y: number;
@@ -57,7 +56,8 @@ export function StepBuild({
   initialTiles: TileLite[];
 }) {
   const [tiles, setTiles] = useState<TileLite[]>(initialTiles);
-  const [view, setView] = useState<View>('stylized');
+  // Stylized-layer opacity: 1 = stylized view, 0 = raw renders, between = both.
+  const [blend, setBlend] = useState(1);
   const [dimOutside, setDimOutside] = useState(false);
   const [showLines, setShowLines] = useState(true);
   // On by default: the live Google 3D map is the only paid (Map Tiles API) part
@@ -100,22 +100,15 @@ export function StepBuild({
     };
   }, [projectId, pollNonce]);
 
-  // Each tile painted onto its footprint over the live city. In stylized view,
-  // status drives the look (stylized image / dimmed render / pulsing amber
-  // in-progress / grey pending / red error). In render view, every rendered
-  // tile shows its raw render at full opacity.
+  // Each tile painted onto its footprint over the live city: stylized image
+  // (with its raw render underneath for the blend slider) / dimmed render /
+  // pulsing amber in-progress / grey pending / red error.
   const overlay = useMemo<OverlayTile[]>(
     () =>
       tiles.map((t) => {
         const rendered = t.renderedImgPath ? `/api/storage/${t.renderedImgPath}?v=${t.v}` : null;
         const stylized = t.stylizedImgPath ? `/api/storage/${t.stylizedImgPath}?v=${t.v}` : null;
         if (t.status === 'error') return { x: t.x, y: t.y, state: 'error', imageUrl: null };
-
-        if (view === 'render') {
-          if (rendered) return { x: t.x, y: t.y, state: 'stylized', imageUrl: rendered }; // full image
-          if (t.status === 'progress') return { x: t.x, y: t.y, state: 'progress', imageUrl: null };
-          return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
-        }
 
         // A tile actively (re)stylizing pulses amber even if it still holds an
         // old image — otherwise a re-stylize looks like nothing is happening.
@@ -125,12 +118,13 @@ export function StepBuild({
         // while it waits (the DB still keeps the old image for neighbour context).
         if (t.currentStatusType === 'stylize' && t.status === 'pending' && rendered)
           return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
-        if (stylized) return { x: t.x, y: t.y, state: 'stylized', imageUrl: stylized };
+        if (stylized)
+          return { x: t.x, y: t.y, state: 'stylized', imageUrl: stylized, underUrl: rendered };
         if (rendered) return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
         if (t.status === 'progress') return { x: t.x, y: t.y, state: 'progress', imageUrl: null };
         return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
       }),
-    [tiles, view],
+    [tiles],
   );
 
   // Counts a finished stylization only — re-queued tiles (still holding their old
@@ -281,14 +275,21 @@ export function StepBuild({
         </div>
 
         <div className="flex items-center gap-2">
-          <Segmented
-            value={view}
-            onChange={setView}
-            options={[
-              { value: 'stylized', label: 'Stylized' },
-              { value: 'render', label: 'Render' },
-            ]}
-          />
+          <div
+            className="flex h-8 items-center gap-2 rounded-full border border-stone-200 bg-white px-3"
+            title={`Stylized ${Math.round(blend * 100)}%`}
+          >
+            <span className="text-[11px] text-stone-500">Render</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(blend * 100)}
+              onChange={(e) => setBlend(Number(e.target.value) / 100)}
+              className="w-24 accent-stone-900"
+            />
+            <span className="text-[11px] text-stone-500">Stylized</span>
+          </div>
           <Toggle on={hideMap} onClick={() => setHideMap((v) => !v)}>
             Hide map
           </Toggle>
@@ -344,6 +345,7 @@ export function StepBuild({
           showLines={showLines}
           showMap={!hideMap}
           focusTarget={focusTarget}
+          blend={blend}
           onTileContext={(x, y, clientX, clientY) => {
             const t = tiles.find((tile) => tile.x === x && tile.y === y);
             if (t && (t.status === 'error' || t.stylizedImgPath || isCancelled(t)))
@@ -513,32 +515,5 @@ function Toggle({
     >
       {children}
     </button>
-  );
-}
-
-function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-}) {
-  return (
-    <div className="flex h-8 items-center rounded-full border border-stone-200 bg-white p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={`h-7 rounded-full px-3 text-[12px] transition ${
-            value === o.value ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   );
 }

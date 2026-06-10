@@ -44,6 +44,8 @@ export interface OverlayTile {
   y: number;
   state: TileState;
   imageUrl: string | null;
+  /** Raw render beneath a stylized tile, revealed as the blend slider moves off 1. */
+  underUrl?: string | null;
 }
 
 export interface AreaSceneProps {
@@ -73,6 +75,11 @@ export interface AreaSceneProps {
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void;
   /** Pan + zoom the camera onto this tile. A new object (even same x,y) re-focuses. */
   focusTarget?: { x: number; y: number } | null;
+  /**
+   * Stylized-layer opacity, 0–1: 1 shows finished tiles fully stylized, 0 shows
+   * their raw renders, in between cross-fades the two. Default 1.
+   */
+  blend?: number;
 }
 
 /** Per-tile footprint corners (scene coords) for a grid centered on the origin. */
@@ -125,13 +132,20 @@ const STATE_FILL: Partial<Record<TileState, { color: number; opacity: number }>>
 };
 
 /** Material for a tile state: image (full / dimmed) or a translucent status fill. */
-function materialFor(state: TileState, texture: Texture | null): MeshBasicMaterial {
+function materialFor(state: TileState, texture: Texture | null, blend: number): MeshBasicMaterial {
   const base = { side: DoubleSide, depthTest: false, depthWrite: false } as const;
   if (texture && state === 'stylized') {
-    return new MeshBasicMaterial({ ...base, map: texture });
+    return new MeshBasicMaterial({ ...base, map: texture, transparent: true, opacity: blend });
   }
   if (texture && state === 'rendered') {
-    return new MeshBasicMaterial({ ...base, map: texture, transparent: true, opacity: 0.5 });
+    // Un-stylized renders dim toward 0.5 at full blend so they read as "not done
+    // yet" next to stylized tiles, and show plain at blend 0 (pure render view).
+    return new MeshBasicMaterial({
+      ...base,
+      map: texture,
+      transparent: true,
+      opacity: 1 - 0.5 * blend,
+    });
   }
   if (texture && state === 'stylizing') {
     // Rendered preview washed amber and pulsed (opacity driven in the tick) so
@@ -235,6 +249,7 @@ interface SceneState {
   setDimOutside: (on: boolean) => void;
   setShowLines: (on: boolean) => void;
   setMapVisible: (on: boolean) => void;
+  setBlend: (blend: number) => void;
   focusTile: (x: number, y: number) => void;
   dispose: () => void;
 }
@@ -251,6 +266,7 @@ function createAreaScene(
     dimOutside?: boolean;
     showLines?: boolean;
     showMap?: boolean;
+    blend?: number;
   },
   onCenterChange?: (center: LatLng) => void,
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void,
@@ -285,13 +301,24 @@ function createAreaScene(
   mask.visible = initial.dimOutside ?? false;
   scene.add(mask);
 
-  // Finished stylized tiles, textured onto their footprints (build step).
+  // Finished stylized tiles, textured onto their footprints (build step). A
+  // stylized tile may carry a second quad underneath with its raw render; the
+  // blend value fades the stylized layer over it.
   const overlayGroup = new Group();
   scene.add(overlayGroup);
   const loader = new TextureLoader();
+  let blend = Math.max(0, Math.min(1, initial.blend ?? 1));
   const overlaid = new Map<
     string,
-    { mesh: Mesh; state: TileState; url: string | null; texture: Texture | null }
+    {
+      mesh: Mesh;
+      under: Mesh | null;
+      state: TileState;
+      url: string | null;
+      underUrl: string | null;
+      texture: Texture | null;
+      underTexture: Texture | null;
+    }
   >();
 
   let cols = initial.cols;
@@ -518,12 +545,21 @@ function createAreaScene(
   };
   if (onTileContext) renderer.domElement.addEventListener('contextmenu', onContextMenu);
 
+  const removeUnder = (e: { under: Mesh | null; underTexture: Texture | null }): void => {
+    if (!e.under) return;
+    overlayGroup.remove(e.under);
+    e.under.geometry.dispose();
+    (e.under.material as MeshBasicMaterial).dispose();
+    e.underTexture?.dispose();
+  };
+
   const clearOverlay = (): void => {
-    for (const { mesh, texture } of overlaid.values()) {
-      overlayGroup.remove(mesh);
-      mesh.geometry.dispose();
-      (mesh.material as MeshBasicMaterial).dispose();
-      texture?.dispose();
+    for (const e of overlaid.values()) {
+      overlayGroup.remove(e.mesh);
+      e.mesh.geometry.dispose();
+      (e.mesh.material as MeshBasicMaterial).dispose();
+      e.texture?.dispose();
+      removeUnder(e);
     }
     overlaid.clear();
   };
@@ -531,8 +567,10 @@ function createAreaScene(
   const setOverlay = (list: OverlayTile[]): void => {
     for (const t of list) {
       const key = `${t.x},${t.y}`;
+      const underUrl = t.underUrl ?? null;
       const cur = overlaid.get(key);
-      if (cur && cur.state === t.state && cur.url === t.imageUrl) continue; // unchanged
+      if (cur && cur.state === t.state && cur.url === t.imageUrl && cur.underUrl === underUrl)
+        continue; // unchanged
 
       let texture: Texture | null = null;
       if (
@@ -542,19 +580,71 @@ function createAreaScene(
         texture = loader.load(t.imageUrl);
         texture.colorSpace = SRGBColorSpace;
       }
-      const material = materialFor(t.state, texture);
+      const material = materialFor(t.state, texture, blend);
 
+      let mesh: Mesh;
       if (cur) {
         (cur.mesh.material as MeshBasicMaterial).dispose();
         cur.texture?.dispose();
+        removeUnder(cur); // rebuilt below if the tile still wants one
         cur.mesh.material = material;
-        overlaid.set(key, { mesh: cur.mesh, state: t.state, url: t.imageUrl, texture });
+        mesh = cur.mesh;
       } else {
-        const mesh = new Mesh(quadGeometry(t.x, t.y, cols, rows), material);
-        mesh.renderOrder = 1000; // above grid lines (999) and streamed tiles
+        mesh = new Mesh(quadGeometry(t.x, t.y, cols, rows), material);
+        mesh.renderOrder = 1001; // above the under layer (1000) and grid lines (999)
         mesh.userData.tile = { x: t.x, y: t.y };
         overlayGroup.add(mesh);
-        overlaid.set(key, { mesh, state: t.state, url: t.imageUrl, texture });
+      }
+      mesh.visible = t.state !== 'stylized' || blend > 0;
+
+      // Raw render beneath a stylized tile. Its texture loads lazily on the
+      // first blend < 1, so the default stylized view downloads nothing extra.
+      let under: Mesh | null = null;
+      let underTexture: Texture | null = null;
+      if (underUrl && t.state === 'stylized') {
+        const m = new MeshBasicMaterial({ side: DoubleSide, depthTest: false, depthWrite: false });
+        if (blend < 1) {
+          underTexture = loader.load(underUrl);
+          underTexture.colorSpace = SRGBColorSpace;
+          m.map = underTexture;
+        }
+        under = new Mesh(quadGeometry(t.x, t.y, cols, rows), m);
+        under.renderOrder = 1000;
+        under.userData.tile = { x: t.x, y: t.y };
+        under.visible = blend < 1;
+        overlayGroup.add(under);
+      }
+
+      overlaid.set(key, {
+        mesh,
+        under,
+        state: t.state,
+        url: t.imageUrl,
+        underUrl,
+        texture,
+        underTexture,
+      });
+    }
+  };
+
+  const setBlend = (value: number): void => {
+    blend = Math.max(0, Math.min(1, value));
+    for (const e of overlaid.values()) {
+      if (e.state === 'stylized') {
+        (e.mesh.material as MeshBasicMaterial).opacity = blend;
+        e.mesh.visible = blend > 0;
+      } else if (e.state === 'rendered') {
+        (e.mesh.material as MeshBasicMaterial).opacity = 1 - 0.5 * blend;
+      }
+      if (e.under) {
+        e.under.visible = blend < 1;
+        if (blend < 1 && e.underUrl && !e.underTexture) {
+          e.underTexture = loader.load(e.underUrl);
+          e.underTexture.colorSpace = SRGBColorSpace;
+          const m = e.under.material as MeshBasicMaterial;
+          m.map = e.underTexture;
+          m.needsUpdate = true;
+        }
       }
     }
   };
@@ -593,6 +683,7 @@ function createAreaScene(
       panGroup.position.set(0, 0, 0);
     },
     setOverlay,
+    setBlend,
     setMapVisible(on) {
       if (on) createTiles();
       else destroyTiles();
@@ -661,6 +752,7 @@ export function AreaScene({
   showMap,
   onTileContext,
   focusTarget,
+  blend,
 }: AreaSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<SceneState | null>(null);
@@ -674,6 +766,7 @@ export function AreaScene({
     dimOutside: dimOutside ?? false,
     showLines: showLines ?? true,
     showMap: showMap ?? true,
+    blend: blend ?? 1,
   });
   const onCenterChangeRef = useRef(onCenterChange);
   onCenterChangeRef.current = onCenterChange;
@@ -721,6 +814,10 @@ export function AreaScene({
   useEffect(() => {
     stateRef.current?.setMapVisible(showMap ?? true);
   }, [showMap]);
+
+  useEffect(() => {
+    stateRef.current?.setBlend(blend ?? 1);
+  }, [blend]);
 
   useEffect(() => {
     if (focusTarget) stateRef.current?.focusTile(focusTarget.x, focusTarget.y);
