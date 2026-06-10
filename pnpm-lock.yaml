@@ -156,9 +156,9 @@ importers:
       '@mapart/storage':
         specifier: workspace:*
         version: link:../../packages/storage
-      puppeteer:
-        specifier: ^24.0.0
-        version: 24.43.1(typescript@5.9.3)
+      pptr:
+        specifier: npm:puppeteer@^24.0.0
+        version: puppeteer@24.43.1(typescript@5.9.3)
       react:
         specifier: ^19.0.0
         version: 19.2.5

@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import '@mapart/env';
 import { closeDb } from '@mapart/db';
 import { env } from '@mapart/env';
-import type { Browser } from 'puppeteer';
+import type { Browser } from 'pptr';
 import { type ViteDevServer, createServer as createViteServer } from 'vite';
 import { VIEWPORT_PAD, launchBrowser } from './chrome';
 import { IDLE_POLL_MS, type RenderConsumer, startRenderConsumer } from './consumer';
