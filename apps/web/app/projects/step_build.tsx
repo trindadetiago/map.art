@@ -4,7 +4,6 @@ import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   cancelAll,
-  expandProject,
   requeueStuckTile,
   restyleAll,
   restylizeTile,
@@ -68,8 +67,6 @@ export function StepBuild({
   const [hideMap, setHideMap] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [errorMenu, setErrorMenu] = useState(false);
-  const [expandOpen, setExpandOpen] = useState(false);
-  const [expandBy, setExpandBy] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
   // Per-phase cursor so repeated clicks cycle through the in-progress tiles.
   const focusCursor = useRef<{ render: number; stylize: number }>({ render: 0, stylize: 0 });
@@ -251,13 +248,6 @@ export function StepBuild({
     setPollNonce((n) => n + 1);
   }
 
-  async function doExpand(): Promise<void> {
-    setExpandOpen(false);
-    const res = await expandProject({ projectId, ...expandBy });
-    setExpandBy({ top: 0, right: 0, bottom: 0, left: 0 });
-    if (res.ok && res.count > 0) setPollNonce((n) => n + 1); // poll picks up the new tiles
-  }
-
   async function doResumeAll(): Promise<void> {
     // Optimistic: cancelled tiles drop back to pending so they read as queued.
     setTiles((ts) => ts.map((t) => (isCancelled(t) ? { ...t, status: 'pending' } : t)));
@@ -369,55 +359,6 @@ export function StepBuild({
           >
             Restyle all
           </button>
-          <span className="relative">
-            <button
-              type="button"
-              onClick={() => setExpandOpen((v) => !v)}
-              className="h-8 rounded-full border border-stone-200 bg-white px-3 text-[12px] text-stone-700 transition hover:border-stone-400"
-            >
-              Expand
-            </button>
-            {expandOpen && (
-              <>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: click-away backdrop */}
-                <div className="fixed inset-0 z-40" onClick={() => setExpandOpen(false)} />
-                <div className="absolute top-full right-0 z-50 mt-1 w-48 rounded-lg border border-stone-200 bg-white p-3 shadow-lg">
-                  <div className="mb-2 text-[12px] font-medium text-stone-700">
-                    Add tiles per side
-                  </div>
-                  {(['top', 'left', 'right', 'bottom'] as const).map((side) => (
-                    <label
-                      key={side}
-                      className="mb-1.5 flex items-center justify-between gap-2 text-[12px] text-stone-600 capitalize"
-                    >
-                      {side}
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={expandBy[side]}
-                        onChange={(e) =>
-                          setExpandBy((v) => ({
-                            ...v,
-                            [side]: Math.max(0, Math.floor(Number(e.target.value) || 0)),
-                          }))
-                        }
-                        className="h-7 w-16 rounded border border-stone-200 px-2 text-right"
-                      />
-                    </label>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={doExpand}
-                    disabled={Object.values(expandBy).every((n) => n === 0)}
-                    className="mt-1 h-7 w-full rounded-full bg-stone-900 text-[12px] text-white transition hover:bg-stone-700 disabled:opacity-40"
-                  >
-                    Expand grid
-                  </button>
-                </div>
-              </>
-            )}
-          </span>
         </div>
       </div>
 

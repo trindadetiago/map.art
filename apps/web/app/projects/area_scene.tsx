@@ -564,7 +564,18 @@ function createAreaScene(
     overlaid.clear();
   };
 
+  // The list is authoritative: tiles absent from it are removed from the scene.
   const setOverlay = (list: OverlayTile[]): void => {
+    const keep = new Set(list.map((t) => `${t.x},${t.y}`));
+    for (const [key, e] of overlaid) {
+      if (keep.has(key)) continue;
+      overlayGroup.remove(e.mesh);
+      e.mesh.geometry.dispose();
+      (e.mesh.material as MeshBasicMaterial).dispose();
+      e.texture?.dispose();
+      removeUnder(e);
+      overlaid.delete(key);
+    }
     for (const t of list) {
       const key = `${t.x},${t.y}`;
       const underUrl = t.underUrl ?? null;
@@ -800,7 +811,7 @@ export function AreaScene({
   }, [center]);
 
   useEffect(() => {
-    if (overlay) stateRef.current?.setOverlay(overlay);
+    stateRef.current?.setOverlay(overlay ?? []);
   }, [overlay]);
 
   useEffect(() => {

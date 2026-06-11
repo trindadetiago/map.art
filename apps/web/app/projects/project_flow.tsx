@@ -70,6 +70,7 @@ export function ProjectFlow(props: ProjectFlowProps) {
             cols={cols}
             rows={rows}
             readOnly={isView}
+            {...(props.projectId ? { projectId: props.projectId } : {})}
             cityLabel={cityLabel}
             onCenterChange={setCenter}
             onCols={setCols}
