@@ -4,6 +4,7 @@ import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   cancelAll,
+  expandProject,
   requeueStuckTile,
   restyleAll,
   restylizeTile,
@@ -67,6 +68,8 @@ export function StepBuild({
   const [hideMap, setHideMap] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [errorMenu, setErrorMenu] = useState(false);
+  const [expandOpen, setExpandOpen] = useState(false);
+  const [expandBy, setExpandBy] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
   // Per-phase cursor so repeated clicks cycle through the in-progress tiles.
   const focusCursor = useRef<{ render: number; stylize: number }>({ render: 0, stylize: 0 });
@@ -101,31 +104,51 @@ export function StepBuild({
     };
   }, [projectId, pollNonce]);
 
+  // Grid extent from the live tiles — expansion can add tiles beyond (even
+  // north/west of, with negative coords) the original grid, so the scene frame
+  // derives from the data. The scene works in normalized 0-based coordinates;
+  // everything that talks to the server uses the tiles' real coordinates.
+  const extent = useMemo(() => {
+    if (tiles.length === 0) return { minX: 0, minY: 0, cols, rows };
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    for (const t of tiles) {
+      if (t.x < minX) minX = t.x;
+      if (t.x > maxX) maxX = t.x;
+      if (t.y < minY) minY = t.y;
+      if (t.y > maxY) maxY = t.y;
+    }
+    return { minX, minY, cols: maxX - minX + 1, rows: maxY - minY + 1 };
+  }, [tiles, cols, rows]);
+
   // Each tile painted onto its footprint over the live city: stylized image
   // (with its raw render underneath for the blend slider) / dimmed render /
   // pulsing amber in-progress / grey pending / red error.
   const overlay = useMemo<OverlayTile[]>(
     () =>
       tiles.map((t) => {
+        const x = t.x - extent.minX;
+        const y = t.y - extent.minY;
         const rendered = t.renderedImgPath ? `/api/storage/${t.renderedImgPath}?v=${t.v}` : null;
         const stylized = t.stylizedImgPath ? `/api/storage/${t.stylizedImgPath}?v=${t.v}` : null;
-        if (t.status === 'error') return { x: t.x, y: t.y, state: 'error', imageUrl: null };
+        if (t.status === 'error') return { x, y, state: 'error', imageUrl: null };
 
         // A tile actively (re)stylizing pulses amber even if it still holds an
         // old image — otherwise a re-stylize looks like nothing is happening.
         if (t.currentStatusType === 'stylize' && t.status === 'progress')
-          return { x: t.x, y: t.y, state: 'stylizing', imageUrl: rendered ?? stylized };
+          return { x, y, state: 'stylizing', imageUrl: rendered ?? stylized };
         // Re-queued for restyle: drop back to the render so it visibly reverts
         // while it waits (the DB still keeps the old image for neighbour context).
         if (t.currentStatusType === 'stylize' && t.status === 'pending' && rendered)
-          return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
-        if (stylized)
-          return { x: t.x, y: t.y, state: 'stylized', imageUrl: stylized, underUrl: rendered };
-        if (rendered) return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
-        if (t.status === 'progress') return { x: t.x, y: t.y, state: 'progress', imageUrl: null };
-        return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
+          return { x, y, state: 'rendered', imageUrl: rendered };
+        if (stylized) return { x, y, state: 'stylized', imageUrl: stylized, underUrl: rendered };
+        if (rendered) return { x, y, state: 'rendered', imageUrl: rendered };
+        if (t.status === 'progress') return { x, y, state: 'progress', imageUrl: null };
+        return { x, y, state: 'pending', imageUrl: null };
       }),
-    [tiles],
+    [tiles, extent],
   );
 
   // Counts a finished stylization only — re-queued tiles (still holding their old
@@ -139,7 +162,7 @@ export function StepBuild({
     (t) => t.status === 'error' && t.currentStatusType === 'stylize',
   ).length;
   const errors = renderErrors + stylizeErrors;
-  const total = cols * rows;
+  const total = tiles.length || cols * rows;
 
   const rendering = tiles.filter(
     (t) => t.currentStatusType === 'render' && t.status === 'progress',
@@ -158,7 +181,7 @@ export function StepBuild({
     const i = focusCursor.current[phase] % list.length;
     focusCursor.current[phase] = i + 1;
     const t = list[i];
-    if (t) setFocusTarget({ x: t.x, y: t.y });
+    if (t) setFocusTarget({ x: t.x - extent.minX, y: t.y - extent.minY });
   }
 
   async function doRestylize(x: number, y: number): Promise<void> {
@@ -226,6 +249,13 @@ export function StepBuild({
     );
     await cancelAll({ projectId });
     setPollNonce((n) => n + 1);
+  }
+
+  async function doExpand(): Promise<void> {
+    setExpandOpen(false);
+    const res = await expandProject({ projectId, ...expandBy });
+    setExpandBy({ top: 0, right: 0, bottom: 0, left: 0 });
+    if (res.ok && res.count > 0) setPollNonce((n) => n + 1); // poll picks up the new tiles
   }
 
   async function doResumeAll(): Promise<void> {
@@ -339,6 +369,55 @@ export function StepBuild({
           >
             Restyle all
           </button>
+          <span className="relative">
+            <button
+              type="button"
+              onClick={() => setExpandOpen((v) => !v)}
+              className="h-8 rounded-full border border-stone-200 bg-white px-3 text-[12px] text-stone-700 transition hover:border-stone-400"
+            >
+              Expand
+            </button>
+            {expandOpen && (
+              <>
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: click-away backdrop */}
+                <div className="fixed inset-0 z-40" onClick={() => setExpandOpen(false)} />
+                <div className="absolute top-full right-0 z-50 mt-1 w-48 rounded-lg border border-stone-200 bg-white p-3 shadow-lg">
+                  <div className="mb-2 text-[12px] font-medium text-stone-700">
+                    Add tiles per side
+                  </div>
+                  {(['top', 'left', 'right', 'bottom'] as const).map((side) => (
+                    <label
+                      key={side}
+                      className="mb-1.5 flex items-center justify-between gap-2 text-[12px] text-stone-600 capitalize"
+                    >
+                      {side}
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={expandBy[side]}
+                        onChange={(e) =>
+                          setExpandBy((v) => ({
+                            ...v,
+                            [side]: Math.max(0, Math.floor(Number(e.target.value) || 0)),
+                          }))
+                        }
+                        className="h-7 w-16 rounded border border-stone-200 px-2 text-right"
+                      />
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={doExpand}
+                    disabled={Object.values(expandBy).every((n) => n === 0)}
+                    className="mt-1 h-7 w-full rounded-full bg-stone-900 text-[12px] text-white transition hover:bg-stone-700 disabled:opacity-40"
+                  >
+                    Expand grid
+                  </button>
+                </div>
+              </>
+            )}
+          </span>
         </div>
       </div>
 
@@ -346,8 +425,8 @@ export function StepBuild({
         <AreaScene
           apiKey={apiKey}
           center={center}
-          cols={cols}
-          rows={rows}
+          cols={extent.cols}
+          rows={extent.rows}
           interactive={false}
           overlay={overlay}
           dimOutside={dimOutside}
@@ -355,8 +434,11 @@ export function StepBuild({
           showMap={!hideMap}
           focusTarget={focusTarget}
           blend={blend}
-          onTileContext={(x, y, clientX, clientY) => {
-            const t = tiles.find((tile) => tile.x === x && tile.y === y);
+          onTileContext={(gx, gy, clientX, clientY) => {
+            // The scene reports normalized grid coords; the menu stores real ones.
+            const t = tiles.find(
+              (tile) => tile.x - extent.minX === gx && tile.y - extent.minY === gy,
+            );
             if (
               t &&
               (t.status === 'error' ||
@@ -364,7 +446,7 @@ export function StepBuild({
                 t.stylizedImgPath ||
                 isCancelled(t))
             )
-              setMenu({ x, y, clientX, clientY });
+              setMenu({ x: t.x, y: t.y, clientX, clientY });
           }}
         />
       </div>

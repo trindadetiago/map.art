@@ -105,6 +105,62 @@ export async function createProjectTiles(
   });
 }
 
+/**
+ * Insert additional cells into an existing project's grid (grid expansion) and
+ * rewire `neighbors` across the old/new boundary: new tiles get their full
+ * adjacency, and existing tiles that gained a new neighbor are updated. New
+ * tiles enter the queue as render/pending, so the workers pick them up and
+ * stylize them with the existing stylized edge as context. Cells may carry
+ * negative coordinates (expansion north/west of the original origin).
+ */
+export async function addProjectTiles(
+  projectId: string,
+  cells: readonly TileCell[],
+): Promise<Tile[]> {
+  if (cells.length === 0) return [];
+  return getDb().transaction(async (tx) => {
+    const existing = await tx
+      .select({ id: tiles.id, x: tiles.x, y: tiles.y, neighbors: tiles.neighbors })
+      .from(tiles)
+      .where(eq(tiles.projectId, projectId));
+
+    const inserted = await tx
+      .insert(tiles)
+      .values(cells.map((c) => ({ projectId, x: c.x, y: c.y, lat: c.lat, lng: c.lng })))
+      .returning();
+
+    const idByCell = new Map(
+      [...existing, ...inserted].map((t) => [`${t.x}:${t.y}`, t.id] as const),
+    );
+    const adjacentIds = (x: number, y: number): string[] => {
+      const ids: string[] = [];
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const id = idByCell.get(`${x + dx}:${y + dy}`);
+          if (id) ids.push(id);
+        }
+      }
+      return ids;
+    };
+
+    for (const t of inserted) {
+      const neighbors = adjacentIds(t.x, t.y);
+      if (neighbors.length > 0) {
+        await tx.update(tiles).set({ neighbors }).where(eq(tiles.id, t.id));
+        t.neighbors = neighbors;
+      }
+    }
+    for (const t of existing) {
+      const neighbors = adjacentIds(t.x, t.y);
+      if (neighbors.length !== t.neighbors.length) {
+        await tx.update(tiles).set({ neighbors }).where(eq(tiles.id, t.id));
+      }
+    }
+    return inserted;
+  });
+}
+
 // ---- queue: render phase (worker-render) ---------------------------------
 
 /**

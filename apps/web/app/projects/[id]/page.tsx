@@ -19,9 +19,14 @@ export default async function ProjectWorkspacePage({
   const tiles = await repos.tilesByProject(id);
 
   // Reconstruct the setup from the tile grid (nothing else is persisted).
-  const cols = tiles.reduce((m, t) => Math.max(m, t.x + 1), 1);
-  const rows = tiles.reduce((m, t) => Math.max(m, t.y + 1), 1);
-  const origin = tiles.find((t) => t.x === 0 && t.y === 0) ?? tiles[0];
+  // Expansion can grow the grid in any direction — north/west tiles carry
+  // negative coords — so bounds come from the extent, and the framing origin
+  // is whatever tile sits at the grid's top-left corner.
+  const minX = tiles.reduce((m, t) => Math.min(m, t.x), 0);
+  const minY = tiles.reduce((m, t) => Math.min(m, t.y), 0);
+  const cols = tiles.reduce((m, t) => Math.max(m, t.x + 1), minX + 1) - minX;
+  const rows = tiles.reduce((m, t) => Math.max(m, t.y + 1), minY + 1) - minY;
+  const origin = tiles.find((t) => t.x === minX && t.y === minY) ?? tiles[0];
   const center = origin
     ? centerFromOrigin({ lat: origin.lat, lng: origin.lng }, cols, rows)
     : { lat: 0, lng: 0 };
