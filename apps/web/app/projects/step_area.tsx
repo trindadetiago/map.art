@@ -48,11 +48,13 @@ export function StepArea({
   const addedTiles = previewCols * previewRows - cols * rows;
 
   // Keep the existing grid fixed on the map while the preview frame grows
-  // around it: shift the scene center by the (asymmetric) margins.
+  // around it: shift the scene center by the (asymmetric) margins. The grid's
+  // +y axis points up on screen, so "top" grows the max-y side — the origin
+  // (min corner) only moves for left/bottom margins.
   const previewCenter = useMemo<LatLng>(() => {
     if (!expanding) return center;
     const origin = originForCenter(center, cols, rows);
-    const previewOrigin = tileCenterLatLng(origin, -margins.left, -margins.top);
+    const previewOrigin = tileCenterLatLng(origin, -margins.left, -margins.bottom);
     return centerFromOrigin(previewOrigin, previewCols, previewRows);
   }, [expanding, center, cols, rows, margins, previewCols, previewRows]);
 
@@ -66,8 +68,8 @@ export function StepArea({
         const isExisting =
           x >= margins.left &&
           x < margins.left + cols &&
-          y >= margins.top &&
-          y < margins.top + rows;
+          y >= margins.bottom &&
+          y < margins.bottom + rows;
         if (!isExisting) list.push({ x, y, state: 'pending', imageUrl: null });
       }
     }

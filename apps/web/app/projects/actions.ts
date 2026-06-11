@@ -129,10 +129,12 @@ export async function expandProject(input: {
 
     const xs = existing.map((t) => t.x);
     const ys = existing.map((t) => t.y);
+    // The grid's +y axis points up on screen (camera yaw), so "top" extends
+    // the max-y side and "bottom" the min-y side.
     const minX = Math.min(...xs) - input.left;
     const maxX = Math.max(...xs) + input.right;
-    const minY = Math.min(...ys) - input.top;
-    const maxY = Math.max(...ys) + input.bottom;
+    const minY = Math.min(...ys) - input.bottom;
+    const maxY = Math.max(...ys) + input.top;
 
     const occupied = new Set(existing.map((t) => `${t.x}:${t.y}`));
     const cells: { x: number; y: number; lat: number; lng: number }[] = [];
