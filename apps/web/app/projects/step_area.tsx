@@ -121,6 +121,7 @@ export function StepArea({
         rows={previewRows}
         interactive={!readOnly}
         onCenterChange={onCenterChange}
+        dimOutside
         {...(previewOverlay ? { overlay: previewOverlay } : {})}
       />
 
