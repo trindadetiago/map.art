@@ -166,7 +166,9 @@ export async function buildComposite(
     create: { width: TILE_SIZE, height: TILE_SIZE, channels: 3, background: { r: 0, g: 0, b: 0 } },
   })
     .composite(overlays)
-    .png()
+    // Model input — keep it truecolour (palette quantisation would posterise the
+    // aerial render and degrade what the model sees), just compress losslessly harder.
+    .png({ compressionLevel: 9 })
     .toBuffer();
 
   return { composite, bbox };
