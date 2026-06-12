@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>isometric.nyc — how the viewer works</title>
+    <style>
+      :root {
+        --bg: #f7f5ef;
+        --panel: #ffffff;
+        --ink: #14110d;
+        --ink-soft: #3f3a32;
+        --muted: #7a7368;
+        --line: #e7e2d4;
+        --line-strong: #d8d2c1;
+        --tint: #f0ece1;
+        --accent: #2563eb;
+        --good: #15803d;
+        --warn: #b45309;
+        --bad: #b91c1c;
+
+        --shadow-xs: 0 1px 2px rgba(20, 17, 13, 0.04);
+        --shadow-sm: 0 1px 2px rgba(20, 17, 13, 0.04), 0 2px 6px rgba(20, 17, 13, 0.04);
+        --shadow-md: 0 1px 2px rgba(20, 17, 13, 0.04), 0 8px 24px rgba(20, 17, 13, 0.06);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; color: var(--ink); }
+      body {
+        font: 15px/1.6 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 56px 28px 96px;
+        background: var(--bg);
+      }
+      h1 {
+        font-size: 36px;
+        font-weight: 700;
+        margin: 0 0 6px;
+        letter-spacing: -0.025em;
+        background: linear-gradient(180deg, #14110d 0%, #4a443b 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 56px 0 14px;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line), transparent);
+        margin-left: 4px;
+      }
+      h3 {
+        font-size: 15.5px;
+        font-weight: 650;
+        margin: 14px 0 8px;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      p { margin: 6px 0; color: var(--ink-soft); }
+      .lede { color: var(--muted); margin-bottom: 32px; font-size: 16px; max-width: 820px; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px 22px 18px;
+        box-shadow: var(--shadow-xs);
+        position: relative;
+        overflow: hidden;
+      }
+      .card h3 { margin-top: 4px; }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px 3px 9px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        background: var(--tint);
+        color: var(--ink-soft);
+        border: 1px solid var(--line);
+      }
+      .tag::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .tag.good::before { background: #15803d; }
+      .tag.warn::before { background: #b45309; }
+      .tag.info::before { background: #2563eb; }
+
+      ul, ol { padding-left: 20px; margin: 6px 0; color: var(--ink-soft); }
+      li { margin: 4px 0; }
+      code {
+        background: var(--tint);
+        padding: 1.5px 6px;
+        border-radius: 5px;
+        font: 12.5px/1.4 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #4a443b;
+        border: 1px solid #e6e0cf;
+      }
+      pre {
+        background: linear-gradient(180deg, #1a1815 0%, #14110d 100%);
+        color: #eaeaea;
+        padding: 16px 18px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font: 12.5px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #0a0907;
+      }
+      pre.tree { background: var(--panel); color: var(--ink-soft); border: 1px solid var(--line); box-shadow: var(--shadow-xs); }
+      pre .c { color: #807a70; }
+      pre .k { color: #93c5fd; }
+      pre .s { color: #fcd34d; }
+
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+      .callout {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin: 18px 0;
+        box-shadow: var(--shadow-xs);
+      }
+      .callout.warn { border-left-color: var(--warn); }
+      .callout.good { border-left-color: var(--good); }
+      .callout p { margin: 4px 0; }
+      .callout strong { color: var(--ink); }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 13.5px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { background: var(--tint); font-weight: 700; color: var(--ink-soft); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+      tr:last-child td { border-bottom: none; }
+      td code { white-space: nowrap; }
+
+      .steps {
+        counter-reset: step;
+        list-style: none;
+        padding-left: 0;
+        margin: 16px 0 0;
+      }
+      .steps > li {
+        position: relative;
+        padding: 0 0 22px 46px;
+        margin: 0;
+        border-left: 2px solid var(--line);
+        margin-left: 14px;
+      }
+      .steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+      .steps > li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: -15px;
+        top: -2px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        color: var(--ink-soft);
+        font: 700 12px/28px "Inter", sans-serif;
+        text-align: center;
+        box-shadow: var(--shadow-xs);
+      }
+      .steps .who {
+        display: inline-block;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: var(--tint);
+        border: 1px solid var(--line);
+        color: var(--ink-soft);
+        margin-bottom: 4px;
+      }
+      .steps .who.build { background: #eef4ff; border-color: #cfe0ff; color: #1e40af; }
+      .steps .who.serve { background: #fef3e7; border-color: #f5dcbf; color: #92400e; }
+      .steps .who.client { background: #ecfdf3; border-color: #c5ead4; color: #15803d; }
+      .steps h3 { margin: 2px 0 4px; }
+      .steps p { margin: 2px 0; }
+
+      .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+      .pill {
+        font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+        background: var(--panel); border: 1px solid var(--line); color: var(--ink-soft);
+      }
+
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+      .mapart { color: var(--accent); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>How isometric.nyc renders its viewer</h1>
+    <p class="lede">
+      A reference teardown of <a href="https://github.com/cannoneyed/isometric-nyc" target="_blank" rel="noopener">cannoneyed/isometric-nyc</a>'s
+      public map viewer, kept here because its shape is the one <span class="mapart">map.art</span> will likely adopt for shipping a
+      zoomable final map. The punchline: <strong>the runtime viewer is not 3D.</strong> The isometric pixel-art is baked into a
+      single enormous flat image ahead of time, sliced into a deep-zoom tile pyramid, and served to a dumb-but-fast 2D pan/zoom widget.
+    </p>
+
+    <div class="callout">
+      <p><strong>One sentence:</strong> Three.js renders source frames offline → a generative model stylizes them → the stitched
+      mega-image is exported to a <strong>DZI/WebP pyramid</strong> with <code>libvips</code> → <strong>OpenSeadragon</strong> pans/zooms
+      it with pixel smoothing turned off → static tiles sit on <strong>Cloudflare R2</strong> behind a thin caching Worker.</p>
+    </div>
+
+    <h2>Two "visualizers", don't confuse them</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag info">build-time · not shipped</span>
+        <h3>The Three.js renderer (<code>src/web</code>)</h3>
+        <p>Referenced in the README as the "3D map tiles data viewer / renderer (Three.js)". It produces the aerial/isometric
+        <em>source frames</em> that get fed to the generative model. <strong>It was not included in the open-sourced tree</strong>
+        — only <code>src/app</code>, <code>src/isometric_nyc</code>, and <code>src/demos</code> shipped.</p>
+        <p>This is the direct analog of our <code>@mapart/renderer</code> <code>&lt;Scene&gt;</code> + <code>apps/worker-render</code>.</p>
+      </div>
+      <div class="card">
+        <span class="tag good">runtime · the public site</span>
+        <h3>The OpenSeadragon viewer (<code>src/app</code>)</h3>
+        <p>What people actually see at isometric.nyc. A React + Vite + Bun single-page app whose entire job is to pan and zoom a
+        pre-rendered pixel-art image served as tiles. <strong>This doc is about this one.</strong></p>
+        <p>The analog for us would be a new viewer route/app consuming our stitched stylized output.</p>
+      </div>
+    </div>
+
+    <h2>The stack</h2>
+    <div class="pills">
+      <span class="pill">React + TypeScript</span>
+      <span class="pill">Vite (build)</span>
+      <span class="pill">Bun (pkg mgr)</span>
+      <span class="pill">OpenSeadragon (tile viewer)</span>
+      <span class="pill">DZI / WebP (tile format)</span>
+      <span class="pill">libvips · dzsave (export)</span>
+      <span class="pill">Cloudflare R2 (hosting)</span>
+      <span class="pill">Cloudflare Worker (cache + CORS)</span>
+    </div>
+
+    <h2>The core insight</h2>
+    <p>
+      The "3D" / isometric look is <strong>baked into the pixels</strong> by the offline generation pipeline. At runtime there is no
+      scene, no camera, no Three.js — just a flat raster that happens to <em>look</em> isometric. That means the viewer can be the
+      cheapest, sharpest thing possible: a 2D deep-zoom image widget. Everything below follows from that decision.
+    </p>
+
+    <h2>Pipeline, end to end</h2>
+    <ol class="steps">
+      <li>
+        <span class="who build">build · python</span>
+        <h3>Stitch + export the mega-image to a DZI pyramid</h3>
+        <p><code>src/isometric_nyc/generation/export_dzi.py</code> drives <strong>libvips</strong> (<code>dzsave</code>) to slice the
+        full-resolution stitched map (&gt;100k px wide) into a pyramid of <strong>512&nbsp;px WebP</strong> tiles. WebP buys ~25–35%
+        over PNG; libvips is used because it streams huge images without loading them whole.</p>
+        <p>Optional flags: <code>--png</code>, <code>--bounds v1.json</code> (clip to the NYC outline), <code>--no-postprocess</code>,
+        <code>--dry-run</code>.</p>
+        <pre class="tree">tiles.dzi              <span class="c"># DZI descriptor (XML)</span>
+tiles_metadata.json    <span class="c"># grid dims, origin, tileSize, appDefaults (start pos/zoom)</span>
+tiles_files/
+  9/0_0.webp           <span class="c"># lowest zoom level</span>
+  ...
+  17/0_1.webp          <span class="c"># full-res tiles, 512px WebP</span></pre>
+      </li>
+      <li>
+        <span class="who serve">serve · cloudflare</span>
+        <h3>Push tiles to R2, front them with a tiny Worker</h3>
+        <p>Tiles live on <strong>Cloudflare R2</strong>. <code>worker/src/index.ts</code> is a ~60-line Worker that proxies R2 and does
+        two things only: stamp <code>Cache-Control: public, max-age=31536000, immutable</code> and add CORS. It checks the Cloudflare
+        edge cache first (<code>caches.default</code>) before touching the bucket. No tile logic lives here.</p>
+      </li>
+      <li>
+        <span class="who client">client · react</span>
+        <h3>Boot from metadata, not the image</h3>
+        <p><code>App.tsx</code> fetches <code>tiles_metadata.json</code> (falling back to a legacy <code>manifest.json</code>) to learn
+        <code>gridWidth/gridHeight/tileSize/origin</code> and computes <code>totalWidth = gridWidth × tileSize</code>. It restores the
+        last view from <code>localStorage</code>, or uses <code>appDefaults</code> (a default start position + zoom written by the
+        exporter). <code>config.ts</code> resolves which dataset/CDN to hit via env (<code>USE_R2_NYC</code>) or URL params
+        (<code>?export=</code>, <code>?r2=true</code>, <code>?debug=true</code>, <code>?reset=1</code>).</p>
+      </li>
+      <li>
+        <span class="who client">client · openseadragon</span>
+        <h3>One OpenSeadragon viewer does the rest</h3>
+        <p><code>IsometricMap.tsx</code> is the whole viewer: it instantiates a single OpenSeadragon instance with a custom tile source,
+        wires pan/zoom/hover, and overlays cosmetic effects. Details below.</p>
+      </li>
+    </ol>
+
+    <h2>Inside <code>IsometricMap.tsx</code> — the clever bits</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag">level remapping</span>
+        <h3>Mapping OSD levels → on-disk folders</h3>
+        <p>OpenSeadragon derives its own pyramid level numbers from image dimensions
+        (<code>maxLevel = ceil(log2(maxDim))</code> ≈ 17; <code>minLevel = ceil(log2(tileSize))</code> = 9 for 512px). The exporter
+        numbered folders <code>0..8</code>. So <code>getTileUrl</code> subtracts the offset:</p>
+        <pre><span class="k">const</span> fileLevel = level - osdMinLevel;
+<span class="k">const</span> dziBase = dziUrl.replace(<span class="s">".dzi"</span>, <span class="s">"_files"</span>);
+<span class="k">return</span> <span class="s">`${dziBase}/${fileLevel}/${x}_${y}.webp`</span>;</pre>
+      </div>
+      <div class="card">
+        <span class="tag good">pixel art</span>
+        <h3>Keeping pixels crisp, not blurry</h3>
+        <p>This is what makes pixel-art survive a zoom widget:</p>
+        <ul>
+          <li><code>imageSmoothingEnabled: false</code> — no bilinear blur</li>
+          <li><code>maxZoomPixelRatio: 1</code> — never upscale past 1 image-px = 1 screen-px</li>
+          <li><code>subPixelRoundingForTransparency: 1</code> — round tile positions to kill shimmer while panning</li>
+          <li><code>smoothTileEdgesMinZoom: 1.0</code> — only soften edges when zoomed <em>out</em> past 1:1</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">coordinate systems</span>
+        <h3>World coords ↔ OSD coords</h3>
+        <p>The app's own <code>ViewState</code> is <code>{ target: [worldX, worldY], zoom: log2scale }</code> with <strong>Y-up</strong>.
+        OSD uses normalized <code>0..1</code> coords with <strong>Y-down</strong>. <code>worldToOsd</code> / <code>osdToWorld</code>
+        convert both ways (note the <code>1 - y</code> flips and the <code>log2</code> zoom conversion against
+        <code>window.innerWidth</code>).</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">gotcha</span>
+        <h3>Breaking the feedback loop</h3>
+        <p>React state drives OSD, and OSD's <code>viewport-change</code> drives React state — a loop. Two refs guard it:
+        <code>isUpdatingFromProps</code> (set while pushing state into OSD) and <code>lastOSDViewState</code> (so the sync effect can
+        skip values that originated from OSD itself, within an epsilon).</p>
+      </div>
+      <div class="card">
+        <span class="tag">free features</span>
+        <h3>Minimap + hover from OSD</h3>
+        <p>The minimap is OSD's built-in <code>navigator</code> (top-right, <code>navigatorSizeRatio: 0.15</code>). Tile hover is just
+        <code>viewportToImageCoordinates</code> then <code>floor(x / tileSize)</code>, bounds-checked against the grid.</p>
+      </div>
+      <div class="card">
+        <span class="tag info">cosmetics (DOM/CSS)</span>
+        <h3>CRT overlays, not in the tiles</h3>
+        <p><code>ScanlineOverlay</code> is a pure CSS <code>repeating-linear-gradient</code> + a radial mask for CRT vignette.
+        <code>WaterShaderOverlay</code> (<code>shaders/water.ts</code>) is a WebGL effect, but it's gated behind <code>?debug=true</code>
+        and disabled in production (it needs individual tile files, not the flattened DZI).</p>
+      </div>
+    </div>
+
+    <h2>Why DZI + OpenSeadragon (vs. rolling your own)</h2>
+    <table>
+      <tr><th>Choice</th><th>Why</th></tr>
+      <tr><td><strong>DZI</strong> (Deep Zoom Image)</td><td>OpenSeadragon's native format → near-zero custom tile-loading code. Just an XML descriptor + a folder pyramid. Works on any static file server / CDN.</td></tr>
+      <tr><td><strong>WebP tiles</strong></td><td>25–35% smaller than PNG; browser handles caching/prefetch natively.</td></tr>
+      <tr><td><strong>libvips <code>dzsave</code></strong></td><td>Generates the whole pyramid in one streamed pass over a &gt;100k-px image without exhausting memory.</td></tr>
+      <tr><td><strong>OpenSeadragon</strong></td><td>Mature pan/zoom, built-in navigator/minimap, gesture handling, tile prefetch, placeholder fills — all configurable, smoothing toggleable for pixel art.</td></tr>
+      <tr><td><strong>R2 + Worker</strong></td><td>Static immutable tiles + edge cache = cheap and fast at scale. The Worker only adds headers; no app logic on the hot path.</td></tr>
+    </table>
+
+    <h2>What this means for <span class="mapart">map.art</span></h2>
+    <div class="callout good">
+      <p><strong>Their architecture splits exactly like ours.</strong> A build-time Three.js render stage (produce source images) →
+      a generative stylize stage → and then a <em>separate</em>, deliberately-dumb 2D pyramid viewer for the final product. The
+      Three.js piece is offline-only, just like our <code>@mapart/renderer</code> + <code>apps/worker-render</code>.</p>
+    </div>
+    <p>When we're ready to ship a zoomable final map, the cheapest sharp path is the same recipe:</p>
+    <ol>
+      <li>Stitch our stylized tile outputs into one large raster.</li>
+      <li><code>libvips dzsave</code> → DZI/WebP pyramid (+ a small <code>metadata.json</code> with grid dims, origin, and default view).</li>
+      <li>Serve tiles from our storage/CDN (we already have <code>@mapart/storage</code> on S3/MinIO → AWS).</li>
+      <li>A thin viewer (an <code>apps/web</code> route, or a dedicated app) mounting OpenSeadragon with <code>imageSmoothingEnabled: false</code> and <code>maxZoomPixelRatio: 1</code>.</li>
+    </ol>
+    <p>A natural home in our monorepo: a <code>packages/export</code> for the pyramid generation (server-only, no React — fits the package boundary) and a viewer route in <code>apps/web</code>. The OpenSeadragon component itself is UI, so it lives in an app, never a package.</p>
+
+    <h2>Files worth reading in their repo</h2>
+    <table>
+      <tr><th>Path</th><th>What</th></tr>
+      <tr><td><code>src/app/src/components/IsometricMap.tsx</code></td><td>The entire viewer: OSD setup, tile source, coord conversion, hover.</td></tr>
+      <tr><td><code>src/app/src/App.tsx</code></td><td>Metadata loading, view-state persistence, zoom clamping, layout.</td></tr>
+      <tr><td><code>src/app/src/config.ts</code></td><td>Dataset/CDN resolution via env + URL params.</td></tr>
+      <tr><td><code>src/app/src/components/ScanlineOverlay.tsx</code></td><td>CSS-only CRT scanlines + vignette.</td></tr>
+      <tr><td><code>src/app/worker/src/index.ts</code></td><td>R2 caching + CORS Worker.</td></tr>
+      <tr><td><code>src/isometric_nyc/generation/export_dzi.py</code></td><td>libvips DZI export (the build-time half).</td></tr>
+      <tr><td><code>docs/app.md</code></td><td>Their own notes on the viewer + DZI export.</td></tr>
+    </table>
+
+    <footer>
+      Reference teardown for map.art · source: <a href="https://github.com/cannoneyed/isometric-nyc" target="_blank" rel="noopener">cannoneyed/isometric-nyc</a> · live: <a href="https://isometric.nyc" target="_blank" rel="noopener">isometric.nyc</a>
+    </footer>
+  </body>
+</html>
