@@ -8,7 +8,7 @@ import {
   UpdateOnChangePlugin,
 } from '3d-tiles-renderer/three/plugins';
 import { type CameraGridParams, tileGroundCorners } from '@mapart/shared';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AmbientLight,
   BufferAttribute,
@@ -124,6 +124,7 @@ export function ProjectMap({
 }: ProjectMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneHandle | null>(null);
+  const [webglReady, setWebglReady] = useState(false);
   const initialViewRef = useRef<UpdateParams>({
     centerLat,
     centerLng,
@@ -139,28 +140,26 @@ export function ProjectMap({
   const onZoomRef = useRef(onZoomFactor);
   const onTileClickRef = useRef(onTileClick);
   const onTileHoverRef = useRef(onTileHover);
-  useEffect(() => {
-    onPanRef.current = onPanDelta;
-  });
-  useEffect(() => {
-    onZoomRef.current = onZoomFactor;
-  });
-  useEffect(() => {
-    onTileClickRef.current = onTileClick;
-  });
-  useEffect(() => {
-    onTileHoverRef.current = onTileHover;
-  });
+  onPanRef.current = onPanDelta;
+  onZoomRef.current = onZoomFactor;
+  onTileClickRef.current = onTileClick;
+  onTileHoverRef.current = onTileHover;
 
   useEffect(() => {
     if (!containerRef.current || !apiKey || tiles.length === 0) return;
     const initialView = initialViewRef.current;
-    const handle = setupScene(containerRef.current, apiKey, initialView, {
-      onPanDelta: (dx, dz) => onPanRef.current?.(dx, dz),
-      onZoomFactor: (factor) => onZoomRef.current?.(factor),
-      onTileClick: (col, row) => onTileClickRef.current?.(col, row),
-      onTileHover: (col, row, x, y, s) => onTileHoverRef.current?.(col, row, x, y, s),
-    });
+    const handle = setupScene(
+      containerRef.current,
+      apiKey,
+      initialView,
+      {
+        onPanDelta: (dx, dz) => onPanRef.current?.(dx, dz),
+        onZoomFactor: (factor) => onZoomRef.current?.(factor),
+        onTileClick: (col, row) => onTileClickRef.current?.(col, row),
+        onTileHover: (col, row, x, y, s) => onTileHoverRef.current?.(col, row, x, y, s),
+      },
+      () => setWebglReady(true),
+    );
     sceneRef.current = handle;
     return () => {
       handle.dispose();
@@ -208,6 +207,11 @@ export function ProjectMap({
       style={{ height }}
     >
       <div ref={containerRef} className="h-full w-full bg-neutral-950" />
+      {tiles.length > 0 && !webglReady && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <span className="animate-pulse text-sm text-neutral-500">Loading 3D tiles...</span>
+        </div>
+      )}
       {overlay}
     </div>
   );
@@ -231,6 +235,7 @@ function setupScene(
   apiKey: string,
   initial: UpdateParams,
   callbacks: InputCallbacks,
+  onReady?: () => void,
 ): SceneHandle {
   const scene = new ThreeScene();
   scene.add(new AmbientLight(0xffffff, 1.0));
@@ -295,6 +300,7 @@ function setupScene(
   const tileIndexMap = new Map<string, number>();
   let lastNonIdleKeys = new Set<string>();
   let topologyKey = '';
+  let topologyTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Per-tile texture meshes for "show generated image on top". Sparse — only
   // tiles with an image have an entry. Diffed against `currentTileImages` so
@@ -569,8 +575,11 @@ function setupScene(
   function applyView(params: UpdateParams): void {
     const key = topologyKeyOf(params);
     if (key !== topologyKey) {
-      rebuildTopology(params);
-      topologyKey = key;
+      if (topologyTimer) clearTimeout(topologyTimer);
+      topologyTimer = setTimeout(() => {
+        rebuildTopology(params);
+        topologyKey = key;
+      }, 100);
     }
     currentViewZoom = params.viewZoom;
     currentPitch = params.pitch;
@@ -770,11 +779,16 @@ function setupScene(
   applyView(initial);
 
   let disposed = false;
+  let firstFrame = true;
   const tick = () => {
     if (disposed) return;
     tilesRenderer.setResolutionFromRenderer(camera, renderer);
     tilesRenderer.update();
     renderer.render(scene, camera);
+    if (firstFrame) {
+      firstFrame = false;
+      onReady?.();
+    }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

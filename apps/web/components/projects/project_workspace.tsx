@@ -348,9 +348,24 @@ export function ProjectWorkspace({
 
   const setStatus = useCallback((k: string, s: TileStatus | null) => {
     setStatuses((m) => {
+      if (s === null) {
+        if (!m.has(k)) return m;
+        const next = new Map(m);
+        next.delete(k);
+        return next;
+      }
+      const existing = m.get(k);
+      if (
+        existing &&
+        existing.phase === s.phase &&
+        existing.error === s.error &&
+        existing.renderedUrl === s.renderedUrl &&
+        existing.generatedUrl === s.generatedUrl
+      ) {
+        return m;
+      }
       const next = new Map(m);
-      if (s === null) next.delete(k);
-      else next.set(k, s);
+      next.set(k, s);
       return next;
     });
   }, []);
@@ -366,7 +381,7 @@ export function ProjectWorkspace({
         const scene = sceneRef.current;
         if (!scene) throw new Error('capture scene not ready');
 
-        const localRendered = new Map(savedRendered);
+        const newlyRendered = new Map<string, SavedTile>();
         const captureAndSave = async (
           c: number,
           r: number,
@@ -388,7 +403,7 @@ export function ProjectWorkspace({
           const rr = await saveTileAction(fd);
           if (!rr.ok) throw new Error(`render save failed at (${c},${r}): ${rr.error}`);
           const tile = { col: rr.col, row: rr.row, url: rr.url, filename: rr.filename };
-          localRendered.set(keyOf(c, r), tile);
+          newlyRendered.set(keyOf(c, r), tile);
           setSavedRendered((m) => {
             const next = new Map(m);
             next.set(keyOf(c, r), tile);
@@ -420,7 +435,7 @@ export function ProjectWorkspace({
               neighbors.push({ dc, dr, url: gen.url });
               continue;
             }
-            const ren = localRendered.get(nk);
+            const ren = newlyRendered.get(nk) ?? savedRendered.get(nk);
             if (ren) {
               neighbors.push({ dc, dr, url: ren.url });
               continue;

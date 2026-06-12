@@ -16,11 +16,15 @@ export interface SceneHandle {
   isReady: () => boolean;
   /**
    * Resolves once the TilesRenderer's download + parse queues have been idle
-   * for `settleMs` (default 500ms), or rejects after `timeoutMs`
-   * (default 15000ms). Useful for automated capture loops that need to wait
+   * for `settleMs` (default 200ms), or rejects after `timeoutMs`
+   * (default 15000ms). Also resolves immediately if content is already loaded
+   * and queues are idle. Useful for automated capture loops that need to wait
    * for streaming to quiesce before grabbing a frame.
    */
   waitForSettled: (opts?: { settleMs?: number; timeoutMs?: number }) => Promise<void>;
+  startRendering: () => void;
+  stopRendering: () => void;
+  markReady: () => void;
 }
 
 export interface SceneProps {
@@ -53,6 +57,9 @@ export const Scene = forwardRef<SceneHandle, SceneProps>(function Scene({ apiKey
       capture: () => state.current?.capture() ?? null,
       isReady: () => state.current?.isReady() ?? false,
       waitForSettled: (opts) => state.current?.waitForSettled(opts) ?? Promise.resolve(),
+      startRendering: () => state.current?.startRendering(),
+      stopRendering: () => state.current?.stopRendering(),
+      markReady: () => state.current?.markReady(),
     }),
     [],
   );
@@ -76,6 +83,9 @@ interface SceneState {
   capture: () => string | null;
   isReady: () => boolean;
   waitForSettled: (opts?: { settleMs?: number; timeoutMs?: number }) => Promise<void>;
+  startRendering: () => void;
+  stopRendering: () => void;
+  markReady: () => void;
   dispose: () => void;
 }
 
@@ -88,7 +98,7 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
   scene.add(sun);
 
   const renderer = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(1);
   renderer.setSize(initial.size, initial.size);
   container.appendChild(renderer.domElement);
 
@@ -102,6 +112,7 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
 
   let disposed = false;
   let contentLoaded = false;
+  let needsRender = false;
   tiles.addEventListener('load-tile-set', () => {
     contentLoaded = true;
   });
@@ -110,12 +121,18 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
 
   const tick = () => {
     if (disposed) return;
-    tiles.setResolutionFromRenderer(camera, renderer);
-    tiles.update();
-    renderer.render(scene, camera);
+    if (needsRender) {
+      tiles.setResolutionFromRenderer(camera, renderer);
+      tiles.update();
+      renderer.render(scene, camera);
+    }
     requestAnimationFrame(tick);
   };
-  requestAnimationFrame(tick);
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => requestAnimationFrame(tick));
+  } else {
+    requestAnimationFrame(tick);
+  }
 
   return {
     updateParams(p: RenderParams) {
@@ -131,6 +148,7 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
       positionCamera(camera, p);
     },
     capture() {
+      needsRender = true;
       renderer.render(scene, camera);
       // Export at logical (CSS) size, not the HiDPI backing-store size.
       // The backing canvas is devicePixelRatio× larger; stitchTiles uses
@@ -148,20 +166,28 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
       return contentLoaded;
     },
     waitForSettled(opts) {
-      const settleMs = opts?.settleMs ?? 500;
+      needsRender = true;
+      const settleMs = opts?.settleMs ?? 200;
       const timeoutMs = opts?.timeoutMs ?? 15000;
       return new Promise<void>((resolve, reject) => {
         const started = Date.now();
+        const checkIdle = () => {
+          const downloading = tiles.downloadQueue?.running ?? false;
+          const parsing = tiles.parseQueue?.running ?? false;
+          return !downloading && !parsing;
+        };
+        if (contentLoaded && checkIdle()) {
+          resolve();
+          return;
+        }
         let idleSince: number | null = null;
         const poll = () => {
           if (disposed) {
             reject(new Error('Scene.waitForSettled: disposed'));
             return;
           }
-          const downloading = tiles.downloadQueue?.running ?? false;
-          const parsing = tiles.parseQueue?.running ?? false;
           const now = Date.now();
-          if (!downloading && !parsing) {
+          if (checkIdle()) {
             if (idleSince === null) idleSince = now;
             if (now - idleSince >= settleMs) {
               resolve();
@@ -178,6 +204,15 @@ function createScene(container: HTMLElement, apiKey: string, initial: RenderPara
         };
         poll();
       });
+    },
+    startRendering() {
+      needsRender = true;
+    },
+    stopRendering() {
+      needsRender = false;
+    },
+    markReady() {
+      contentLoaded = true;
     },
     dispose() {
       disposed = true;
