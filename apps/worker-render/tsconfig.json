@@ -3,7 +3,9 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": ".",
-    "noEmit": true
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"]
   },
-  "include": ["*.ts"]
+  "include": ["*.ts"],
+  "exclude": ["render-page", "dist", "node_modules"]
 }

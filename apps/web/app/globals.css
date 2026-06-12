@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Project-wide defaults — replaces the inline body styles previously in layout.tsx. */
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;

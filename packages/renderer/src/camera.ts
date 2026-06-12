@@ -1,10 +1,11 @@
-import { type RenderParams, tileWidthMeters } from '@mapart/shared';
+import { tileWidthMeters } from '@mapart/geo';
 import type { OrthographicCamera } from 'three';
+import type { RenderParams } from './params';
 
 /**
  * Orthographic frustum bounds for a given zoom + latitude. We size the frustum
- * so one tile (per @mapart/shared.tileWidthMeters) fits across the viewport,
- * with near/far set generously to avoid clipping at high pitch.
+ * so one tile (per `tileWidthMeters`) fits across the viewport, with near/far
+ * set generously to avoid clipping at high pitch.
  */
 export function cameraFrustumForZoom(
   zoom: number,

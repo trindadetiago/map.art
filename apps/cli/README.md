@@ -2,6 +2,8 @@
 
 Single CLI entry for everything ad-hoc. Run via `pnpm mapart <subcommand>` (or `tsx apps/cli/bin/mapart.ts` directly).
 
+This is meant for debugging only, specially for AI Coding Agents to easily test our code and packages without interacting with the UI.
+
 ```bash
 pnpm mapart --help
 pnpm mapart db --help
@@ -18,6 +20,7 @@ apps/cli/
     db.ts              # mapart db status|migrate|reset|projects|models|seed|sql
     storage.ts         # mapart storage list|put|get|delete
     models.ts          # mapart models generate
+    render.ts          # mapart render (end-to-end test against apps/worker-render dev endpoint)
     tiles.ts           # mapart tiles for-point|bounds|for-bbox|for-circle
 ```
 
@@ -32,6 +35,6 @@ Each command file exports `registerXxxCommands(parent: Command)` that hangs subc
 
 ## Not the place for
 
-- **Long-running processes.** CLIs exit. Long-running work belongs in `apps/worker` (or a future named worker).
+- **Long-running processes.** CLIs exit. Long-running work belongs in a named worker (e.g. `apps/worker-render`).
 - **HTTP endpoints.** Those live in `apps/web` server actions / API routes.
 - **Business logic.** Goes in `packages/*`. The CLI is a thin dispatcher.

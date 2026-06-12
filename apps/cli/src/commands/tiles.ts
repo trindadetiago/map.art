@@ -1,4 +1,4 @@
-import { tileWidthMeters } from '@mapart/shared';
+import { tileWidthMeters } from '@mapart/geo';
 import {
   bboxToTiles,
   circleToPolygon,
@@ -7,7 +7,7 @@ import {
   tileToBounds,
   tileToBoundsWkt,
   tileToCenter,
-} from '@mapart/tiles';
+} from '@mapart/geo';
 import type { Command } from 'commander';
 
 export function registerTilesCommands(parent: Command): void {

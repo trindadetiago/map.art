@@ -1,7 +1,5 @@
 'use client';
 
-import { applyFrustum, createTilesRenderer, positionCamera, reorientTo } from '@mapart/renderer';
-import type { RenderParams } from '@mapart/shared';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import {
   AmbientLight,
@@ -10,6 +8,9 @@ import {
   Scene as ThreeScene,
   WebGLRenderer,
 } from 'three';
+import { applyFrustum, positionCamera } from './camera';
+import type { RenderParams } from './params';
+import { createTilesRenderer, reorientTo } from './tiles';
 
 export interface SceneHandle {
   capture: () => string | null;

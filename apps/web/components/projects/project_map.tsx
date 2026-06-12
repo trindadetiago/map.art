@@ -7,7 +7,7 @@ import {
   TileCompressionPlugin,
   UpdateOnChangePlugin,
 } from '3d-tiles-renderer/three/plugins';
-import { type CameraGridParams, tileGroundCorners } from '@mapart/shared';
+import { type CameraGridParams, tileGroundCorners } from '@mapart/renderer';
 import { useEffect, useRef, useState } from 'react';
 import {
   AmbientLight,
