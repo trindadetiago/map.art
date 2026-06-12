@@ -11,6 +11,7 @@
     "dev": "mprocs",
     "dev:web": "pnpm --filter @mapart/web dev",
     "dev:worker": "pnpm --filter @mapart/worker dev",
+    "dev:worker-render": "pnpm --filter @mapart/worker-render dev",
     "dev:studio": "pnpm --filter @mapart/db drizzle studio",
     "build": "pnpm -r build",
     "lint": "biome check .",
@@ -21,7 +22,7 @@
     "spike:single": "tsx apps/worker-render/spike-single.ts",
     "spike:batch": "tsx apps/worker-render/spike-batch.ts",
     "spike": "tsx apps/worker-render/spike.ts",
-    "worker:render": "tsx apps/worker-render/index.ts",
+    "worker:render": "tsx apps/worker-render/src/index.ts",
     "prepare": "husky"
   },
   "lint-staged": {

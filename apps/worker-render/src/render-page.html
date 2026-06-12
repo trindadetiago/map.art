@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; background: #000; overflow: hidden; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.169.0",
+    "3d-tiles-renderer/": "https://esm.sh/3d-tiles-renderer@0.4.8/"
+  }
+}
+</script>
+</head>
+<body>
+<script type="module">
+import {
+  OrthographicCamera,
+  Scene,
+  WebGLRenderer,
+} from 'three';
+import { GoogleCloudAuthPlugin } from '3d-tiles-renderer/core/plugins';
+import { TilesRenderer } from '3d-tiles-renderer/three';
+import {
+  ReorientationPlugin,
+  TileCompressionPlugin,
+  UpdateOnChangePlugin,
+} from '3d-tiles-renderer/three/plugins';
+
+const EARTH_CIRCUMFERENCE_M = 40075016.686;
+
+function tileWidthMeters(zoom, latDeg) {
+  const latRad = (latDeg * Math.PI) / 180;
+  return (EARTH_CIRCUMFERENCE_M * Math.cos(latRad)) / 2 ** zoom;
+}
+
+function applyFrustum(camera, zoom, lat) {
+  const width = tileWidthMeters(zoom, lat);
+  const half = width / 2;
+  camera.left = -half;
+  camera.right = half;
+  camera.top = half;
+  camera.bottom = -half;
+  camera.near = 1;
+  camera.far = width * 50;
+  camera.updateProjectionMatrix();
+}
+
+function positionCamera(camera, p) {
+  const yawRad = (p.yaw * Math.PI) / 180;
+  const pitchRad = (p.pitch * Math.PI) / 180;
+  const distance = tileWidthMeters(p.zoom, p.center.lat) * 10;
+  const dx = Math.sin(yawRad) * Math.cos(pitchRad);
+  const dy = Math.sin(pitchRad);
+  const dz = Math.cos(yawRad) * Math.cos(pitchRad);
+  camera.position.set(-dx * distance, dy * distance, -dz * distance);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(0, 0, 0);
+  camera.updateProjectionMatrix();
+}
+
+async function init() {
+  while (!window.__RENDER_PARAMS__) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  const params = window.__RENDER_PARAMS__;
+
+  const scene = new Scene();
+
+  const renderer = new WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true,
+    alpha: true,
+  });
+  renderer.setPixelRatio(1);
+  renderer.setSize(params.size, params.size);
+  document.body.appendChild(renderer.domElement);
+
+  const camera = new OrthographicCamera();
+  applyFrustum(camera, params.zoom, params.center.lat);
+
+  const tiles = new TilesRenderer();
+  tiles.registerPlugin(
+    new GoogleCloudAuthPlugin({ apiToken: params.apiKey, autoRefreshToken: true }),
+  );
+  tiles.registerPlugin(
+    new ReorientationPlugin({
+      lat: params.center.lat * (Math.PI / 180),
+      lon: params.center.lng * (Math.PI / 180),
+      height: 0,
+      recenter: true,
+    }),
+  );
+  tiles.registerPlugin(new TileCompressionPlugin());
+  tiles.registerPlugin(new UpdateOnChangePlugin());
+  tiles.setCamera(camera);
+  tiles.setResolutionFromRenderer(camera, renderer);
+  scene.add(tiles.group);
+
+  positionCamera(camera, params);
+
+  let contentLoaded = false;
+  tiles.addEventListener('load-tile-set', () => {
+    contentLoaded = true;
+  });
+
+  let disposed = false;
+  function tick() {
+    if (disposed) return;
+    tiles.setResolutionFromRenderer(camera, renderer);
+    tiles.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  const started = Date.now();
+  const timeoutMs = 110000;
+  let idleSince = null;
+
+  await new Promise((resolve, reject) => {
+    function checkIdle() {
+      const downloading = tiles.downloadQueue?.running ?? false;
+      const parsing = tiles.parseQueue?.running ?? false;
+      return !downloading && !parsing;
+    }
+    function poll() {
+      const now = Date.now();
+      if (contentLoaded && checkIdle()) {
+        if (idleSince === null) idleSince = now;
+        if (now - idleSince >= 500) {
+          setTimeout(() => {
+            tiles.update();
+            renderer.render(scene, camera);
+            setTimeout(resolve, 300);
+          }, 200);
+          return;
+        }
+      } else {
+        idleSince = null;
+      }
+      if (now - started >= timeoutMs) {
+        reject(new Error('Timeout waiting for tiles'));
+        return;
+      }
+      setTimeout(poll, 200);
+    }
+    poll();
+  });
+
+  window.__TILES_READY__ = true;
+}
+
+init().catch((err) => {
+  console.error('Render page error:', err);
+  window.__TILES_READY__ = true;
+  window.__RENDER_ERROR__ = String(err);
+});
+</script>
+</body>
+</html>

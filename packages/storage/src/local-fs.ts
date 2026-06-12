@@ -45,6 +45,10 @@ export class LocalFs implements Storage {
     }
   }
 
+  async presignReadUrl(key: string, _ttlSeconds: number): Promise<string> {
+    return `/api/storage/${key}`;
+  }
+
   async list(prefix = ''): Promise<StorageEntry[]> {
     const base = this.resolveKey(prefix);
     if (!existsSync(base)) return [];

@@ -10,4 +10,5 @@ export interface Storage {
   has(key: string): Promise<boolean>;
   delete(key: string): Promise<void>;
   list(prefix?: string): Promise<StorageEntry[]>;
+  presignReadUrl(key: string, ttlSeconds: number): Promise<string>;
 }

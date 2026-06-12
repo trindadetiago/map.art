@@ -1,5 +1,6 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { getDb, getSql } from '../client';
+import { tileVersions } from '../schema/tile-versions';
 import { tiles } from '../schema/tiles';
 
 export async function countTilesForProject(projectId: string): Promise<number> {
@@ -45,6 +46,59 @@ export interface CreateTileVersionInput {
   modelId?: string | null;
   prompt?: string | null;
   referenceStorageKey?: string | null;
+}
+
+export interface TileStatusSummary {
+  total: number;
+  rendered: number;
+  generated: number;
+  pending: number;
+}
+
+export async function getTileStatusSummary(projectId: string): Promise<TileStatusSummary> {
+  const result = await getDb()
+    .select({
+      total: sql<number>`count(*)`.mapWith(Number),
+      rendered:
+        sql<number>`count(case when ${tileVersions.source} = 'rendered' then 1 end)`.mapWith(
+          Number,
+        ),
+      generated:
+        sql<number>`count(case when ${tileVersions.source} = 'generated' then 1 end)`.mapWith(
+          Number,
+        ),
+    })
+    .from(tiles)
+    .leftJoin(tileVersions, eq(tiles.currentVersionId, tileVersions.id))
+    .where(eq(tiles.projectId, projectId));
+
+  const r = result[0];
+  const total = r?.total ?? 0;
+  const generated = r?.generated ?? 0;
+  return {
+    total,
+    rendered: r?.rendered ?? 0,
+    generated,
+    pending: total - generated,
+  };
+}
+
+export async function listTileVersionByProjectAndCoords(
+  projectId: string,
+  col: number,
+  row: number,
+  source: TileVersionSource,
+) {
+  const result = await getDb().query.tileVersions.findFirst({
+    where: and(
+      eq(tileVersions.projectId, projectId),
+      eq(tileVersions.col, col),
+      eq(tileVersions.row, row),
+      eq(tileVersions.source, source),
+    ),
+    orderBy: desc(tileVersions.createdAt),
+  });
+  return result ?? null;
 }
 
 /**

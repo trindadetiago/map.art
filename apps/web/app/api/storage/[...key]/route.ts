@@ -27,7 +27,7 @@ export async function GET(
       status: 200,
       headers: {
         'content-type': contentTypeFor(key),
-        'cache-control': 'no-cache',
+        'cache-control': 'public, max-age=86400',
       },
     });
   } catch (e) {

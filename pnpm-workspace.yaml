@@ -1,3 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+catalog:
+  tsx: ^4.19.2
+  typescript: ^5.6.3

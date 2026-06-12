@@ -1,5 +1,5 @@
 {
-  "name": "@mapart/worker-render",
+  "name": "@mapart/worker-stylize",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,11 @@
   "dependencies": {
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
-    "@mapart/renderer": "workspace:*",
+    "@mapart/models": "workspace:*",
+    "@mapart/pipeline": "workspace:*",
     "@mapart/shared": "workspace:*",
     "@mapart/storage": "workspace:*",
-    "puppeteer": "^24.0.0",
+    "sharp": "^0.33.5",
     "tsx": "^4.19.2"
   },
   "devDependencies": {

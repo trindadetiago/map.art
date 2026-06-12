@@ -6,6 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Storage, StorageEntry } from './types';
 
 export interface S3Config {
@@ -45,6 +46,17 @@ export class S3Storage implements Storage {
         Key: this.normalizeKey(key),
         Body: data,
       }),
+    );
+  }
+
+  async presignReadUrl(key: string, ttlSeconds: number): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: this.normalizeKey(key),
+      }),
+      { expiresIn: ttlSeconds },
     );
   }
 
