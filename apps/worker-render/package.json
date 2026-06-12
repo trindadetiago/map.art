@@ -8,7 +8,6 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
     "@mapart/renderer": "workspace:*",
     "@mapart/shared": "workspace:*",

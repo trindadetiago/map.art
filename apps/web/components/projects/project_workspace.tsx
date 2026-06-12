@@ -1,8 +1,8 @@
 'use client';
 
-import { Scene, type SceneHandle } from '@/components/scene';
 import type { ModelName } from '@mapart/models';
-import { type RenderParams, renderParamsForTile } from '@mapart/shared';
+import { Scene, type SceneHandle } from '@mapart/renderer';
+import { type RenderParams, renderParamsForTile } from '@mapart/renderer';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { ProjectMap, type TileCoord, type TileVisualState } from './project_map';

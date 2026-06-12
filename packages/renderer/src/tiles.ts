@@ -5,7 +5,7 @@ import {
   TileCompressionPlugin,
   UpdateOnChangePlugin,
 } from '3d-tiles-renderer/three/plugins';
-import type { LatLng } from '@mapart/shared';
+import type { LatLng } from '@mapart/geo';
 
 export interface CreateTilesRendererOptions {
   /** Google Maps Platform API key with Map Tiles API enabled. */

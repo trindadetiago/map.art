@@ -14,13 +14,17 @@ export function getStorage(): Storage {
   if (singleton) return singleton;
 
   if (env.storageBackend === 's3') {
+    // Path-style addressing is required by MinIO and most other custom S3
+    // backends; AWS S3 uses virtual-hosted style. A custom S3_ENDPOINT
+    // reliably signals one of the former, so derive the toggle from it.
+    const isCustomEndpoint = !!env.s3Endpoint;
     singleton = new S3Storage({
       ...(env.s3Endpoint ? { endpoint: env.s3Endpoint } : {}),
       region: env.s3Region,
       accessKeyId: requireEnv('s3AccessKeyId'),
       secretAccessKey: requireEnv('s3SecretAccessKey'),
       bucket: requireEnv('s3Bucket'),
-      forcePathStyle: env.s3ForcePathStyle === 'true',
+      forcePathStyle: isCustomEndpoint,
     });
   } else {
     singleton = new LocalFs(resolve(findRepoRoot(), LOCAL_STORAGE_ROOT));
