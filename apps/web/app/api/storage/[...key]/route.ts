@@ -15,6 +15,36 @@ function contentTypeFor(key: string): string {
   return CONTENT_TYPES[ext] ?? 'application/octet-stream';
 }
 
+// A fresh presign mints a new signature each call, so the same image would get a
+// different URL on every request and the browser's disk cache (keyed by URL)
+// could never reuse it. Keying by `key` + `?v=` version, we hand back one stable
+// URL per version: identical address every reload, so the cache actually holds.
+// Entries refresh before the signature expires, keeping the served URL valid.
+const PRESIGN_VALID_S = 7 * 24 * 3600;
+const PRESIGN_TTL_MS = 6 * 24 * 3600 * 1000;
+const PRESIGN_MAX_ENTRIES = 10_000;
+const presignCache = new Map<string, { url: string; expiresAt: number }>();
+
+async function stablePresign(key: string, version: string): Promise<string> {
+  const cacheKey = `${key}?v=${version}`;
+  const now = Date.now();
+  const hit = presignCache.get(cacheKey);
+  if (hit && hit.expiresAt > now) return hit.url;
+
+  const url = await getStorage().presignGet(key, PRESIGN_VALID_S, {
+    contentType: contentTypeFor(key),
+    cacheControl: 'public, max-age=31536000, immutable',
+  });
+  presignCache.set(cacheKey, { url, expiresAt: now + PRESIGN_TTL_MS });
+
+  // Bound memory: Map iterates in insertion order, so the first key is the oldest.
+  if (presignCache.size > PRESIGN_MAX_ENTRIES) {
+    const oldest = presignCache.keys().next().value;
+    if (oldest !== undefined) presignCache.delete(oldest);
+  }
+  return url;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ key: string[] }> },
@@ -31,11 +61,9 @@ export async function GET(
   // the presigned URL's 7-day validity so a cached redirect can never point at
   // an expired signature; the bucket response itself is cached as immutable.
   try {
-    if (req.nextUrl.searchParams.has('v')) {
-      const url = await getStorage().presignGet(key, 7 * 24 * 3600, {
-        contentType: contentTypeFor(key),
-        cacheControl: 'public, max-age=31536000, immutable',
-      });
+    const version = req.nextUrl.searchParams.get('v');
+    if (version !== null) {
+      const url = await stablePresign(key, version);
       return NextResponse.redirect(url, {
         status: 302,
         headers: { 'cache-control': 'public, max-age=518400' },
