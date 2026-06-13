@@ -65,6 +65,7 @@ export function startRenderConsumer(render: RenderFn, log: Logger): RenderConsum
       };
     });
 
+  let idleLogged = false;
   const done = (async () => {
     while (!stopping) {
       let tile: Awaited<ReturnType<typeof claimNextRender>>;
@@ -77,9 +78,14 @@ export function startRenderConsumer(render: RenderFn, log: Logger): RenderConsum
       }
 
       if (!tile) {
+        if (!idleLogged) {
+          log.info('no render-pending tiles — idle', { idlePollMs: IDLE_POLL_MS });
+          idleLogged = true;
+        }
         await idle(); // empty queue — back off
         continue;
       }
+      idleLogged = false;
 
       const startedAt = Date.now();
       try {

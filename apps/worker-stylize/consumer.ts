@@ -156,7 +156,12 @@ export function startStylizeConsumer(model: ModelClient, log: Logger): StylizeCo
       const startedAt = Date.now();
       try {
         if (!tile.renderedImgPath) throw new Error('claimed tile has no renderedImgPath');
-        log.info('tile claimed', { x: tile.x, y: tile.y, attempt: tile.retryAttempt });
+        log.info('tile claimed', {
+          x: tile.x,
+          y: tile.y,
+          attempt: tile.retryAttempt,
+          promoted: tile.promoted,
+        });
 
         const render = await getStorage().get(tile.renderedImgPath);
         const ctx = await loadNeighborContext(tile);

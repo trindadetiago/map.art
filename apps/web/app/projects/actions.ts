@@ -39,6 +39,13 @@ export async function createProjectWithGrid(input: {
       description: input.description?.trim() || null,
     });
     await repos.createProjectTiles(project.id, cells);
+    log.info('project created', {
+      projectId: project.id,
+      name,
+      cols: input.cols,
+      rows: input.rows,
+      tiles: cells.length,
+    });
     revalidatePath('/projects');
     return { ok: true, id: project.id };
   } catch (e) {
@@ -56,6 +63,7 @@ export async function restylizeTile(input: {
   try {
     const n = await repos.requeueStylize(input.projectId, input.x, input.y);
     if (n === 0) return { ok: false, error: 'tile is not in the stylize phase' };
+    log.info('tile re-queued for stylize', { ...input });
     return { ok: true };
   } catch (e) {
     log.error('restylizeTile failed', { ...input, err: e });
@@ -72,6 +80,7 @@ export async function retryTile(input: {
   try {
     const n = await repos.requeueErrored(input.projectId, input.x, input.y);
     if (n === 0) return { ok: false, error: 'tile is not in an error state' };
+    log.info('errored tile re-queued', { ...input });
     return { ok: true };
   } catch (e) {
     log.error('retryTile failed', { ...input, err: e });
@@ -87,6 +96,7 @@ export async function retryProjectErrors(input: {
   try {
     const phase = input.phase === 'all' ? undefined : input.phase;
     const count = await repos.requeueErroredByProject(input.projectId, phase);
+    log.info('project errors re-queued', { projectId: input.projectId, phase: input.phase, count });
     return { ok: true, count };
   } catch (e) {
     log.error('retryProjectErrors failed', { ...input, err: e });
@@ -100,6 +110,7 @@ export async function restyleAll(input: {
 }): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   try {
     const count = await repos.requeueAllStylize(input.projectId);
+    log.info('project re-styled', { projectId: input.projectId, count });
     return { ok: true, count };
   } catch (e) {
     log.error('restyleAll failed', { ...input, err: e });
@@ -157,6 +168,14 @@ export async function expandProject(input: {
     }
 
     const inserted = await repos.addProjectTiles(input.projectId, cells);
+    log.info('project grid expanded', {
+      projectId: input.projectId,
+      top: input.top,
+      right: input.right,
+      bottom: input.bottom,
+      left: input.left,
+      count: inserted.length,
+    });
     revalidatePath(`/projects/${input.projectId}`);
     return { ok: true, count: inserted.length };
   } catch (e) {
@@ -171,6 +190,7 @@ export async function cancelAll(input: {
 }): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   try {
     const count = await repos.cancelAllStylize(input.projectId);
+    log.info('project stylize cancelled', { projectId: input.projectId, count });
     return { ok: true, count };
   } catch (e) {
     log.error('cancelAll failed', { ...input, err: e });
@@ -184,6 +204,7 @@ export async function resumeAll(input: {
 }): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   try {
     const count = await repos.resumeAllStylize(input.projectId);
+    log.info('project stylize resumed', { projectId: input.projectId, count });
     return { ok: true, count };
   } catch (e) {
     log.error('resumeAll failed', { ...input, err: e });
@@ -200,6 +221,7 @@ export async function requeueStuckTile(input: {
   try {
     const n = await repos.requeueStuck(input.projectId, input.x, input.y);
     if (n === 0) return { ok: false, error: 'tile is not in progress' };
+    log.info('stuck tile re-queued', { ...input });
     return { ok: true };
   } catch (e) {
     log.error('requeueStuckTile failed', { ...input, err: e });
@@ -216,6 +238,7 @@ export async function resumeTile(input: {
   try {
     const n = await repos.resumeStylize(input.projectId, input.x, input.y);
     if (n === 0) return { ok: false, error: 'tile is not cancelled' };
+    log.info('cancelled tile resumed', { ...input });
     return { ok: true };
   } catch (e) {
     log.error('resumeTile failed', { ...input, err: e });

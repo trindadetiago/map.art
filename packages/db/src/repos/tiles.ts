@@ -208,7 +208,7 @@ export async function completeRender(id: string, renderedImgPath: string): Promi
  * phase column — a stylized neighbor still has its rendered path, so the check
  * stays true and tiles never starve.
  */
-export async function claimNextStylize(): Promise<Tile | null> {
+export async function claimNextStylize(): Promise<(Tile & { promoted: boolean }) | null> {
   return getDb().transaction(async (tx) => {
     const [claimed] = await tx
       .select({ id: tiles.id, currentStatusType: tiles.currentStatusType })
@@ -245,7 +245,7 @@ export async function claimNextStylize(): Promise<Tile | null> {
       })
       .where(eq(tiles.id, claimed.id))
       .returning();
-    return row ?? null;
+    return row ? { ...row, promoted: promoting } : null;
   });
 }
 
