@@ -19,6 +19,7 @@ import {
   Group,
   LineBasicMaterial,
   LineLoop,
+  LinearFilter,
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
@@ -28,8 +29,7 @@ import {
   SRGBColorSpace,
   Shape,
   ShapeGeometry,
-  type Texture,
-  TextureLoader,
+  Texture,
   Scene as ThreeScene,
   Vector2,
   Vector3,
@@ -278,8 +278,30 @@ function createAreaScene(
   scene.add(sun);
 
   const renderer = new WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  // Cap the framebuffer cost: at a large tile count the GPU is already carrying a
+  // texture per tile, and a 2x+ retina framebuffer on top is what tips a tab into
+  // a lost WebGL context. 1.5x keeps the canvas crisp without the full doubling.
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   container.appendChild(renderer.domElement);
+
+  // When VRAM pressure (or a GPU reset) drops the WebGL context the canvas goes
+  // black; the browser restores it shortly after. Pause our per-frame work while
+  // it's gone and flag textures for re-upload on the way back, so recovery is
+  // clean instead of a flash of broken state.
+  let contextLost = false;
+  const onContextLost = (e: Event): void => {
+    e.preventDefault(); // signal we'll restore, so the browser re-grants a context
+    contextLost = true;
+  };
+  const onContextRestored = (): void => {
+    contextLost = false;
+    for (const e of overlaid.values()) {
+      if (e.texture) e.texture.needsUpdate = true;
+      if (e.underTexture) e.underTexture.needsUpdate = true;
+    }
+  };
+  renderer.domElement.addEventListener('webglcontextlost', onContextLost, false);
+  renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false);
 
   const camera = new OrthographicCamera();
   // Pan via a parent group, never `tiles.group` directly — the
@@ -306,7 +328,49 @@ function createAreaScene(
   // blend value fades the stylized layer over it.
   const overlayGroup = new Group();
   scene.add(overlayGroup);
-  const loader = new TextureLoader();
+
+  // Tile textures load through a small concurrency gate. The naive path fires one
+  // image request + GPU upload per tile the instant it appears, so a grid of a
+  // thousand-plus tiles stampedes the network and the main thread on first paint.
+  // Capping in-flight loads spreads the work so tiles fill in steadily instead of
+  // freezing the page. Each texture also drops mipmaps (a tile is viewed near 1:1,
+  // so the chain is wasted VRAM + an upload pass) to keep GPU memory in budget.
+  const MAX_TEXTURE_LOADS = 12;
+  let activeLoads = 0;
+  const loadQueue: Array<() => void> = [];
+  const pumpLoads = (): void => {
+    while (activeLoads < MAX_TEXTURE_LOADS && loadQueue.length > 0) {
+      const start = loadQueue.shift();
+      if (start) {
+        activeLoads++;
+        start();
+      }
+    }
+  };
+  const loadTexture = (url: string): Texture => {
+    const texture = new Texture();
+    texture.colorSpace = SRGBColorSpace;
+    texture.generateMipmaps = false;
+    texture.minFilter = LinearFilter;
+    loadQueue.push(() => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const done = (): void => {
+        activeLoads--;
+        pumpLoads();
+      };
+      img.onload = (): void => {
+        texture.image = img;
+        texture.needsUpdate = true;
+        done();
+      };
+      img.onerror = done;
+      img.src = url;
+    });
+    pumpLoads();
+    return texture;
+  };
+
   let blend = Math.max(0, Math.min(1, initial.blend ?? 1));
   const overlaid = new Map<
     string,
@@ -405,6 +469,8 @@ function createAreaScene(
   let disposed = false;
   const tick = (): void => {
     if (disposed) return;
+    requestAnimationFrame(tick);
+    if (contextLost) return; // canvas has no GPU context — nothing to draw
     if (tilesState) {
       tilesState.tiles.setResolutionFromRenderer(camera, renderer);
       tilesState.tiles.update();
@@ -418,7 +484,6 @@ function createAreaScene(
       }
     }
     renderer.render(scene, camera);
-    requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 
@@ -588,8 +653,7 @@ function createAreaScene(
         t.imageUrl &&
         (t.state === 'rendered' || t.state === 'stylizing' || t.state === 'stylized')
       ) {
-        texture = loader.load(t.imageUrl);
-        texture.colorSpace = SRGBColorSpace;
+        texture = loadTexture(t.imageUrl);
       }
       const material = materialFor(t.state, texture, blend);
 
@@ -615,8 +679,7 @@ function createAreaScene(
       if (underUrl && t.state === 'stylized') {
         const m = new MeshBasicMaterial({ side: DoubleSide, depthTest: false, depthWrite: false });
         if (blend < 1) {
-          underTexture = loader.load(underUrl);
-          underTexture.colorSpace = SRGBColorSpace;
+          underTexture = loadTexture(underUrl);
           m.map = underTexture;
         }
         under = new Mesh(quadGeometry(t.x, t.y, cols, rows), m);
@@ -650,8 +713,7 @@ function createAreaScene(
       if (e.under) {
         e.under.visible = blend < 1;
         if (blend < 1 && e.underUrl && !e.underTexture) {
-          e.underTexture = loader.load(e.underUrl);
-          e.underTexture.colorSpace = SRGBColorSpace;
+          e.underTexture = loadTexture(e.underUrl);
           const m = e.under.material as MeshBasicMaterial;
           m.map = e.underTexture;
           m.needsUpdate = true;
@@ -735,6 +797,8 @@ function createAreaScene(
       renderer.domElement.removeEventListener('pointerup', onPanUp);
       renderer.domElement.removeEventListener('wheel', onWheel);
       renderer.domElement.removeEventListener('contextmenu', onContextMenu);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
       clearOverlay();
       scene.remove(grid);
       disposeGrid(grid);
