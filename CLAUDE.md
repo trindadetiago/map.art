@@ -39,6 +39,7 @@ Mostly pure Node libraries. Tree-shake-friendly imports.
 | `@mapart/geo` | Foundational geo primitives + web-mercator tile math. Types (`LatLng`, `Bbox`, `Polygon`, `TileCoord`). Tile math (`latLngToTile`, `tileToBounds`, `tileToCenter`, `tileToBoundsWkt`, `tileWidthMeters`). Coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`). No deps. |
 | `@mapart/renderer` | Three.js + Google 3D Tiles. Exports the React `<Scene>` component (for `apps/web` + `apps/worker-render/render-page`), the render-side type `RenderParams`, the global render pose/output config `RENDER_DEFAULTS` (pitch 30, yaw 45, 150 m/tile, 512 px), and the pure helpers (`createTilesRenderer`, `positionCamera`, `applyFrustum`, `reorientTo`, `tileGroundCorners`, `tileCenterLatLng`, `renderParamsForLatLng`). Depends on `@mapart/geo` for `LatLng` + `tileWidthMeters`. React is a peer dep; pure helpers are usable without it (tree-shaken). |
 | `@mapart/storage` | Blob storage on S3 (MinIO locally, AWS in prod), configured by the `S3_*` env vars. Singleton via `getStorage()`. |
+| `@mapart/logger` | Structured logger shared by the services. `createLogger(name, bindings?)` → a `Logger` with `debug/info/warn/error(msg, fields?)` and `child(bindings)`. Pretty lines locally, one JSON object per line on Railway; threshold + format from `LOG_LEVEL`/`LOG_FORMAT` (defaults info/json on Railway, debug/pretty locally). `silentLogger` for tests. Depends on `@mapart/env`. |
 
 ### `infra/`
 

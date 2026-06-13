@@ -1,6 +1,7 @@
 import { closeDb, getDb } from '@mapart/db';
 import { type TileCell, createProject, createProjectTiles, tilesByProject } from '@mapart/db/repos';
 import { projects, tiles } from '@mapart/db/schema';
+import { silentLogger } from '@mapart/logger';
 import { type ModelClient, StubImageModel } from '@mapart/models';
 import { type Storage, type StorageEntry, __setStorageForTests } from '@mapart/storage';
 import { eq } from 'drizzle-orm';
@@ -116,7 +117,7 @@ describe('stylize-queue consumer (end-to-end)', () => {
     __setStorageForTests(mem);
     const projectId = await seedRenderedProject(mem, 2, 2);
 
-    const consumer = startStylizeConsumer(new StubImageModel(), () => {});
+    const consumer = startStylizeConsumer(new StubImageModel(), silentLogger);
     await waitFor(async () =>
       (await tilesByProject(projectId)).every(
         (t) => t.currentStatusType === 'stylize' && t.status === 'done',
@@ -143,7 +144,7 @@ describe('stylize-queue consumer (end-to-end)', () => {
     const projectId = await seedRenderedProject(mem, 1, 1);
 
     const boom: ModelClient = { name: 'boom', generate: () => Promise.reject(new Error('boom')) };
-    const consumer = startStylizeConsumer(boom, () => {});
+    const consumer = startStylizeConsumer(boom, silentLogger);
     await waitFor(async () => {
       const [t] = await tilesByProject(projectId);
       return t?.status === 'error';

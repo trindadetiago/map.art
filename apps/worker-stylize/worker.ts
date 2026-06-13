@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { closeDb } from '@mapart/db';
 import { env, findRepoRoot, requireEnv } from '@mapart/env';
+import { createLogger } from '@mapart/logger';
 import { type ModelClient, OxenImageModel, StubImageModel } from '@mapart/models';
 import { getStorage } from '@mapart/storage';
 import { IDLE_POLL_MS, type StylizeConsumer, startStylizeConsumer } from './consumer';
@@ -22,7 +23,7 @@ import { IDLE_POLL_MS, type StylizeConsumer, startStylizeConsumer } from './cons
 /** Deployed oxen.ai image-edit model that backs the stylize phase. */
 const OXEN_MODEL_ID = 'trindadetiago-linguistic-amaranth-clam';
 
-const WORKER_NAME = `stylize-worker-${process.pid}`;
+const log = createLogger('worker-stylize', { pid: process.pid });
 
 /**
  * Public base URL for MinIO objects, written by the `ngrok` process to
@@ -41,7 +42,7 @@ let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`\n[${WORKER_NAME}] shutting down (${signal})`);
+  log.info('shutting down', { signal });
   if (consumer) {
     consumer.stop();
     await consumer.done.catch(() => {});
@@ -75,7 +76,7 @@ function buildModel(): ModelClient {
         const url = env.railwayEnvironmentName
           ? await storage.presignGet(key)
           : `${ngrokBase()}/${bucket}/${key}`;
-        console.log(`[${WORKER_NAME}] composite uploaded → ${url}`);
+        log.debug('composite uploaded for model input', { key, url });
         return url;
       },
     });
@@ -97,10 +98,8 @@ function buildModel(): ModelClient {
 
 function main(): void {
   const model = buildModel();
-  consumer = startStylizeConsumer(model, (m) => console.log(`[${WORKER_NAME}] ${m}`));
-  console.log(
-    `[${WORKER_NAME}] queue consumer started (idle poll ${IDLE_POLL_MS / 1000}s, model=${model.name})`,
-  );
+  consumer = startStylizeConsumer(model, log.child({ component: 'consumer' }));
+  log.info('queue consumer started', { idlePollMs: IDLE_POLL_MS, model: model.name });
 }
 
 main();

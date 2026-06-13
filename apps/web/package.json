@@ -14,6 +14,7 @@
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
     "@mapart/geo": "workspace:*",
+    "@mapart/logger": "workspace:*",
     "@mapart/models": "workspace:*",
     "@mapart/renderer": "workspace:*",
     "@mapart/storage": "workspace:*",

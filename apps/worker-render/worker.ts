@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import '@mapart/env';
 import { closeDb } from '@mapart/db';
 import { env } from '@mapart/env';
+import { createLogger } from '@mapart/logger';
 import type { Browser } from 'pptr';
 import { type ViteDevServer, createServer as createViteServer } from 'vite';
 import { VIEWPORT_PAD, launchBrowser } from './chrome';
@@ -35,6 +36,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const RENDER_PAGE_ROOT = resolve(__dirname, 'render-page');
 const WORKER_NAME = `render-worker-${process.pid}`;
 const PORT = Number.parseInt(env.renderWorkerPort, 10);
+const log = createLogger('worker-render', { pid: process.pid });
 
 // Browser is launched lazily on the first render and reused. The disconnect
 // handler nulls it out so the next request relaunches.
@@ -44,11 +46,11 @@ let browserPromise: Promise<Browser> | null = null;
 async function getBrowser(): Promise<Browser> {
   if (browser?.connected) return browser;
   if (browserPromise) return browserPromise;
-  browserPromise = launchBrowser().then((b) => {
+  browserPromise = launchBrowser(log.child({ component: 'chrome' })).then((b) => {
     browser = b;
     browserPromise = null;
     b.on('disconnected', () => {
-      console.warn(`[${WORKER_NAME}] browser disconnected — will relaunch on next render`);
+      log.warn('browser disconnected — will relaunch on next render');
       browser = null;
       browserPromise = null;
     });
@@ -69,9 +71,9 @@ async function renderTile(req: RenderTileRequest): Promise<Buffer> {
 
   const b = await getBrowser();
   const page = await b.newPage();
-  page.on('pageerror', (err) => console.error(`[${WORKER_NAME}] page error:`, String(err)));
+  page.on('pageerror', (err) => log.error('render-page error', { error: String(err) }));
   page.on('console', (msg) => {
-    if (msg.type() === 'error') console.error(`[${WORKER_NAME}] console:`, msg.text());
+    if (msg.type() === 'error') log.warn('render-page console error', { text: msg.text() });
   });
 
   try {
@@ -153,12 +155,15 @@ async function handleRender(req: IncomingMessage, res: ServerResponse): Promise<
       'x-render-duration-ms': String(Date.now() - startedAt),
     });
     res.end(png);
-    console.log(
-      `[${WORKER_NAME}] rendered ${tileReq.lat.toFixed(4)},${tileReq.lng.toFixed(4)} z=${tileReq.zoom} in ${Date.now() - startedAt}ms`,
-    );
+    log.info('render request served', {
+      lat: Number(tileReq.lat.toFixed(4)),
+      lng: Number(tileReq.lng.toFixed(4)),
+      zoom: tileReq.zoom,
+      ms: Date.now() - startedAt,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error(`[${WORKER_NAME}] render failed:`, msg);
+    log.error('render request failed', { err: e });
     sendJson(res, 400, { ok: false, error: msg });
   }
 }
@@ -170,7 +175,7 @@ let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`\n[${WORKER_NAME}] shutting down (${signal})`);
+  log.info('shutting down', { signal });
   if (consumer) {
     consumer.stop();
     await consumer.done.catch(() => {});
@@ -211,18 +216,20 @@ async function main(): Promise<void> {
   });
 
   server.listen(PORT, () => {
-    console.log(`[${WORKER_NAME}] listening on http://localhost:${PORT}`);
-    console.log(`[${WORKER_NAME}] render-page served at      GET  /`);
-    console.log(`[${WORKER_NAME}] POST /render is DEV ONLY — prod renders come from the queue`);
-    console.log(`[${WORKER_NAME}] health at                   GET  /health`);
+    log.info('listening', {
+      url: `http://localhost:${PORT}`,
+      renderPage: 'GET /',
+      health: 'GET /health',
+    });
+    log.info('POST /render is dev only — prod renders come from the queue');
     // Start consuming the render queue. Needs the server up first — renderTile
     // navigates Puppeteer to this same port to execute Scene.
-    consumer = startRenderConsumer(renderTile, (m) => console.log(`[${WORKER_NAME}] ${m}`));
-    console.log(`[${WORKER_NAME}] queue consumer started      (idle poll ${IDLE_POLL_MS / 1000}s)`);
+    consumer = startRenderConsumer(renderTile, log.child({ component: 'consumer' }));
+    log.info('queue consumer started', { idlePollMs: IDLE_POLL_MS });
   });
 }
 
 main().catch((err) => {
-  console.error(`[${WORKER_NAME}] FATAL:`, err);
+  log.error('fatal — exiting', { err });
   process.exit(1);
 });

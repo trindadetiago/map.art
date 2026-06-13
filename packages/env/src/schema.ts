@@ -73,6 +73,29 @@ export const SCHEMA = {
       'Port apps/worker-render listens on. Serves the render-page on GET / (via embedded Vite in dev) and the render API on POST /render. Puppeteer also navigates to this same port internally.',
     default: '9999',
   },
+  logLevel: {
+    envKey: 'LOG_LEVEL',
+    description:
+      'Minimum log level emitted by @mapart/logger: debug, info, warn, or error. Defaults to info on Railway and debug locally.',
+    validate: (v) => {
+      const allowed = ['debug', 'info', 'warn', 'error'];
+      if (!allowed.includes(v.toLowerCase())) {
+        throw new Error(`LOG_LEVEL must be one of ${allowed.join(', ')}`);
+      }
+      return v.toLowerCase();
+    },
+  },
+  logFormat: {
+    envKey: 'LOG_FORMAT',
+    description:
+      'Log line format from @mapart/logger: "pretty" (human-readable, coloured on a TTY) or "json" (one JSON object per line). Defaults to json on Railway and pretty locally.',
+    validate: (v) => {
+      if (v.toLowerCase() !== 'pretty' && v.toLowerCase() !== 'json') {
+        throw new Error('LOG_FORMAT must be "pretty" or "json"');
+      }
+      return v.toLowerCase();
+    },
+  },
 } as const satisfies Record<string, EnvFieldDef>;
 
 export type EnvKey = keyof typeof SCHEMA;

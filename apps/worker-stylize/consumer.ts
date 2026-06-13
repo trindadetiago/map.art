@@ -12,6 +12,7 @@
  */
 import { claimNextStylize, completeStylize, failOrRetry, tilesByIds } from '@mapart/db/repos';
 import { env } from '@mapart/env';
+import type { Logger } from '@mapart/logger';
 import type { ModelClient } from '@mapart/models';
 import { getStorage } from '@mapart/storage';
 import {
@@ -102,10 +103,7 @@ async function loadNeighborContext(tile: ClaimedTile): Promise<NeighborContext> 
   return { buffers, stylized, rendered };
 }
 
-export function startStylizeConsumer(
-  model: ModelClient,
-  log: (msg: string) => void,
-): StylizeConsumer {
+export function startStylizeConsumer(model: ModelClient, log: Logger): StylizeConsumer {
   let stopping = false;
   let wake: (() => void) | null = null;
 
@@ -137,14 +135,17 @@ export function startStylizeConsumer(
       try {
         tile = await claimNextStylize();
       } catch (e) {
-        log(`claim query failed: ${errMsg(e)} — retrying in ${IDLE_POLL_MS / 1000}s`);
+        log.error('claim query failed — backing off', {
+          error: errMsg(e),
+          retryInMs: IDLE_POLL_MS,
+        });
         await idle();
         continue;
       }
 
       if (!tile) {
         if (!idleLogged) {
-          log(`no stylize-ready tiles — polling every ${IDLE_POLL_MS / 1000}s`);
+          log.info('no stylize-ready tiles — idle', { idlePollMs: IDLE_POLL_MS });
           idleLogged = true;
         }
         await idle(); // empty queue — back off
@@ -153,20 +154,28 @@ export function startStylizeConsumer(
       idleLogged = false;
 
       const startedAt = Date.now();
-      const at = `${tile.x},${tile.y}`;
       try {
         if (!tile.renderedImgPath) throw new Error('claimed tile has no renderedImgPath');
-        log(`tile ${at}: claimed (attempt ${tile.retryAttempt}), loading render + neighbours`);
+        log.info('tile claimed', { x: tile.x, y: tile.y, attempt: tile.retryAttempt });
 
         const render = await getStorage().get(tile.renderedImgPath);
         const ctx = await loadNeighborContext(tile);
-        log(
-          `tile ${at}: ${ctx.stylized + ctx.rendered}/${tile.neighbors.length} neighbours as context ` +
-            `(${ctx.stylized} stylized, ${ctx.rendered} render)`,
-        );
+        log.debug('neighbour context loaded', {
+          x: tile.x,
+          y: tile.y,
+          used: ctx.stylized + ctx.rendered,
+          total: tile.neighbors.length,
+          stylized: ctx.stylized,
+          rendered: ctx.rendered,
+        });
 
         const { composite, bbox } = await buildComposite(render, ctx.buffers);
-        log(`tile ${at}: composite built (bbox ${bbox.join(',')}), calling ${model.name}`);
+        log.debug('composite built — calling model', {
+          x: tile.x,
+          y: tile.y,
+          bbox: bbox.join(','),
+          model: model.name,
+        });
 
         const genStart = Date.now();
         const { image } = await model.generate({ input: composite, prompt: STYLIZE_PROMPT });
@@ -186,17 +195,21 @@ export function startStylizeConsumer(
         const key = stylizeKey(tile.projectId, tile.x, tile.y);
         await storage.put(key, stylized);
         await completeStylize(tile.id, key);
-        log(
-          `tile ${at} → ${key} (${Date.now() - startedAt}ms total, ${Date.now() - genStart}ms model)`,
-        );
+        log.info('tile stylized', {
+          x: tile.x,
+          y: tile.y,
+          key,
+          ms: Date.now() - startedAt,
+          modelMs: Date.now() - genStart,
+        });
       } catch (e) {
         let status = 'unknown';
         try {
           status = await failOrRetry(tile.id);
         } catch (err) {
-          log(`failOrRetry failed for tile ${tile.id}: ${errMsg(err)}`);
+          log.error('failOrRetry failed', { tileId: tile.id, error: errMsg(err) });
         }
-        log(`tile ${at} stylize failed: ${errMsg(e)} → ${status}`);
+        log.error('tile stylize failed', { x: tile.x, y: tile.y, status, error: errMsg(e) });
       }
       // claimed a tile this round — loop straight back to drain the backlog
     }

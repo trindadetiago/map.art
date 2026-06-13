@@ -3,6 +3,7 @@
 import { repos } from '@mapart/db';
 import { gridCells, tileCenterLatLng } from '@mapart/renderer/params';
 import { revalidatePath } from 'next/cache';
+import { log } from '../../lib/logger';
 
 /**
  * Create a project and its render-tile grid from a chosen origin + size.
@@ -41,6 +42,7 @@ export async function createProjectWithGrid(input: {
     revalidatePath('/projects');
     return { ok: true, id: project.id };
   } catch (e) {
+    log.error('createProjectWithGrid failed', { name: input.name, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -56,6 +58,7 @@ export async function restylizeTile(input: {
     if (n === 0) return { ok: false, error: 'tile is not in the stylize phase' };
     return { ok: true };
   } catch (e) {
+    log.error('restylizeTile failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -71,6 +74,7 @@ export async function retryTile(input: {
     if (n === 0) return { ok: false, error: 'tile is not in an error state' };
     return { ok: true };
   } catch (e) {
+    log.error('retryTile failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -85,6 +89,7 @@ export async function retryProjectErrors(input: {
     const count = await repos.requeueErroredByProject(input.projectId, phase);
     return { ok: true, count };
   } catch (e) {
+    log.error('retryProjectErrors failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -97,6 +102,7 @@ export async function restyleAll(input: {
     const count = await repos.requeueAllStylize(input.projectId);
     return { ok: true, count };
   } catch (e) {
+    log.error('restyleAll failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -154,6 +160,7 @@ export async function expandProject(input: {
     revalidatePath(`/projects/${input.projectId}`);
     return { ok: true, count: inserted.length };
   } catch (e) {
+    log.error('expandProject failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -166,6 +173,7 @@ export async function cancelAll(input: {
     const count = await repos.cancelAllStylize(input.projectId);
     return { ok: true, count };
   } catch (e) {
+    log.error('cancelAll failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -178,6 +186,7 @@ export async function resumeAll(input: {
     const count = await repos.resumeAllStylize(input.projectId);
     return { ok: true, count };
   } catch (e) {
+    log.error('resumeAll failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -193,6 +202,7 @@ export async function requeueStuckTile(input: {
     if (n === 0) return { ok: false, error: 'tile is not in progress' };
     return { ok: true };
   } catch (e) {
+    log.error('requeueStuckTile failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -208,6 +218,7 @@ export async function resumeTile(input: {
     if (n === 0) return { ok: false, error: 'tile is not cancelled' };
     return { ok: true };
   } catch (e) {
+    log.error('resumeTile failed', { ...input, err: e });
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }

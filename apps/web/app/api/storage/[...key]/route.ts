@@ -1,5 +1,6 @@
 import { getStorage } from '@mapart/storage';
 import { type NextRequest, NextResponse } from 'next/server';
+import { log } from '../../../../lib/logger';
 
 const CONTENT_TYPES: Record<string, string> = {
   png: 'image/png',
@@ -82,6 +83,7 @@ export async function GET(
     if (err.code === 'ENOENT') {
       return NextResponse.json({ error: 'not found', key }, { status: 404 });
     }
+    log.error('storage fetch failed', { key, err });
     return NextResponse.json({ error: err.message ?? 'unknown' }, { status: 500 });
   }
 }

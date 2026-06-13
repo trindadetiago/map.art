@@ -68,6 +68,9 @@ importers:
       '@mapart/geo':
         specifier: workspace:*
         version: link:../../packages/geo
+      '@mapart/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@mapart/models':
         specifier: workspace:*
         version: link:../../packages/models
@@ -150,6 +153,9 @@ importers:
       '@mapart/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@mapart/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@mapart/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
@@ -199,6 +205,9 @@ importers:
       '@mapart/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@mapart/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@mapart/models':
         specifier: workspace:*
         version: link:../../packages/models
@@ -250,6 +259,12 @@ importers:
   packages/env: {}
 
   packages/geo: {}
+
+  packages/logger:
+    dependencies:
+      '@mapart/env':
+        specifier: workspace:*
+        version: link:../env
 
   packages/models:
     dependencies:

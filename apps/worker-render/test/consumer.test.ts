@@ -7,6 +7,7 @@ import {
   tilesByProject,
 } from '@mapart/db/repos';
 import { projects, tiles } from '@mapart/db/schema';
+import { silentLogger } from '@mapart/logger';
 import { RENDER_DEFAULTS } from '@mapart/renderer';
 import { type Storage, type StorageEntry, __setStorageForTests } from '@mapart/storage';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -110,13 +111,10 @@ describe('render-queue consumer (end-to-end)', () => {
 
     const seen: RenderRequest[] = [];
     const png = Buffer.from('\x89PNG\r\n fake render bytes');
-    const consumer = startRenderConsumer(
-      async (req) => {
-        seen.push(req);
-        return png;
-      },
-      () => {},
-    );
+    const consumer = startRenderConsumer(async (req) => {
+      seen.push(req);
+      return png;
+    }, silentLogger);
 
     // the loop claims + renders on its own — wait for the queue to drain
     await waitFor(async () => (await tilesByProject(projectId)).every((t) => t.status === 'done'));
@@ -151,12 +149,9 @@ describe('render-queue consumer (end-to-end)', () => {
 
     const projectId = await project(grid(1, 1));
 
-    const consumer = startRenderConsumer(
-      async () => {
-        throw new Error('boom');
-      },
-      () => {},
-    );
+    const consumer = startRenderConsumer(async () => {
+      throw new Error('boom');
+    }, silentLogger);
 
     await waitFor(async () => {
       const [tile] = await tilesByProject(projectId);
@@ -182,13 +177,10 @@ describe('render-queue consumer (end-to-end)', () => {
 
     const seen: RenderRequest[] = [];
     const png = Buffer.from('\x89PNG\r\n shared render bytes');
-    const consumer = startRenderConsumer(
-      async (req) => {
-        seen.push(req);
-        return png;
-      },
-      () => {},
-    );
+    const consumer = startRenderConsumer(async (req) => {
+      seen.push(req);
+      return png;
+    }, silentLogger);
 
     await waitFor(async () =>
       [...(await tilesByProject(a)), ...(await tilesByProject(b))].every(
