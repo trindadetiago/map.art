@@ -62,6 +62,11 @@ export const SCHEMA = {
     description:
       'Set to "1" to make worker-stylize persist per-tile pipeline artifacts (model composite + raw output) to storage for inspection. Off by default — they double the upload volume per tile.',
   },
+  appPassword: {
+    envKey: 'APP_PASSWORD',
+    description:
+      'Shared password gating the whole apps/web site. When set, visitors must enter it at /login before any page loads; leave empty to disable the gate (e.g. local dev).',
+  },
   railwayEnvironmentName: {
     envKey: 'RAILWAY_ENVIRONMENT_NAME',
     description:
