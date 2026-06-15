@@ -1,0 +1,101 @@
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0c0b0a;
+  color: #eae6dc;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* The viewer fills the viewport. OpenSeadragon forces `position: relative`
+   inline on its container, which defeats `inset: 0` sizing — so size it with
+   explicit viewport units that hold regardless of the positioning scheme. */
+.viewer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #0c0b0a;
+}
+
+/* Pixel-art must stay crisp at every zoom — kill the browser's own smoothing on
+   the OpenSeadragon canvas in addition to OSD's drawer settings. */
+.viewer canvas {
+  image-rendering: pixelated;
+}
+
+.overlay {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 10;
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(12, 11, 10, 0.72);
+  border: 1px solid rgba(234, 230, 220, 0.12);
+  border-radius: 10px;
+  padding: 10px 13px;
+  backdrop-filter: blur(6px);
+  max-width: 340px;
+}
+
+.overlay h1 {
+  font-size: 14px;
+  margin: 0 0 4px;
+  font-weight: 650;
+}
+
+.overlay .muted {
+  color: #9a9385;
+}
+
+.center {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.panel {
+  max-width: 520px;
+  width: 100%;
+  background: #16140f;
+  border: 1px solid rgba(234, 230, 220, 0.12);
+  border-radius: 14px;
+  padding: 22px 24px;
+}
+
+.panel h1 {
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+
+.panel code {
+  background: #221f17;
+  border: 1px solid rgba(234, 230, 220, 0.1);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.panel ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.panel a {
+  color: #6ea8fe;
+  text-decoration: none;
+}
+
+.panel a:hover {
+  text-decoration: underline;
+}

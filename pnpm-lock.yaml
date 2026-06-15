@@ -38,6 +38,9 @@ importers:
       '@mapart/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@mapart/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@mapart/geo':
         specifier: workspace:*
         version: link:../../packages/geo
@@ -53,6 +56,46 @@ importers:
       commander:
         specifier: ^12.1.0
         version: 12.1.0
+
+  apps/visualizer:
+    dependencies:
+      '@mapart/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@mapart/env':
+        specifier: workspace:*
+        version: link:../../packages/env
+      '@mapart/export':
+        specifier: workspace:*
+        version: link:../../packages/export
+      '@mapart/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@mapart/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      next:
+        specifier: ^15.0.3
+        version: 15.5.15(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      openseadragon:
+        specifier: ^4.1.1
+        version: 4.1.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.5(react@19.2.5)
+    devDependencies:
+      '@types/openseadragon':
+        specifier: ^3.0.10
+        version: 3.0.10
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
 
   apps/web:
     dependencies:
@@ -257,6 +300,21 @@ importers:
         version: 4.1.7(@types/node@22.19.17)(vite@6.4.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/env: {}
+
+  packages/export:
+    dependencies:
+      '@mapart/db':
+        specifier: workspace:*
+        version: link:../db
+      '@mapart/logger':
+        specifier: workspace:*
+        version: link:../logger
+      '@mapart/storage':
+        specifier: workspace:*
+        version: link:../storage
+      sharp:
+        specifier: ^0.33.5
+        version: 0.33.5
 
   packages/geo: {}
 
@@ -2097,6 +2155,9 @@ packages:
   '@types/node@22.19.17':
     resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
 
+  '@types/openseadragon@3.0.10':
+    resolution: {integrity: sha512-nNVlu9PUNDVTudkSqVWhHtghCsyzQrJObEtN5zsVN2ghh5HYAC6U6xAcT9NQRfVfZVZkWXEYp2Hw7hQgwRxqgg==}
+
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
@@ -2857,6 +2918,9 @@ packages:
   onetime@7.0.0:
     resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
     engines: {node: '>=18'}
+
+  openseadragon@4.1.1:
+    resolution: {integrity: sha512-owU9gsasAcobLN+LM8lN58Xc2VDSDotY9mkrwS/NB6g9KX/PcusV4RZvhHng2RF/Q0pMziwldf62glwXoGnuzg==}
 
   pac-proxy-agent@7.2.0:
     resolution: {integrity: sha512-TEB8ESquiLMc0lV8vcd5Ql/JAKAoyzHFXaStwjkzpOpC5Yv+pIzLfHvjTSdf3vpa2bMiUQrg9i6276yn8666aA==}
@@ -4855,6 +4919,8 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/openseadragon@3.0.10': {}
+
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
     dependencies:
       '@types/react': 19.2.14
@@ -5558,6 +5624,8 @@ snapshots:
   onetime@7.0.0:
     dependencies:
       mimic-function: 5.0.1
+
+  openseadragon@4.1.1: {}
 
   pac-proxy-agent@7.2.0:
     dependencies:

@@ -45,6 +45,7 @@ const stylizeCmd = 'pnpm --filter @mapart/worker-stylize dev';
 
 const procs = {
   web: run('web', 'pnpm --filter @mapart/web dev'),
+  visualizer: run('visualizer', 'pnpm --filter @mapart/visualizer dev'),
   'worker-render': run('worker-render', 'pnpm --filter @mapart/worker-render dev'),
 };
 if (stylize === 1) {
