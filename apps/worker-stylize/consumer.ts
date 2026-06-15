@@ -14,9 +14,11 @@ import { claimNextStylize, completeStylize, failOrRetry, tilesByIds } from '@map
 import type { ModelClient } from '@mapart/models';
 import { getStorage } from '@mapart/storage';
 import {
+  FULL_WATER_THRESHOLD,
   STYLIZE_PROMPT,
   type StylizedNeighbors,
   buildComposite,
+  canonicalWaterTile,
   detectWaterMask,
   extractStylized,
   neutralizeWater,
@@ -169,6 +171,21 @@ export function startStylizeConsumer(
 
         const water = await detectWaterMask(render);
         log(`tile ${at}: water coverage ${(water.coverage * 100).toFixed(1)}%`);
+        if (water.coverage >= FULL_WATER_THRESHOLD) {
+          const storage = getStorage();
+          const filled = await canonicalWaterTile();
+          const key = stylizeKey(tile.projectId, tile.x, tile.y);
+          await Promise.all([
+            storage.put(
+              stylizeStepKey(tile.projectId, tile.x, tile.y, 'water-mask'),
+              await waterMaskToPng(water),
+            ),
+            storage.put(key, filled),
+          ]);
+          await completeStylize(tile.id, key);
+          log(`tile ${at} → ${key} (canonical water, model skipped, ${Date.now() - startedAt}ms)`);
+          continue;
+        }
         const neutralized = await neutralizeWater(render, water);
         const { composite, bbox } = await buildComposite(neutralized, ctx.buffers);
         log(`tile ${at}: composite built (bbox ${bbox.join(',')}), calling ${model.name}`);

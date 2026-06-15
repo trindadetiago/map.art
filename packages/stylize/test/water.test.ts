@@ -1,6 +1,13 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { detectWaterMask, neutralizeWater, waterMaskToPng } from '../src/water';
+import { TILE_SIZE } from '../src/constants';
+import {
+  FULL_WATER_THRESHOLD,
+  canonicalWaterTile,
+  detectWaterMask,
+  neutralizeWater,
+  waterMaskToPng,
+} from '../src/water';
 
 const WATER = { r: 20, g: 40, b: 120 }; // blue/teal water
 const LAND = { r: 40, g: 120, b: 30 }; // green vegetation
@@ -86,5 +93,20 @@ describe('waterMaskToPng', () => {
     expect(meta.width).toBe(64);
     expect(meta.height).toBe(64);
     expect(meta.channels).toBe(1);
+  });
+});
+
+describe('canonicalWaterTile', () => {
+  it('is a TILE_SIZE flat fill of the sampled ocean blue', async () => {
+    const tile = await canonicalWaterTile();
+    const meta = await sharp(tile).metadata();
+    expect(meta.width).toBe(TILE_SIZE);
+    expect(meta.height).toBe(TILE_SIZE);
+    expect(await pixel(tile, 512, 512)).toEqual([57, 96, 125]);
+  });
+
+  it('FULL_WATER_THRESHOLD is a high water fraction', () => {
+    expect(FULL_WATER_THRESHOLD).toBeGreaterThan(0.8);
+    expect(FULL_WATER_THRESHOLD).toBeLessThanOrEqual(1);
   });
 });

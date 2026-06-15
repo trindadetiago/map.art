@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { TILE_SIZE } from './constants';
 
 /**
  * Minimum amount the blue channel must exceed the red channel for a pixel to
@@ -100,6 +101,21 @@ export async function neutralizeWater(
 export function waterMaskToPng(water: WaterMask): Promise<Buffer> {
   return sharp(water.mask, { raw: { width: water.width, height: water.height, channels: 1 } })
     .toColourspace('b-w')
+    .png()
+    .toBuffer();
+}
+
+/** Coverage at/above which a tile is treated as open water and the model is skipped. */
+export const FULL_WATER_THRESHOLD = 0.92;
+
+/** The model's open-water colour, sampled from its own output. Skipped water tiles use it so they match model-rendered coastlines. */
+export const WATER_FILL_RGB = { r: 57, g: 96, b: 125 } as const;
+
+/** A flat TILE_SIZE ocean tile, used in place of the model for full-water tiles. */
+export function canonicalWaterTile(): Promise<Buffer> {
+  return sharp({
+    create: { width: TILE_SIZE, height: TILE_SIZE, channels: 3, background: WATER_FILL_RGB },
+  })
     .png()
     .toBuffer();
 }
