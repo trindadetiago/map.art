@@ -13,6 +13,10 @@ const log = createLogger('export');
 /** Pyramid tile edge. 512px is the OpenSeadragon/DZI default. */
 const PYRAMID_TILE_SIZE = 512;
 
+/** Max inflight storage requests. Caps the S3 connection pool so remote storage
+ * doesn't start cancelling requests under a thundering herd of GETs/PUTs. */
+const STORAGE_CONCURRENCY = 16;
+
 export interface ExportOptions {
   /** Which per-tile image to stitch. Defaults to the final stylized output. */
   source?: VizSource;
@@ -61,14 +65,14 @@ export async function exportProjectDzi(
   const gridHeight = Math.max(...present.map((t) => t.y)) - minY + 1;
 
   // Fetch every tile image. All tiles share the fixed render/output size, so
-  // probing the first one fixes the grid pitch for the whole project.
-  const fetched = await Promise.all(
-    present.map(async (t) => {
-      const key = tileImagePath(t, source);
-      if (!key) throw new Error('unreachable: filtered for present image');
-      return { x: t.x, y: t.y, buf: await storage.get(key) };
-    }),
-  );
+  // probing the first one fixes the grid pitch for the whole project. Bounded
+  // concurrency: firing every GET at once saturates the S3 connection pool and
+  // remote storage starts cancelling requests (408), so cap inflight requests.
+  const fetched = await mapLimit(present, STORAGE_CONCURRENCY, async (t) => {
+    const key = tileImagePath(t, source);
+    if (!key) throw new Error('unreachable: filtered for present image');
+    return { x: t.x, y: t.y, buf: await storage.get(key) };
+  });
 
   const first = fetched[0];
   if (!first) throw new Error('unreachable: present is non-empty');
@@ -118,12 +122,16 @@ export async function exportProjectDzi(
       .toFile(dziBase);
 
     const prefix = vizPrefix(projectId);
-    for await (const filePath of walk(workDir)) {
+    const files: string[] = [];
+    for await (const filePath of walk(workDir)) files.push(filePath);
+    // Same bounded concurrency as the fetch — a pyramid is hundreds-to-thousands
+    // of small objects, so a sequential upload to remote storage crawls.
+    await mapLimit(files, STORAGE_CONCURRENCY, async (filePath) => {
       const rel = relative(workDir, filePath).split('\\').join('/');
       // tiles.dzi → viz/{pid}/tiles.dzi ; tiles_files/** → viz/{pid}/tiles_files/**
       await storage.put(`${prefix}/${rel}`, await readFile(filePath));
-      uploaded++;
-    }
+    });
+    uploaded = files.length;
 
     const metadata: VizMetadata = {
       projectId,
@@ -155,6 +163,24 @@ export async function exportProjectDzi(
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
+}
+
+/** Map over `items` with at most `limit` calls inflight, preserving order. */
+async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (cursor < items.length) {
+      const i = cursor++;
+      results[i] = await fn(items[i] as T);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 /** Yield every file path under `dir`, recursively. */
