@@ -14,7 +14,12 @@ export function stylizeKey(projectId: string, x: number, y: number): string {
 }
 
 /** The intermediate pipeline artifacts saved per tile, in pipeline order. */
-export const STYLIZE_STEPS = ['composite', 'raw-output'] as const;
+export const STYLIZE_STEPS = [
+  'water-mask',
+  'neutralized-input',
+  'composite',
+  'raw-output',
+] as const;
 export type StylizeStep = (typeof STYLIZE_STEPS)[number];
 
 /** Storage key for one intermediate stylize artifact of a tile. */
