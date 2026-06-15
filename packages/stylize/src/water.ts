@@ -33,12 +33,14 @@ export async function detectWaterMask(image: Buffer): Promise<WaterMask> {
     .raw()
     .toBuffer({ resolveWithObject: true });
   const { width, height, channels } = info;
+  if (channels !== 3) throw new Error(`detectWaterMask expects 3 channels, got ${channels}`);
   const mask = Buffer.alloc(width * height);
   let waterPixels = 0;
   for (let i = 0; i < width * height; i++) {
-    const r = data[i * channels] ?? 0;
-    const g = data[i * channels + 1] ?? 0;
-    const b = data[i * channels + 2] ?? 0;
+    const base = i * channels;
+    const r = data[base] ?? 0;
+    const g = data[base + 1] ?? 0;
+    const b = data[base + 2] ?? 0;
     const isWater = b - r >= MIN_BLUE_DOMINANCE && b >= g * MIN_BLUE_GREEN_RATIO;
     if (isWater) {
       mask[i] = 255;
@@ -97,6 +99,7 @@ export async function neutralizeWater(
 /** Render a water mask as an inspectable single-channel PNG. */
 export function waterMaskToPng(water: WaterMask): Promise<Buffer> {
   return sharp(water.mask, { raw: { width: water.width, height: water.height, channels: 1 } })
+    .toColourspace('b-w')
     .png()
     .toBuffer();
 }

@@ -68,6 +68,7 @@ describe('neutralizeWater', () => {
 
     const out = await neutralizeWater(img);
 
+    // x=63 is well clear of the x=32 boundary's ~3*MASK_FEATHER_SIGMA feather spread
     // Land half, far from the boundary → identical to the original green.
     expect(await pixel(out, 63, 32)).toEqual([40, 120, 30]);
     // Speck centre in the water half → bright blue pulled down by the blur.
@@ -84,5 +85,6 @@ describe('waterMaskToPng', () => {
     const meta = await sharp(png).metadata();
     expect(meta.width).toBe(64);
     expect(meta.height).toBe(64);
+    expect(meta.channels).toBe(1);
   });
 });
