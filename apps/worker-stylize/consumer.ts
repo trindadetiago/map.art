@@ -17,9 +17,12 @@ import {
   STYLIZE_PROMPT,
   type StylizedNeighbors,
   buildComposite,
+  detectWaterMask,
   extractStylized,
+  neutralizeWater,
   stylizeKey,
   stylizeStepKey,
+  waterMaskToPng,
 } from '@mapart/stylize';
 
 export { stylizeKey } from '@mapart/stylize';
@@ -164,7 +167,10 @@ export function startStylizeConsumer(
             `(${ctx.stylized} stylized, ${ctx.rendered} render)`,
         );
 
-        const { composite, bbox } = await buildComposite(render, ctx.buffers);
+        const water = await detectWaterMask(render);
+        log(`tile ${at}: water coverage ${(water.coverage * 100).toFixed(1)}%`);
+        const neutralized = await neutralizeWater(render, water);
+        const { composite, bbox } = await buildComposite(neutralized, ctx.buffers);
         log(`tile ${at}: composite built (bbox ${bbox.join(',')}), calling ${model.name}`);
 
         const genStart = Date.now();
@@ -175,6 +181,14 @@ export function startStylizeConsumer(
         // model output before cropping) so a tile's whole history is inspectable.
         const storage = getStorage();
         await Promise.all([
+          storage.put(
+            stylizeStepKey(tile.projectId, tile.x, tile.y, 'water-mask'),
+            await waterMaskToPng(water),
+          ),
+          storage.put(
+            stylizeStepKey(tile.projectId, tile.x, tile.y, 'neutralized-input'),
+            neutralized,
+          ),
           storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'composite'), composite),
           storage.put(stylizeStepKey(tile.projectId, tile.x, tile.y, 'raw-output'), image),
         ]);
