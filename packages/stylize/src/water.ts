@@ -68,15 +68,23 @@ export async function neutralizeWater(
   const raw = { width, height, channels: 1 as const };
 
   // Soften the mask edges → used as the alpha of the blurred layer.
-  const feathered = await sharp(mask, { raw }).blur(MASK_FEATHER_SIGMA).raw().toBuffer();
+  // grayscale() keeps the output at 1 channel after blur; without it sharp expands
+  // single-channel raw input to 3 channels, which breaks joinChannel.
+  const feathered = await sharp(mask, { raw })
+    .blur(MASK_FEATHER_SIGMA)
+    .grayscale()
+    .raw()
+    .toBuffer();
 
   // A fully-blurred copy of the render, masked to water-only via the feathered alpha.
-  const blurredWater = await sharp(image)
+  // Two-step: blur first, then attach the alpha channel. Chaining joinChannel onto a
+  // blur pipeline causes sharp to apply the blur to the RGBA image, spreading the alpha
+  // into land pixels and corrupting them.
+  const blurredRgb = await sharp(image)
     .removeAlpha()
     .blur(opts.blurSigma ?? WATER_BLUR_SIGMA)
-    .joinChannel(feathered, { raw })
-    .png()
     .toBuffer();
+  const blurredWater = await sharp(blurredRgb).joinChannel(feathered, { raw }).png().toBuffer();
 
   // Lay the masked blur over the original: water gets blurred, land shows through.
   return sharp(image)

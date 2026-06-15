@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { detectWaterMask } from '../src/water';
+import { detectWaterMask, neutralizeWater, waterMaskToPng } from '../src/water';
 
 const WATER = { r: 20, g: 40, b: 120 }; // blue/teal water
 const LAND = { r: 40, g: 120, b: 30 }; // green vegetation
@@ -37,5 +37,52 @@ describe('detectWaterMask', () => {
       .toBuffer();
     const { coverage } = await detectWaterMask(roof);
     expect(coverage).toBe(0);
+  });
+});
+
+/** Read one pixel's [r,g,b] from a PNG buffer. */
+async function pixel(buf: Buffer, x: number, y: number): Promise<[number, number, number]> {
+  const { data } = await sharp(buf)
+    .removeAlpha()
+    .extract({ left: x, top: y, width: 1, height: 1 })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return [data[0] ?? -1, data[1] ?? -1, data[2] ?? -1];
+}
+
+describe('neutralizeWater', () => {
+  it('blurs a bright speck in water but leaves the land half untouched', async () => {
+    // Left half water, right half land, plus a bright-blue speck inside the water
+    // half. The speck stays classified as water (blue-dominant) so it sits inside
+    // the mask, and the blur should pull its value toward the surrounding water.
+    const base = await halfWaterLand(64, 64);
+    const speck = await sharp({
+      create: { width: 6, height: 6, channels: 3, background: { r: 60, g: 120, b: 220 } },
+    })
+      .png()
+      .toBuffer();
+    const img = await sharp(base)
+      .composite([{ input: speck, left: 13, top: 29 }])
+      .png()
+      .toBuffer();
+
+    const out = await neutralizeWater(img);
+
+    // Land half, far from the boundary → identical to the original green.
+    expect(await pixel(out, 63, 32)).toEqual([40, 120, 30]);
+    // Speck centre in the water half → bright blue pulled down by the blur.
+    const [, , b] = await pixel(out, 16, 32);
+    expect(b).toBeLessThan(220);
+  });
+});
+
+describe('waterMaskToPng', () => {
+  it('renders the mask as a single-channel PNG of the same size', async () => {
+    const img = await halfWaterLand(64, 64);
+    const water = await detectWaterMask(img);
+    const png = await waterMaskToPng(water);
+    const meta = await sharp(png).metadata();
+    expect(meta.width).toBe(64);
+    expect(meta.height).toBe(64);
   });
 });
