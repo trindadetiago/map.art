@@ -428,10 +428,111 @@ If the mask under- or over-covers water on real renders, tune `MIN_BLUE_DOMINANC
 
 ---
 
+---
+
+### Task 6: Skip the model on full-water tiles (canonical water fill)
+
+**Why (real-render evidence):** Tasks 1-4 shipped, but a live run showed the model *still* invents a full world-map of continents on near-100%-water tiles — even when fed a perfectly flat blue input (the `4_4` composite was flat blue; the raw output was continents). Detection and blur both worked; the model hallucinates land unconditionally when there is no real land in the frame to anchor it. Coastline tiles (partial water) render correctly and are left untouched. The fix: when a tile is essentially all water, skip the model entirely and paint a flat canonical ocean tile. The fill color `rgb(57,96,125)` was sampled from the model's own open-water output so skipped tiles match model-rendered coastlines.
+
+**Files:**
+- Modify: `packages/stylize/src/water.ts`
+- Modify: `packages/stylize/src/index.ts`
+- Modify: `apps/worker-stylize/consumer.ts`
+- Test: `packages/stylize/test/water.test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `packages/stylize/test/water.test.ts` (the `pixel` helper and `TILE_SIZE` are already imported/defined earlier in the file — if `TILE_SIZE` is not imported, add `import { TILE_SIZE } from '../src/constants';`):
+
+```ts
+import { canonicalWaterTile, FULL_WATER_THRESHOLD } from '../src/water';
+
+describe('canonicalWaterTile', () => {
+  it('is a TILE_SIZE flat fill of the sampled ocean blue', async () => {
+    const tile = await canonicalWaterTile();
+    const meta = await sharp(tile).metadata();
+    expect(meta.width).toBe(TILE_SIZE);
+    expect(meta.height).toBe(TILE_SIZE);
+    expect(await pixel(tile, 512, 512)).toEqual([57, 96, 125]);
+  });
+
+  it('FULL_WATER_THRESHOLD is a high water fraction', () => {
+    expect(FULL_WATER_THRESHOLD).toBeGreaterThan(0.8);
+    expect(FULL_WATER_THRESHOLD).toBeLessThanOrEqual(1);
+  });
+});
+```
+
+- [ ] **Step 2: Run, verify it fails** — `pnpm --filter @mapart/stylize exec vitest run test/water.test.ts` → FAIL (`canonicalWaterTile` not a function).
+
+- [ ] **Step 3: Implement.** In `packages/stylize/src/water.ts`, add `import { TILE_SIZE } from './constants';` at the top (alongside the sharp import) and append:
+
+```ts
+/** Coverage at/above which a tile is treated as open water and the model is skipped. */
+export const FULL_WATER_THRESHOLD = 0.92;
+
+/** The model's open-water colour, sampled from its own output. Skipped water tiles use it so they match model-rendered coastlines. */
+export const WATER_FILL_RGB = { r: 57, g: 96, b: 125 } as const;
+
+/** A flat TILE_SIZE ocean tile, used in place of the model for full-water tiles. */
+export function canonicalWaterTile(): Promise<Buffer> {
+  return sharp({
+    create: { width: TILE_SIZE, height: TILE_SIZE, channels: 3, background: WATER_FILL_RGB },
+  })
+    .png()
+    .toBuffer();
+}
+```
+
+- [ ] **Step 4: Run, verify it passes** — all water tests green. Typecheck: `pnpm --filter @mapart/stylize exec tsc --noEmit`.
+
+- [ ] **Step 5: Export.** In `packages/stylize/src/index.ts`, add `canonicalWaterTile`, `FULL_WATER_THRESHOLD`, `WATER_FILL_RGB` to the existing `from './water'` export block.
+
+- [ ] **Step 6: Wire the skip into the consumer.** In `apps/worker-stylize/consumer.ts`, add `canonicalWaterTile` and `FULL_WATER_THRESHOLD` to the `@mapart/stylize` import block. Then, immediately after the existing water-coverage log line:
+
+```ts
+        const water = await detectWaterMask(render);
+        log(`tile ${at}: water coverage ${(water.coverage * 100).toFixed(1)}%`);
+```
+
+insert the skip branch (before `const neutralized = ...`):
+
+```ts
+        if (water.coverage >= FULL_WATER_THRESHOLD) {
+          const storage = getStorage();
+          const filled = await canonicalWaterTile();
+          const key = stylizeKey(tile.projectId, tile.x, tile.y);
+          await Promise.all([
+            storage.put(
+              stylizeStepKey(tile.projectId, tile.x, tile.y, 'water-mask'),
+              await waterMaskToPng(water),
+            ),
+            storage.put(key, filled),
+          ]);
+          await completeStylize(tile.id, key);
+          log(`tile ${at} → ${key} (canonical water, model skipped, ${Date.now() - startedAt}ms)`);
+          continue;
+        }
+```
+
+`continue` skips to the next queue iteration (the loop's trailing comment is the only thing after the try/catch — safe to skip). `completeStylize`, `stylizeKey`, `stylizeStepKey`, `getStorage`, `startedAt`, `at`, and `log` are all already in scope at that point.
+
+- [ ] **Step 7: Verify.** Typecheck `apps/worker-stylize` and run its test (DB must be up): `pnpm --filter @mapart/worker-stylize exec tsc --noEmit && pnpm --filter @mapart/worker-stylize test`. Run `pnpm --filter @mapart/stylize test`.
+
+- [ ] **Step 8: Commit.**
+
+```bash
+git add packages/stylize/src/water.ts packages/stylize/src/index.ts packages/stylize/test/water.test.ts apps/worker-stylize/consumer.ts
+git commit -m "feat(stylize): skip model and fill canonical water on full-water tiles"
+```
+
+---
+
 ## Notes / Out of Scope
 
-- **Skipping the model on pure-water tiles** (a cost optimization: when `coverage` is ~1.0, fill canonical water and skip the model call) is deliberately deferred. This plan keeps every tile on the same path for simplicity; the blur already removes the hallucination trigger on full-water tiles.
+- **Input neutralization (blur) is no longer the primary fix** — real renders proved the model hallucinates continents from flat-blue input. It remains on the sub-threshold (coastline) path as cheap, harmless insurance; the load-bearing fix is Task 6's skip-and-fill.
 - **Texture-based detection** (local-variance gate) is deferred — the color rule plus the persisted mask artifact is enough to validate and tune the approach first.
-- **No DB schema or phase change.** The reviewer/4th-step framing from brainstorming collapses into an in-pipeline input transform, which is simpler and avoids a new queue phase.
+- **No DB schema or phase change.** The reviewer/4th-step framing from brainstorming collapses into an in-pipeline transform.
+- **`FULL_WATER_THRESHOLD` and the detector thresholds are tunable** against the logged per-tile coverage and the persisted `water-mask` artifact.
 </content>
 </invoke>
