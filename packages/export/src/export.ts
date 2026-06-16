@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { extname, join, relative } from 'node:path';
 import { repos } from '@mapart/db';
 import { createLogger } from '@mapart/logger';
 import { getStorage } from '@mapart/storage';
@@ -64,70 +64,95 @@ export async function exportProjectDzi(
   const gridWidth = Math.max(...present.map((t) => t.x)) - minX + 1;
   const gridHeight = Math.max(...present.map((t) => t.y)) - minY + 1;
 
-  // Fetch every tile image. All tiles share the fixed render/output size, so
-  // probing the first one fixes the grid pitch for the whole project. Bounded
-  // concurrency: firing every GET at once saturates the S3 connection pool and
-  // remote storage starts cancelling requests (408), so cap inflight requests.
-  const fetched = await mapLimit(present, STORAGE_CONCURRENCY, async (t) => {
-    const key = tileImagePath(t, source);
-    if (!key) throw new Error('unreachable: filtered for present image');
-    return { x: t.x, y: t.y, buf: await storage.get(key) };
-  });
-
-  const first = fetched[0];
-  if (!first) throw new Error('unreachable: present is non-empty');
-  const probe = await sharp(first.buf).metadata();
-  const sourceTileSize = probe.width ?? probe.height ?? 0;
-  if (!sourceTileSize) throw new Error('Could not read source tile dimensions');
-
-  const width = gridWidth * sourceTileSize;
-  const height = gridHeight * sourceTileSize;
-  log.info('stitching project pyramid', {
-    projectId,
-    source,
-    placed: present.length,
-    skipped,
-    gridWidth,
-    gridHeight,
-    width,
-    height,
-  });
-
-  // Every tile shares the fixed render/output size, so they slot onto the grid
-  // verbatim — no per-tile resampling, which would only soften the pixel art.
-  // Grid `y` increases northward, but image rows run top→down, so the row axis
-  // is inverted (highest `y` at the top) to keep the map the right way up.
-  const composites = fetched.map((f) => ({
-    input: f.buf,
-    left: (f.x - minX) * sourceTileSize,
-    top: (gridHeight - 1 - (f.y - minY)) * sourceTileSize,
-  }));
-
-  // sharp/libvips writes the pyramid to disk only, so slice into a temp dir,
-  // then upload every file and clean up. The stitched canvas easily exceeds
-  // sharp's default megapixel guard, so lift it; composite straight into the
-  // tiler to avoid materialising a full-size intermediate raster.
-  const workDir = await mkdtemp(join(tmpdir(), `mapart-dzi-${projectId}-`));
-  // sharp appends `.dzi` + `_files` to this basename → `tiles.dzi` + `tiles_files/`.
-  const dziBase = join(workDir, 'tiles');
+  // Download every tile to disk rather than holding it in memory: a large
+  // project is thousands of tiles, and keeping every decoded buffer resident
+  // would need gigabytes of RAM. Bounded concurrency caps the S3 connection
+  // pool — firing every GET at once makes remote storage cancel requests (408).
+  const srcDir = await mkdtemp(join(tmpdir(), `mapart-dzi-src-${projectId}-`));
+  const stripsDir = await mkdtemp(join(tmpdir(), `mapart-dzi-strip-${projectId}-`));
+  const outDir = await mkdtemp(join(tmpdir(), `mapart-dzi-out-${projectId}-`));
   let uploaded = 0;
   try {
+    const placed = await mapLimit(present, STORAGE_CONCURRENCY, async (t) => {
+      const key = tileImagePath(t, source);
+      if (!key) throw new Error('unreachable: filtered for present image');
+      const file = join(srcDir, `${t.x}_${t.y}${extname(key) || '.png'}`);
+      await writeFile(file, await storage.get(key));
+      return { x: t.x, y: t.y, file };
+    });
+
+    // All tiles share the fixed render/output size, so probing one fixes the
+    // grid pitch for the whole project.
+    const firstFile = placed[0];
+    if (!firstFile) throw new Error('unreachable: present is non-empty');
+    const probe = await sharp(firstFile.file).metadata();
+    const sourceTileSize = probe.width ?? probe.height ?? 0;
+    if (!sourceTileSize) throw new Error('Could not read source tile dimensions');
+
+    const width = gridWidth * sourceTileSize;
+    const height = gridHeight * sourceTileSize;
+    log.info('stitching project pyramid', {
+      projectId,
+      source,
+      placed: present.length,
+      skipped,
+      gridWidth,
+      gridHeight,
+      width,
+      height,
+    });
+
+    // Stitch in two passes to keep memory bounded. Compositing every tile in one
+    // shot holds ~all inputs resident while dzsave renders a multi-gigapixel
+    // canvas, which OOMs at a few thousand tiles. Instead build one full-width
+    // strip per grid row (≤gridWidth inputs each) as a memory-mapped libvips
+    // `.v`, then assemble the gridHeight strips into the pyramid — capping
+    // concurrent inputs to dozens. Grid `y` increases northward but image rows
+    // run top→down, so the row axis is inverted (highest `y` on top).
+    const rowTiles = new Map<number, { left: number; file: string }[]>();
+    for (const p of placed) {
+      const imgRow = gridHeight - 1 - (p.y - minY);
+      const list = rowTiles.get(imgRow) ?? [];
+      list.push({ left: (p.x - minX) * sourceTileSize, file: p.file });
+      rowTiles.set(imgRow, list);
+    }
+
+    const strips: { top: number; input: string }[] = [];
+    for (const [imgRow, tilesInRow] of rowTiles) {
+      const stripFile = join(stripsDir, `row_${imgRow}.v`);
+      await sharp({
+        create: {
+          width,
+          height: sourceTileSize,
+          channels: 4,
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        },
+        limitInputPixels: false,
+      })
+        .composite(tilesInRow.map((t) => ({ input: t.file, left: t.left, top: 0 })))
+        .toFile(stripFile);
+      strips.push({ top: imgRow * sourceTileSize, input: stripFile });
+    }
+
+    // sharp appends `.dzi` + `_files` to this basename → `tiles.dzi` +
+    // `tiles_files/`. The canvas far exceeds sharp's default megapixel guard.
+    const dziBase = join(outDir, 'tiles');
     await sharp({
       create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
       limitInputPixels: false,
     })
-      .composite(composites)
+      .composite(strips.map((s) => ({ input: s.input, left: 0, top: s.top })))
       .webp({ quality })
       .tile({ size: PYRAMID_TILE_SIZE, overlap: 0, layout: 'dz' })
       .toFile(dziBase);
 
     const prefix = vizPrefix(projectId);
     const files: string[] = [];
-    for await (const filePath of walk(workDir)) files.push(filePath);
-    // Same bounded concurrency as the fetch — a pyramid is hundreds-to-thousands
-    // of small objects, so a sequential upload to remote storage crawls.
+    for await (const filePath of walk(outDir)) files.push(filePath);
+    // A pyramid is hundreds-to-thousands of small objects, so a sequential
+    // upload to remote storage crawls — same bounded concurrency as the fetch.
     await mapLimit(files, STORAGE_CONCURRENCY, async (filePath) => {
-      const rel = relative(workDir, filePath).split('\\').join('/');
+      const rel = relative(outDir, filePath).split('\\').join('/');
       // tiles.dzi → viz/{pid}/tiles.dzi ; tiles_files/** → viz/{pid}/tiles_files/**
       await storage.put(`${prefix}/${rel}`, await readFile(filePath));
     });
@@ -161,7 +186,9 @@ export async function exportProjectDzi(
       prefix,
     };
   } finally {
-    await rm(workDir, { recursive: true, force: true });
+    await rm(srcDir, { recursive: true, force: true });
+    await rm(stripsDir, { recursive: true, force: true });
+    await rm(outDir, { recursive: true, force: true });
   }
 }
 
