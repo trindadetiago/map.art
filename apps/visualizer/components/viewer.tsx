@@ -48,15 +48,19 @@ export function Viewer({ projectId, meta }: { projectId: string; meta: VizMetada
         minZoomImageRatio: 0.7,
         visibilityRatio: 1,
         gestureSettingsMouse: { clickToZoom: false },
+        // A custom tile source rather than the legacy DZI `{ Image }` descriptor:
+        // OSD's built-in DZI getTileUrl concatenates `fileFormat + queryParams`,
+        // and the minified bundle appends a literal "undefined" (queryParams is
+        // unset for the object form) → every tile 404s. Owning getTileUrl
+        // sidesteps that entirely. Levels/tile grid are computed from the
+        // dimensions exactly like DZI, so they line up with the libvips pyramid.
         tileSources: {
-          Image: {
-            xmlns: 'http://schemas.microsoft.com/deepzoom/2008',
-            Url: `${base}/tiles_files/`,
-            Format: meta.format,
-            Overlap: String(meta.overlap),
-            TileSize: String(meta.tileSize),
-            Size: { Width: String(meta.width), Height: String(meta.height) },
-          },
+          width: meta.width,
+          height: meta.height,
+          tileSize: meta.tileSize,
+          tileOverlap: meta.overlap,
+          getTileUrl: (level: number, x: number, y: number) =>
+            `${base}/tiles_files/${level}/${x}_${y}.${meta.format}`,
         },
       };
       viewer = OpenSeadragon(options);
