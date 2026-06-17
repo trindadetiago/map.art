@@ -27,3 +27,8 @@ export function vizDziKey(projectId: string): string {
 export function vizTilesPrefix(projectId: string): string {
   return `${vizPrefix(projectId)}/tiles_files`;
 }
+
+/** The project's pin overlay definitions (a JSON {@link import('./types').VizPin} array). */
+export function vizPinsKey(projectId: string): string {
+  return `${vizPrefix(projectId)}/pins.json`;
+}

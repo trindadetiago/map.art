@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./keys": "./src/keys.ts",
+    "./pins": "./src/pins.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {

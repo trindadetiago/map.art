@@ -54,6 +54,47 @@ body {
   color: #9a9385;
 }
 
+/* Geolocation pins. Stacked so the label sits above the dot; OpenSeadragon
+   anchors the element by its bottom-centre, so the dot's base lands on the
+   real-world point. Constant screen size — they don't scale with zoom. */
+.viz-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 9;
+}
+
+.viz-pin-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffcf4d;
+  border: 2px solid #0c0b0a;
+  box-shadow: 0 0 0 1px rgba(255, 207, 77, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.viz-pin-label {
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #eae6dc;
+  background: rgba(12, 11, 10, 0.82);
+  border: 1px solid rgba(234, 230, 220, 0.14);
+  border-radius: 7px;
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+
+.viz-pin:hover .viz-pin-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .center {
   position: fixed;
   inset: 0;

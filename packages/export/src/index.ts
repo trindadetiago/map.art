@@ -1,3 +1,4 @@
 export { exportProjectDzi, type ExportOptions } from './export';
-export { vizDziKey, vizMetadataKey, vizPrefix, vizTilesPrefix } from './keys';
-export type { ExportResult, VizMetadata, VizSource } from './types';
+export { vizDziKey, vizMetadataKey, vizPinsKey, vizPrefix, vizTilesPrefix } from './keys';
+export { getProjectPins, parsePins, setProjectPins } from './pins';
+export type { ExportResult, VizGeoAnchor, VizMetadata, VizPin, VizSource } from './types';
