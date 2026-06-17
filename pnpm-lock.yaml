@@ -89,9 +89,6 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.5(react@19.2.5)
-      three:
-        specifier: ^0.169.0
-        version: 0.169.0
     devDependencies:
       '@types/openseadragon':
         specifier: ^3.0.10
@@ -102,9 +99,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.14)
-      '@types/three':
-        specifier: ^0.169.0
-        version: 0.169.0
 
   apps/web:
     dependencies:

@@ -14,8 +14,7 @@ const mapartPackages = readdirSync(join(repoRoot, 'packages'))
   .map((name) => `@mapart/${name}`);
 
 const config: NextConfig = {
-  // `three` (via @mapart/ui) ships untranspiled ESM under three/examples/jsm.
-  transpilePackages: [...mapartPackages, 'three'],
+  transpilePackages: mapartPackages,
 };
 
 export default config;

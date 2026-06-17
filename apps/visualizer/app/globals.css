@@ -279,61 +279,92 @@ body {
   display: none;
 }
 
-/* ---- Globe home ----------------------------------------------------------- */
-.globe-stage {
+/* ---- World map home ------------------------------------------------------- */
+.worldmap-stage {
   position: fixed;
   inset: 0;
   background: radial-gradient(120% 100% at 50% 30%, #14161d 0%, #08080a 70%);
 }
 
-.globe-canvas {
+.worldmap-canvas {
   position: absolute;
   inset: 0;
 }
 
-.globe-tip {
+.worldmap-pins {
   position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 20;
-  /* JS sets translate(x,y) to the pin; nudge up so the pill clears the marker. */
-  margin: -14px 0 0 12px;
+  inset: 0;
+}
+
+/* Bottom-centre of the pin (the dot) lands on the projected location. */
+.worldmap-pin {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -100%);
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.worldmap-pin-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ffcf4d;
+  border: 2px solid #14110c;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  transition: transform 0.1s ease;
+}
+.worldmap-pin.is-hovered .worldmap-pin-dot {
+  transform: scale(1.4);
+}
+
+.worldmap-pin-label {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 4px 10px;
+  gap: 6px;
+  margin-bottom: 5px;
+  padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
+  color: #eae6dc;
   background: rgba(12, 11, 10, 0.9);
   border: 1px solid rgba(234, 230, 220, 0.18);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-  transition: opacity 0.1s ease;
-}
-.globe-tip-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-.globe-tip-year {
   font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.worldmap-pin.is-hovered .worldmap-pin-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+.worldmap-pin-year {
   color: #d8be7e;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
-.globe-title {
+.worldmap-title {
   position: fixed;
   left: 28px;
   bottom: 26px;
   z-index: 10;
   pointer-events: none;
 }
-.globe-title h1 {
+.worldmap-title h1 {
   margin: 0;
   font-size: 22px;
   font-weight: 680;
   letter-spacing: -0.01em;
 }
-.globe-title p {
+.worldmap-title p {
   margin: 4px 0 0;
   font-size: 13px;
   color: #9a9385;

@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./globe": "./src/globe/index.ts",
-    "./globe/react": "./src/globe/globe.tsx"
+    "./globe/react": "./src/globe/globe.tsx",
+    "./worldmap": "./src/worldmap/index.ts",
+    "./worldmap/react": "./src/worldmap/worldmap.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
