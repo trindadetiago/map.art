@@ -5,7 +5,6 @@ import {
   IconEnv,
   IconLayers,
   IconMap,
-  IconPin,
   IconSparkles,
   IconStorage,
   IconWorkflow,
@@ -138,9 +137,6 @@ export default async function AdminIndex() {
           </Card>
           <Card icon={IconWorkflow} label="Stylize history" href="/admin/stylize">
             <Caption>Trace one tile through the stylizer: render, composite, raw + final.</Caption>
-          </Card>
-          <Card icon={IconPin} label="Pins" href="/admin/pins">
-            <Caption>Drop lat/lng markers on a project — they overlay the visualizer map.</Caption>
           </Card>
         </div>
       </Section>

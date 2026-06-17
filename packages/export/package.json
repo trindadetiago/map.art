@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./geo": "./src/geo.ts",
     "./keys": "./src/keys.ts",
     "./pins": "./src/pins.ts",
     "./types": "./src/types.ts"

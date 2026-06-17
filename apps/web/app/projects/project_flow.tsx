@@ -1,10 +1,12 @@
 'use client';
 
+import type { VizGeoAnchor, VizPin } from '@mapart/export/types';
 import type { LatLng } from '@mapart/geo';
 import { useState } from 'react';
 import { StepArea } from './step_area';
 import { StepBuild, type TileLite } from './step_build';
 import { StepCity } from './step_city';
+import { StepPins } from './step_pins';
 import { type StepId, StepRail } from './step_rail';
 import { StepReview } from './step_review';
 
@@ -18,6 +20,9 @@ export interface ProjectFlowProps {
   projectName?: string;
   initial?: { center: LatLng; cols: number; rows: number; cityLabel: string };
   initialTiles?: TileLite[];
+  /** view mode only: grid↔WGS84 fit, for placing pins on the stitched art. */
+  geo?: VizGeoAnchor;
+  initialPins?: VizPin[];
 }
 
 /**
@@ -38,11 +43,15 @@ export function ProjectFlow(props: ProjectFlowProps) {
   const canArea = isView || hasCity;
   const canBuild = isView;
   const canReview = isView;
+  // Pins are placed on the stitched art via the grid↔WGS84 fit; without it
+  // (e.g. a project with no tiles) there's nothing to anchor them to.
+  const canPins = isView && !!props.geo;
 
   const go = (s: StepId): void => {
     if (s === 2 && !canArea) return;
     if (s === 3 && !canBuild) return;
     if (s === 4 && !canReview) return;
+    if (s === 5 && !canPins) return;
     setActive(s);
   };
 
@@ -54,6 +63,7 @@ export function ProjectFlow(props: ProjectFlowProps) {
         canArea={canArea}
         canBuild={canBuild}
         canReview={canReview}
+        canPins={canPins}
       />
 
       <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-stone-200 bg-white">
@@ -106,6 +116,18 @@ export function ProjectFlow(props: ProjectFlowProps) {
             cols={cols}
             rows={rows}
             initialTiles={props.initialTiles ?? []}
+          />
+        )}
+
+        {active === 5 && props.projectId && props.geo && (
+          <StepPins
+            projectId={props.projectId}
+            projectName={props.projectName ?? ''}
+            cols={cols}
+            rows={rows}
+            geo={props.geo}
+            initialTiles={props.initialTiles ?? []}
+            initialPins={props.initialPins ?? []}
           />
         )}
       </div>

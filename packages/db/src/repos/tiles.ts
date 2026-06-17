@@ -39,22 +39,6 @@ export async function findRenderedAt(lat: number, lng: number): Promise<string |
   return row?.renderedImgPath ?? null;
 }
 
-/** Mean of a project's tile centres — a cheap centroid to open a map on. Null
- * when the project has no tiles. */
-export async function projectCenter(
-  projectId: string,
-): Promise<{ lat: number; lng: number } | null> {
-  const [row] = await getDb()
-    .select({
-      lat: sql<number | null>`avg(${tiles.lat})`,
-      lng: sql<number | null>`avg(${tiles.lng})`,
-    })
-    .from(tiles)
-    .where(eq(tiles.projectId, projectId));
-  if (!row || row.lat === null || row.lng === null) return null;
-  return { lat: Number(row.lat), lng: Number(row.lng) };
-}
-
 export interface TileStatusCount {
   currentStatusType: TilePhase;
   status: TileStatus;
