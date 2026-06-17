@@ -257,6 +257,31 @@ export async function completeStylize(id: string, stylizedImgPath: string): Prom
 }
 
 /**
+ * Point a tile at a stylized image written out-of-band (e.g. a post-process
+ * import), addressed by grid coordinate rather than id. Marks the tile done in
+ * the stylize phase and bumps `updatedAt` so the served image cache-busts.
+ * Returns how many rows changed (0 = no such tile).
+ */
+export async function setStylizedImage(
+  projectId: string,
+  x: number,
+  y: number,
+  stylizedImgPath: string,
+): Promise<number> {
+  const rows = await getDb()
+    .update(tiles)
+    .set({
+      stylizedImgPath,
+      currentStatusType: 'stylize',
+      status: 'done',
+      updatedAt: new Date(),
+    })
+    .where(and(eq(tiles.projectId, projectId), eq(tiles.x, x), eq(tiles.y, y)))
+    .returning({ id: tiles.id });
+  return rows.length;
+}
+
+/**
  * Re-queue a stylize-phase tile: drop it back to `pending`, clear its stylized
  * output + retry budget so a worker stylizes it again. No-op on render-phase
  * tiles. Returns how many rows changed (0 = no matching stylize tile).

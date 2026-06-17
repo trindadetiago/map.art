@@ -6,6 +6,7 @@ import { StepArea } from './step_area';
 import { StepBuild, type TileLite } from './step_build';
 import { StepCity } from './step_city';
 import { type StepId, StepRail } from './step_rail';
+import { StepReview } from './step_review';
 
 const DEFAULT_CENTER: LatLng = { lat: 40.7484, lng: -73.9857 }; // midtown Manhattan
 
@@ -36,16 +37,24 @@ export function ProjectFlow(props: ProjectFlowProps) {
 
   const canArea = isView || hasCity;
   const canBuild = isView;
+  const canReview = isView;
 
   const go = (s: StepId): void => {
     if (s === 2 && !canArea) return;
     if (s === 3 && !canBuild) return;
+    if (s === 4 && !canReview) return;
     setActive(s);
   };
 
   return (
     <div className="flex h-[calc(100vh-120px)] gap-5">
-      <StepRail active={active} onSelect={go} canArea={canArea} canBuild={canBuild} />
+      <StepRail
+        active={active}
+        onSelect={go}
+        canArea={canArea}
+        canBuild={canBuild}
+        canReview={canReview}
+      />
 
       <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-stone-200 bg-white">
         {active === 1 && (
@@ -82,6 +91,16 @@ export function ProjectFlow(props: ProjectFlowProps) {
           <StepBuild
             apiKey={props.apiKey}
             center={center}
+            projectId={props.projectId}
+            projectName={props.projectName ?? ''}
+            cols={cols}
+            rows={rows}
+            initialTiles={props.initialTiles ?? []}
+          />
+        )}
+
+        {active === 4 && props.projectId && (
+          <StepReview
             projectId={props.projectId}
             projectName={props.projectName ?? ''}
             cols={cols}
