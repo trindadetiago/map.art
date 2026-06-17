@@ -68,15 +68,15 @@ importers:
       '@mapart/export':
         specifier: workspace:*
         version: link:../../packages/export
-      '@mapart/globe':
-        specifier: workspace:*
-        version: link:../../packages/globe
       '@mapart/logger':
         specifier: workspace:*
         version: link:../../packages/logger
       '@mapart/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@mapart/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: ^15.0.3
         version: 15.5.15(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -123,9 +123,6 @@ importers:
       '@mapart/geo':
         specifier: workspace:*
         version: link:../../packages/geo
-      '@mapart/globe':
-        specifier: workspace:*
-        version: link:../../packages/globe
       '@mapart/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -141,6 +138,9 @@ importers:
       '@mapart/stylize':
         specifier: workspace:*
         version: link:../../packages/stylize
+      '@mapart/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@radix-ui/react-select':
         specifier: ^2.2.6
         version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -318,37 +318,6 @@ importers:
 
   packages/geo: {}
 
-  packages/globe:
-    dependencies:
-      d3-geo:
-        specifier: ^3.1.1
-        version: 3.1.1
-      react:
-        specifier: ^19.0.0
-        version: 19.2.5
-      three:
-        specifier: ^0.169.0
-        version: 0.169.0
-      topojson-client:
-        specifier: ^3.1.0
-        version: 3.1.0
-      world-atlas:
-        specifier: ^2.0.2
-        version: 2.0.2
-    devDependencies:
-      '@types/d3-geo':
-        specifier: ^3.1.0
-        version: 3.1.0
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.14
-      '@types/three':
-        specifier: ^0.169.0
-        version: 0.169.0
-      '@types/topojson-client':
-        specifier: ^3.1.5
-        version: 3.1.5
-
   packages/logger:
     dependencies:
       '@mapart/env':
@@ -414,6 +383,37 @@ importers:
       vitest:
         specifier: ^4.1.7
         version: 4.1.7(@types/node@22.19.17)(vite@6.4.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/ui:
+    dependencies:
+      d3-geo:
+        specifier: ^3.1.1
+        version: 3.1.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+      topojson-client:
+        specifier: ^3.1.0
+        version: 3.1.0
+      world-atlas:
+        specifier: ^2.0.2
+        version: 2.0.2
+    devDependencies:
+      '@types/d3-geo':
+        specifier: ^3.1.0
+        version: 3.1.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/three':
+        specifier: ^0.169.0
+        version: 0.169.0
+      '@types/topojson-client':
+        specifier: ^3.1.5
+        version: 3.1.5
 
 packages:
 

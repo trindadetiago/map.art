@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
-const Globe = dynamic(() => import('@mapart/globe/react').then((m) => m.Globe), {
+const Globe = dynamic(() => import('@mapart/ui/globe/react').then((m) => m.Globe), {
   ssr: false,
   loading: () => (
     <div className="mx-auto aspect-square w-full max-w-[220px] animate-pulse rounded-full bg-neutral-200/50" />

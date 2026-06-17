@@ -1,6 +1,6 @@
 'use client';
 
-import { GLOBE_VARIANTS, buildGlobeTexture } from '@mapart/globe';
+import { GLOBE_VARIANTS, buildGlobeTexture } from '@mapart/ui/globe';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -34,7 +34,7 @@ function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
 /**
  * The visualizer home: an interactive globe with one pin per located project.
  * Hover reveals the project's name; click flies into its framed deep-zoom view.
- * Built on `@mapart/globe`'s pure texture helpers with a bespoke pin + raycast
+ * Built on `@mapart/ui/globe`'s pure texture helpers with a bespoke pin + raycast
  * layer (the shared `Globe` component is decorative and has no pin model).
  */
 export function GlobeHome({ projects }: { projects: GlobeProject[] }) {

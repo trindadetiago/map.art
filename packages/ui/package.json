@@ -1,11 +1,11 @@
 {
-  "name": "@mapart/globe",
+  "name": "@mapart/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./react": "./src/globe.tsx"
+    "./globe": "./src/globe/index.ts",
+    "./globe/react": "./src/globe/globe.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
