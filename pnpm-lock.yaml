@@ -108,6 +108,9 @@ importers:
       '@mapart/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@mapart/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@mapart/geo':
         specifier: workspace:*
         version: link:../../packages/geo

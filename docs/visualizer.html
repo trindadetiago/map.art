@@ -290,7 +290,8 @@
         multi-gigapixel canvas. The grid's <code>y</code> is inverted (north on top). Everything uploads under one
         prefix:</p>
         <pre class="tree">viz/{projectId}/
-  metadata.json          <span class="c"># VizMetadata: dims, tileSize, format, grid, source</span>
+  metadata.json          <span class="c"># VizMetadata: dims, tileSize, format, grid, source, geo anchor</span>
+  pins.json              <span class="c"># VizPin[]: real-world lat/lng markers (optional)</span>
   tiles.dzi              <span class="c"># the DZI descriptor sharp emits (kept for debugging)</span>
   tiles_files/
     0/0_0.webp           <span class="c"># lowest zoom level (1 tile)</span>
@@ -377,6 +378,70 @@
       </div>
     </div>
 
+    <h2>Pins — real-world overlays</h2>
+    <p class="lede" style="margin-bottom: 18px;">
+      Pins put labelled markers — a landmark, a neighbourhood, anything with a coordinate — onto the map at
+      their true geographic location. The trick is that the runtime is a flat raster with no idea where on Earth
+      it sits, so the lat/lng → pixel mapping has to be carried across from build time.
+    </p>
+
+    <div class="callout">
+      <p>The chain is three linear hops:
+      <strong>lat/lng → grid <code>(x,y)</code> → raster pixel → OpenSeadragon viewport point</strong>.
+      The middle hop is fixed by how the export stitches; the first is recovered from a fit baked into
+      <code>metadata.json</code>; the last is OSD's own <code>imageToViewportCoordinates</code>.</p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <span class="who build">build · export</span>
+        <h3>Bake a geo anchor into the metadata</h3>
+        <p>Each tile row carries its real-world centre (<code>lat</code>, <code>lng</code>) alongside its grid
+        <code>(x,y)</code>. At export, <code>computeGeoAnchor</code> least-squares-fits those centres into a
+        <code>VizGeoAnchor</code> — the grid is mercator-aligned, so longitude tracks grid&nbsp;X and latitude
+        tracks grid&nbsp;Y, each with a near-constant per-tile step. A project one tile wide or tall has no spread
+        to fit on that axis, so the step is recovered from the other via the <code>cos(latitude)</code> aspect
+        (tiles are square on the ground). The anchor rides in <code>metadata.json</code>.</p>
+        <pre class="tree">geo: {
+  anchorLat, anchorLng,   <span class="c"># centre of the grid's (minX, minY) tile</span>
+  latPerTileY,            <span class="c"># °lat per +1 grid Y (north-positive)</span>
+  lngPerTileX             <span class="c"># °lng per +1 grid X (east-positive)</span>
+}</pre>
+      </li>
+      <li>
+        <span class="who serve">author · admin / cli</span>
+        <h3>Define the pins</h3>
+        <p>Pins live as a plain <code>VizPin[]</code> JSON array at <code>viz/{projectId}/pins.json</code> — each
+        is <code>{ lat, lng, label, kind? }</code>. Author them two ways:</p>
+        <ul>
+          <li><strong>Admin panel</strong> (<code>apps/web</code> → <code>/admin/pins</code>): pick a project, click a
+          Google Map to drop pins, drag markers to nudge them, edit labels, save. The panel reads/writes the same
+          <code>pins.json</code>.</li>
+          <li><strong>CLI</strong>: <code>pnpm mapart export pins --project &lt;id&gt; --file pins.json</code> —
+          validates the array and uploads it.</li>
+        </ul>
+        <p>Both go through <code>@mapart/export/pins</code> (<code>getProjectPins</code> /
+        <code>setProjectPins</code> / <code>validatePins</code>), which validates ranges and rejects malformed
+        entries loudly rather than dropping them.</p>
+      </li>
+      <li>
+        <span class="who client">client · openseadragon</span>
+        <h3>Project to pixels, render as overlays</h3>
+        <p><code>page.tsx</code> reads <code>pins.json</code> server-side and hands it to the viewer.
+        <code>lib/geo.ts</code>'s <code>latLngToImagePoint</code> inverts the anchor to a raster pixel (mirroring the
+        export's half-tile offset and flipped row axis), and each pin is added as an OSD overlay anchored to that
+        image point. Because overlays are placed <em>by point</em>, they hold a constant screen size and their
+        position tracks pan/zoom for free; the label reveals on hover.</p>
+      </li>
+    </ol>
+
+    <div class="callout warn">
+      <p><strong>Pins need an anchored pyramid.</strong> The mapping lives in <code>metadata.json</code>, so a
+      pyramid exported before geo anchoring existed has no <code>geo</code> field — the viewer skips pins silently
+      until the project is re-exported with <code>mapart export dzi</code>. <code>pins.json</code> itself is read
+      live, so editing pins doesn't require a re-export.</p>
+    </div>
+
     <h2>Running an export</h2>
     <p>The export is a build step, not a request. Two ways to run it:</p>
     <ol class="steps">
@@ -413,7 +478,10 @@
       <tr><td><code>packages/export/src/export.ts</code></td><td>The whole export: download, two-pass stitch, dzsave, upload.</td></tr>
       <tr><td><code>apps/visualizer/components/viewer.tsx</code></td><td>OSD setup, custom tile source, crispness settings.</td></tr>
       <tr><td><code>apps/visualizer/app/api/viz/[...path]/route.ts</code></td><td>The tile proxy: semaphore, retry, cache, CORS.</td></tr>
-      <tr><td><code>apps/visualizer/app/page.tsx</code></td><td>Metadata load, picker + no-pyramid fallbacks.</td></tr>
+      <tr><td><code>apps/visualizer/app/page.tsx</code></td><td>Metadata load, pins load, picker + no-pyramid fallbacks.</td></tr>
+      <tr><td><code>apps/visualizer/lib/geo.ts</code></td><td>lat/lng → image-pixel projection via the geo anchor.</td></tr>
+      <tr><td><code>packages/export/src/pins.ts</code></td><td>Pin read/write/validate over storage.</td></tr>
+      <tr><td><code>apps/web/components/admin/pins/pins_editor.tsx</code></td><td>The map-based pin editor (admin panel).</td></tr>
       <tr><td><code>scripts/export-on-railway.mjs</code></td><td>The reusable Railway export-runner.</td></tr>
     </table>
 

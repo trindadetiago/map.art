@@ -14,8 +14,16 @@ export function parsePins(raw: string): VizPin[] {
   } catch (err) {
     throw new Error(`pins must be valid JSON: ${(err as Error).message}`);
   }
+  return validatePins(data);
+}
+
+/**
+ * Validate an already-parsed value as a pin array, normalising each entry to a
+ * clean {@link VizPin} (dropping unknown fields). Throws on the first bad entry.
+ */
+export function validatePins(data: unknown): VizPin[] {
   if (!Array.isArray(data)) {
-    throw new Error('pins must be a JSON array of { lat, lng, label }');
+    throw new Error('pins must be an array of { lat, lng, label }');
   }
   return data.map((entry, i) => validatePin(entry, i));
 }
