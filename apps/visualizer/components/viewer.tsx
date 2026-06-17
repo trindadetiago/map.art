@@ -1,6 +1,7 @@
 'use client';
 
-import type { VizMetadata } from '@mapart/export/types';
+import { latLngToImagePoint } from '@/lib/geo';
+import type { VizMetadata, VizPin } from '@mapart/export/types';
 import type OpenSeadragon from 'openseadragon';
 import { useEffect, useRef } from 'react';
 
@@ -13,7 +14,15 @@ import { useEffect, useRef } from 'react';
  * smoothing, so smoothing is off and over-zoom is nearest-neighbour, letting you
  * zoom past 1:1 to inspect individual pixels without blur.
  */
-export function Viewer({ projectId, meta }: { projectId: string; meta: VizMetadata }) {
+export function Viewer({
+  projectId,
+  meta,
+  pins = [],
+}: {
+  projectId: string;
+  meta: VizMetadata;
+  pins?: VizPin[];
+}) {
   const elRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,13 +73,60 @@ export function Viewer({ projectId, meta }: { projectId: string; meta: VizMetada
         },
       };
       viewer = OpenSeadragon(options);
+
+      // Pins are placed by image point, so they hold a constant screen size and
+      // their position tracks pan/zoom for free. They need the tiled image's
+      // dimensions, so wait for `open` before converting coordinates.
+      if (pins.length > 0) {
+        const v = viewer;
+        v.addOnceHandler('open', () => {
+          for (const pin of pins) {
+            const pt = latLngToImagePoint(meta, pin.lat, pin.lng);
+            if (!pt) continue;
+            v.addOverlay({
+              element: createPinElement(pin),
+              location: v.viewport.imageToViewportCoordinates(new OpenSeadragon.Point(pt.x, pt.y)),
+              placement: OpenSeadragon.Placement.BOTTOM,
+              checkResize: false,
+            });
+          }
+        });
+      }
     });
 
     return () => {
       cancelled = true;
       viewer?.destroy();
     };
-  }, [projectId, meta]);
+  }, [projectId, meta, pins]);
 
   return <div ref={elRef} className="viewer" />;
+}
+
+/** Build a pin overlay: a marker dot with a label that reveals on hover. The
+ * element's bottom-centre is the geo point (it's added with `BOTTOM` placement),
+ * so the dot sits exactly on the location.
+ *
+ * OpenSeadragon forces the overlay root to `display: block`, which would lay the
+ * label and dot out side by side — the flex column lives on an inner wrapper it
+ * doesn't touch. */
+function createPinElement(pin: VizPin): HTMLElement {
+  const root = document.createElement('div');
+  root.className = 'viz-pin';
+  if (pin.kind) root.dataset.kind = pin.kind;
+  root.title = pin.label;
+
+  const inner = document.createElement('div');
+  inner.className = 'viz-pin-inner';
+
+  const label = document.createElement('span');
+  label.className = 'viz-pin-label';
+  label.textContent = pin.label;
+
+  const dot = document.createElement('span');
+  dot.className = 'viz-pin-dot';
+
+  inner.append(label, dot);
+  root.append(inner);
+  return root;
 }

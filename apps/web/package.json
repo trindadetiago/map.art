@@ -13,6 +13,7 @@
     "3d-tiles-renderer": "^0.4.8",
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
+    "@mapart/export": "workspace:*",
     "@mapart/geo": "workspace:*",
     "@mapart/logger": "workspace:*",
     "@mapart/models": "workspace:*",

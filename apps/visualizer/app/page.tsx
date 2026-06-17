@@ -1,6 +1,7 @@
 import { Viewer } from '@/components/viewer';
 import { repos } from '@mapart/db';
 import { vizMetadataKey } from '@mapart/export/keys';
+import { getProjectPins } from '@mapart/export/pins';
 import type { VizMetadata } from '@mapart/export/types';
 import { getStorage } from '@mapart/storage';
 
@@ -39,10 +40,11 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
   }
 
   const meta = JSON.parse((await storage.get(metaKey)).toString('utf8')) as VizMetadata;
+  const pins = await getProjectPins(projectId);
 
   return (
     <>
-      <Viewer projectId={projectId} meta={meta} />
+      <Viewer projectId={projectId} meta={meta} pins={pins} />
       <div className="overlay">
         <h1>{project.name}</h1>
         <div className="muted">

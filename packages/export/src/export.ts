@@ -5,6 +5,7 @@ import { repos } from '@mapart/db';
 import { createLogger } from '@mapart/logger';
 import { getStorage } from '@mapart/storage';
 import sharp from 'sharp';
+import { computeGeoAnchor } from './geo';
 import { vizDziKey, vizMetadataKey, vizPrefix } from './keys';
 import type { ExportResult, VizMetadata, VizSource } from './types';
 
@@ -169,6 +170,7 @@ export async function exportProjectDzi(
       gridHeight,
       sourceTileSize,
       source,
+      geo: computeGeoAnchor(tiles, minX, minY),
       generatedAt: new Date().toISOString(),
     };
     await storage.put(vizMetadataKey(projectId), Buffer.from(JSON.stringify(metadata, null, 2)));

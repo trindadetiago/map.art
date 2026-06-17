@@ -1,5 +1,7 @@
 import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
+import { computeGeoAnchor } from '@mapart/export/geo';
+import { getProjectPins } from '@mapart/export/pins';
 import { notFound } from 'next/navigation';
 import { centerFromOrigin } from '../grid_geometry';
 import { ProjectFlow } from '../project_flow';
@@ -32,6 +34,19 @@ export default async function ProjectWorkspacePage({
     : { lat: 0, lng: 0 };
   const cityLabel = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
 
+  // Grid↔WGS84 fit for placing/previewing pins on the stitched art. Anchored at
+  // the grid's true (minX, minY) — the same extent the Pins step derives from its
+  // tiles — so a pin's on-art position matches the render. Skipped with no tiles.
+  const geo =
+    tiles.length > 0
+      ? computeGeoAnchor(
+          tiles,
+          tiles.reduce((m, t) => Math.min(m, t.x), Number.POSITIVE_INFINITY),
+          tiles.reduce((m, t) => Math.min(m, t.y), Number.POSITIVE_INFINITY),
+        )
+      : undefined;
+  const pins = await getProjectPins(project.id);
+
   return (
     <ProjectFlow
       mode="view"
@@ -39,6 +54,8 @@ export default async function ProjectWorkspacePage({
       projectId={project.id}
       projectName={project.name}
       initial={{ center, cols, rows, cityLabel }}
+      {...(geo ? { geo } : {})}
+      initialPins={pins}
       initialTiles={tiles.map((t) => ({
         x: t.x,
         y: t.y,

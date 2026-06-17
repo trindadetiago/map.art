@@ -1,9 +1,31 @@
 'use server';
 
 import { repos } from '@mapart/db';
+import { setProjectPins, validatePins } from '@mapart/export/pins';
+import type { VizPin } from '@mapart/export/types';
 import { gridCells, tileCenterLatLng } from '@mapart/renderer/params';
 import { revalidatePath } from 'next/cache';
 import { log } from '../../lib/logger';
+
+/**
+ * Validate and persist a project's visualizer pins (the lat/lng markers the
+ * deep-zoom viewer overlays on the map). Stored as JSON in blob storage, keyed
+ * by project — independent of the pyramid, so they can be edited any time.
+ */
+export async function savePins(
+  projectId: string,
+  pins: VizPin[],
+): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  try {
+    const clean = validatePins(pins);
+    await setProjectPins(projectId, clean);
+    log.info('project pins saved', { projectId, count: clean.length });
+    return { ok: true, count: clean.length };
+  } catch (e) {
+    log.error('savePins failed', { projectId, err: e });
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 /**
  * Create a project and its render-tile grid from a chosen origin + size.

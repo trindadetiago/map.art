@@ -54,6 +54,51 @@ body {
   color: #9a9385;
 }
 
+/* Geolocation pins. The label sits above the dot; OpenSeadragon anchors the
+   element by its bottom-centre, so the dot's base lands on the real-world point.
+   Constant screen size — they don't scale with zoom. OSD forces the overlay root
+   to `display: block`, so the flex column lives on `.viz-pin-inner`. */
+.viz-pin {
+  z-index: 9;
+}
+
+.viz-pin-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.viz-pin-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffcf4d;
+  border: 2px solid #14110c;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+.viz-pin-label {
+  margin-bottom: 5px;
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  color: #eae6dc;
+  background: rgba(12, 11, 10, 0.88);
+  border: 1px solid rgba(234, 230, 220, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+
+.viz-pin:hover .viz-pin-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .center {
   position: fixed;
   inset: 0;

@@ -22,7 +22,7 @@ That boundary is load-bearing. Don't add Next-isms inside `packages/*`. Don't wr
 | Path | What | Runtime shape |
 |---|---|---|
 | `apps/web` | Next.js 15 (App Router). Main UI on `:3210`. Admin pages at `/admin/*` (projects, storage, env, models, renderer, tiles). Database has no panel — its card on the dashboard links to Drizzle Studio at https://local.drizzle.studio. | long-running service |
-| `apps/visualizer` | Next.js 15 (App Router). Deep-zoom viewer on `:3220`. One OpenSeadragon instance over a project's pre-built DZI/WebP pyramid (`/?project=<id>`); pixel-art kept crisp (smoothing off, nearest-neighbour over-zoom). `app/api/viz/[...path]` proxies pyramid objects out of `@mapart/storage` with immutable-cache + CORS — the runtime is a flat raster, no Three.js/scene. Pyramids are built offline by `@mapart/export` (via `mapart export dzi`). | long-running service |
+| `apps/visualizer` | Next.js 15 (App Router). Deep-zoom viewer on `:3220`. One OpenSeadragon instance over a project's pre-built DZI/WebP pyramid (`/?project=<id>`); pixel-art kept crisp (smoothing off, nearest-neighbour over-zoom). `app/api/viz/[...path]` proxies pyramid objects out of `@mapart/storage` with immutable-cache + CORS — the runtime is a flat raster, no Three.js/scene. Lat/lng pins (`viz/{projectId}/pins.json`) are rendered as OSD overlays, mapped to image pixels via the pyramid's `VizGeoAnchor` (`lib/geo.ts`). Pyramids are built offline by `@mapart/export` (via `mapart export dzi`). | long-running service |
 | `apps/worker-render` | Server-side render service. Single Node process on `:9999`. Embeds Vite as middleware to serve `render-page/` (the page that mounts `<Scene>`), drives a persistent Puppeteer/Chromium that navigates to its own port, exposes `POST /render` to render one tile and return its PNG. Queue consumer can be layered on top later (call `renderTile()` from a pg-boss handler). | long-running service |
 | `apps/cli` | `mapart` binary. Single entry, subcommands per domain. Imports from `packages/*`. | short-lived tool |
 
@@ -41,7 +41,7 @@ Mostly pure Node libraries. Tree-shake-friendly imports.
 | `@mapart/renderer` | Three.js + Google 3D Tiles. Exports the React `<Scene>` component (for `apps/web` + `apps/worker-render/render-page`), the render-side type `RenderParams`, the global render pose/output config `RENDER_DEFAULTS` (pitch 30, yaw 45, 150 m/tile, 512 px), and the pure helpers (`createTilesRenderer`, `positionCamera`, `applyFrustum`, `reorientTo`, `tileGroundCorners`, `tileCenterLatLng`, `renderParamsForLatLng`). Depends on `@mapart/geo` for `LatLng` + `tileWidthMeters`. React is a peer dep; pure helpers are usable without it (tree-shaken). |
 | `@mapart/storage` | Blob storage on S3 (MinIO locally, AWS in prod), configured by the `S3_*` env vars. Singleton via `getStorage()`. |
 | `@mapart/logger` | Structured logger shared by the services. `createLogger(name, bindings?)` → a `Logger` with `debug/info/warn/error(msg, fields?)` and `child(bindings)`. Pretty lines locally, one JSON object per line on Railway; threshold + format from `LOG_LEVEL`/`LOG_FORMAT` (defaults info/json on Railway, debug/pretty locally). `silentLogger` for tests. Depends on `@mapart/env`. |
-| `@mapart/export` | Builds a project's deep-zoom pyramid for the visualizer. `exportProjectDzi(projectId, opts)` stitches the per-tile `(x,y)` images (stylized by default, or rendered) into one raster, slices a DZI/WebP pyramid via sharp/libvips, and uploads it to storage under `viz/{projectId}/` (`tiles.dzi` + `tiles_files/` + a `VizMetadata` `metadata.json`). Sub-paths: `./keys` (storage-key layout), `./types` (`VizMetadata`). Depends on `@mapart/db`, `@mapart/storage`, `@mapart/logger`. |
+| `@mapart/export` | Builds a project's deep-zoom pyramid for the visualizer. `exportProjectDzi(projectId, opts)` stitches the per-tile `(x,y)` images (stylized by default, or rendered) into one raster, slices a DZI/WebP pyramid via sharp/libvips, and uploads it to storage under `viz/{projectId}/` (`tiles.dzi` + `tiles_files/` + a `VizMetadata` `metadata.json`). The `metadata.json` also carries a `VizGeoAnchor` — a linear fit from grid coords to WGS84 over the tile centres — so the visualizer can place lat/lng pins. Pins live alongside as `pins.json` (a `VizPin[]`); `getProjectPins`/`setProjectPins`/`parsePins` (`./pins`) read, write, and validate them. Sub-paths: `./keys` (storage-key layout), `./pins` (pin I/O), `./types` (`VizMetadata`, `VizGeoAnchor`, `VizPin`). Depends on `@mapart/db`, `@mapart/storage`, `@mapart/logger`. |
 
 ### `infra/`
 
@@ -91,6 +91,7 @@ pnpm mapart storage list
 pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 pnpm mapart models generate --input … --prompt … --out …
 pnpm mapart export dzi --project <id>  # build a project's deep-zoom pyramid for the visualizer
+pnpm mapart export pins --project <id> --file pins.json  # set the visualizer's lat/lng pins
 ```
 
 If you need a *new* command, add it under `apps/cli/src/commands/<domain>.ts` and register it in `apps/cli/bin/mapart.ts`. Don't add new `bin/` folders inside packages — packages stay library-only.

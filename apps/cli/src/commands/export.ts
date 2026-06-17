@@ -1,4 +1,7 @@
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { exportProjectDzi } from '@mapart/export';
+import { parsePins, setProjectPins } from '@mapart/export/pins';
 import type { VizSource } from '@mapart/export/types';
 import type { Command } from 'commander';
 
@@ -26,5 +29,18 @@ export function registerExportCommands(parent: Command): void {
         console.log(`  ${res.skipped} tiles had no ${res.source} image (left as gaps)`);
       }
       console.log(`  view:  http://localhost:3220/?project=${res.projectId}`);
+    });
+
+  parent
+    .command('pins')
+    .description("Set a project's map pins from a local JSON file ([{ lat, lng, label, kind? }])")
+    .requiredOption('--project <id>', 'project id to set pins for')
+    .requiredOption('--file <path>', 'local JSON file with the pin array')
+    .action(async (opts: { project: string; file: string }) => {
+      const raw = await readFile(resolve(process.cwd(), opts.file), 'utf8');
+      const pins = parsePins(raw);
+      await setProjectPins(opts.project, pins);
+      console.log(`set ${pins.length} pin(s) for project ${opts.project}`);
+      console.log(`  view:  http://localhost:3220/?project=${opts.project}`);
     });
 }

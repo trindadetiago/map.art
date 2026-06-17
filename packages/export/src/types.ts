@@ -22,7 +22,41 @@ export interface VizMetadata {
   sourceTileSize: number;
   /** Which tile image fed the stitch. */
   source: VizSource;
+  /**
+   * Linear map from WGS84 to the grid, fitted over the project's tile centres.
+   * Lets the visualizer place lat/lng pins in image space without DB access.
+   * Absent on pyramids exported before geo anchoring existed.
+   */
+  geo?: VizGeoAnchor;
   generatedAt: string;
+}
+
+/**
+ * Affine fit relating grid coordinates to WGS84. The grid is mercator-aligned
+ * (no rotation), so longitude tracks grid X and latitude tracks grid Y, each
+ * with a near-constant step over a single project's extent.
+ */
+export interface VizGeoAnchor {
+  /** Center lat/lng of the grid's `(minX, minY)` tile (the stitch's anchor). */
+  anchorLat: number;
+  anchorLng: number;
+  /** Degrees of latitude gained per +1 step in grid Y (grid Y runs north). */
+  latPerTileY: number;
+  /** Degrees of longitude gained per +1 step in grid X (grid X runs east). */
+  lngPerTileX: number;
+}
+
+/**
+ * A labelled real-world point a project pins onto its map, in WGS84. Stored as
+ * a JSON array at `viz/{projectId}/pins.json`; the visualizer renders each as an
+ * overlay marker.
+ */
+export interface VizPin {
+  lat: number;
+  lng: number;
+  label: string;
+  /** Optional free-form category, surfaced as a `data-kind` for styling. */
+  kind?: string;
 }
 
 /** Which per-tile image the pyramid was built from. */
