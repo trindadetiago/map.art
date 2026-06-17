@@ -105,12 +105,19 @@ export function Viewer({
 
 /** Build a pin overlay: a marker dot with a label that reveals on hover. The
  * element's bottom-centre is the geo point (it's added with `BOTTOM` placement),
- * so the dot sits exactly on the location. */
+ * so the dot sits exactly on the location.
+ *
+ * OpenSeadragon forces the overlay root to `display: block`, which would lay the
+ * label and dot out side by side — the flex column lives on an inner wrapper it
+ * doesn't touch. */
 function createPinElement(pin: VizPin): HTMLElement {
   const root = document.createElement('div');
   root.className = 'viz-pin';
   if (pin.kind) root.dataset.kind = pin.kind;
   root.title = pin.label;
+
+  const inner = document.createElement('div');
+  inner.className = 'viz-pin-inner';
 
   const label = document.createElement('span');
   label.className = 'viz-pin-label';
@@ -119,6 +126,7 @@ function createPinElement(pin: VizPin): HTMLElement {
   const dot = document.createElement('span');
   dot.className = 'viz-pin-dot';
 
-  root.append(label, dot);
+  inner.append(label, dot);
+  root.append(inner);
   return root;
 }
