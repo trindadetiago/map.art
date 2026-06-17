@@ -16,7 +16,13 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
   const projectId = Array.isArray(raw) ? raw[0] : raw;
 
   if (!projectId) {
-    const projects = await repos.listProjectsWithLocation();
+    // Only pin projects that actually have an exported pyramid — a project can
+    // have tiles (so a location) without ever being exported, and clicking such
+    // a pin would only land on the "no pyramid yet" notice.
+    const located = await repos.listProjectsWithLocation();
+    const storage = getStorage();
+    const exported = await Promise.all(located.map((p) => storage.has(vizMetadataKey(p.id))));
+    const projects = located.filter((_, i) => exported[i]);
     return <GlobeHome projects={projects} />;
   }
 
