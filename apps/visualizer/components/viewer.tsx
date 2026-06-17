@@ -18,10 +18,12 @@ export function Viewer({
   projectId,
   meta,
   pins = [],
+  showPins = true,
 }: {
   projectId: string;
   meta: VizMetadata;
   pins?: VizPin[];
+  showPins?: boolean;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +102,10 @@ export function Viewer({
     };
   }, [projectId, meta, pins]);
 
-  return <div ref={elRef} className="viewer" />;
+  // Toggling pins only flips this class; the effect doesn't depend on showPins,
+  // so the (expensive) OSD instance and its overlays are never rebuilt — CSS
+  // hides the markers in place.
+  return <div ref={elRef} className={`viewer${showPins ? '' : ' viz-pins-hidden'}`} />;
 }
 
 /** Build a pin overlay: a marker dot with a label that reveals on hover. The

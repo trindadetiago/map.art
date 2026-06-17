@@ -13,9 +13,11 @@ export default function CompositePage() {
             id: 'demo',
             name: 'João Pessoa centro',
             description: 'Pixel-art map of the city center.',
+            year: 2024,
             createdAt: new Date('2026-05-01'),
           }}
           deleteAction={async () => {}}
+          updateAction={async () => ({ ok: true })}
         />
       </div>
     </div>

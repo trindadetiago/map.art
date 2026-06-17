@@ -13,16 +13,19 @@
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
     "@mapart/export": "workspace:*",
+    "@mapart/globe": "workspace:*",
     "@mapart/logger": "workspace:*",
     "@mapart/storage": "workspace:*",
     "next": "^15.0.3",
     "openseadragon": "^4.1.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@types/openseadragon": "^3.0.10",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.169.0"
   }
 }

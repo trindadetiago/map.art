@@ -68,6 +68,9 @@ importers:
       '@mapart/export':
         specifier: workspace:*
         version: link:../../packages/export
+      '@mapart/globe':
+        specifier: workspace:*
+        version: link:../../packages/globe
       '@mapart/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -86,6 +89,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.5(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
     devDependencies:
       '@types/openseadragon':
         specifier: ^3.0.10
@@ -96,6 +102,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.14)
+      '@types/three':
+        specifier: ^0.169.0
+        version: 0.169.0
 
   apps/web:
     dependencies:
@@ -114,6 +123,9 @@ importers:
       '@mapart/geo':
         specifier: workspace:*
         version: link:../../packages/geo
+      '@mapart/globe':
+        specifier: workspace:*
+        version: link:../../packages/globe
       '@mapart/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -135,9 +147,6 @@ importers:
       '@vis.gl/react-google-maps':
         specifier: ^1.8.3
         version: 1.8.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      d3-geo:
-        specifier: ^3.1.1
-        version: 3.1.1
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -156,19 +165,10 @@ importers:
       three:
         specifier: ^0.169.0
         version: 0.169.0
-      topojson-client:
-        specifier: ^3.1.0
-        version: 3.1.0
-      world-atlas:
-        specifier: ^2.0.2
-        version: 2.0.2
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.0
-      '@types/d3-geo':
-        specifier: ^3.1.0
-        version: 3.1.0
       '@types/google.maps':
         specifier: ^3.65.0
         version: 3.65.0
@@ -184,9 +184,6 @@ importers:
       '@types/three':
         specifier: ^0.169.0
         version: 0.169.0
-      '@types/topojson-client':
-        specifier: ^3.1.5
-        version: 3.1.5
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -320,6 +317,37 @@ importers:
         version: 0.33.5
 
   packages/geo: {}
+
+  packages/globe:
+    dependencies:
+      d3-geo:
+        specifier: ^3.1.1
+        version: 3.1.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+      topojson-client:
+        specifier: ^3.1.0
+        version: 3.1.0
+      world-atlas:
+        specifier: ^2.0.2
+        version: 2.0.2
+    devDependencies:
+      '@types/d3-geo':
+        specifier: ^3.1.0
+        version: 3.1.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/three':
+        specifier: ^0.169.0
+        version: 0.169.0
+      '@types/topojson-client':
+        specifier: ^3.1.5
+        version: 3.1.5
 
   packages/logger:
     dependencies:

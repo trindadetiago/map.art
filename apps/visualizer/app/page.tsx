@@ -1,4 +1,5 @@
-import { Viewer } from '@/components/viewer';
+import { Frame } from '@/components/frame';
+import { GlobeHome } from '@/components/globe_home';
 import { repos } from '@mapart/db';
 import { vizMetadataKey } from '@mapart/export/keys';
 import { getProjectPins } from '@mapart/export/pins';
@@ -14,7 +15,10 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
   const raw = sp.project;
   const projectId = Array.isArray(raw) ? raw[0] : raw;
 
-  if (!projectId) return <Picker />;
+  if (!projectId) {
+    const projects = await repos.listProjectsWithLocation();
+    return <GlobeHome projects={projects} />;
+  }
 
   const project = await repos.getProjectById(projectId);
   if (!project) {
@@ -43,41 +47,14 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
   const pins = await getProjectPins(projectId);
 
   return (
-    <>
-      <Viewer projectId={projectId} meta={meta} pins={pins} />
-      <div className="overlay">
-        <h1>{project.name}</h1>
-        <div className="muted">
-          {meta.gridWidth}&times;{meta.gridHeight} tiles &middot; {meta.width}&times;{meta.height}px
-          &middot; {meta.source}
-        </div>
-      </div>
-    </>
-  );
-}
-
-async function Picker() {
-  const projects = await repos.listProjects();
-  return (
-    <div className="center">
-      <div className="panel">
-        <h1>map.art visualizer</h1>
-        {projects.length === 0 ? (
-          <p className="muted">No projects yet. Create one in the admin app first.</p>
-        ) : (
-          <>
-            <p className="muted">Pick a project to open its map:</p>
-            <ul>
-              {projects.map((p) => (
-                <li key={p.id}>
-                  <a href={`/?project=${p.id}`}>{p.name}</a>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
-    </div>
+    <Frame
+      projectId={projectId}
+      meta={meta}
+      pins={pins}
+      name={project.name}
+      year={project.year}
+      description={project.description}
+    />
   );
 }
 
