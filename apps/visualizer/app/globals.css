@@ -360,26 +360,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.worldmap-title {
-  position: fixed;
-  left: 28px;
-  bottom: 26px;
-  z-index: 10;
-  pointer-events: none;
-}
-.worldmap-title h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 680;
-  letter-spacing: -0.01em;
-  color: #1a1714;
-}
-.worldmap-title p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: #6f6a5e;
-}
-
 .center {
   position: fixed;
   inset: 0;

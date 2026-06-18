@@ -82,15 +82,6 @@ export function WorldMapHome({ projects }: { projects: WorldProject[] }) {
           ))}
         </div>
       </div>
-
-      <div className="worldmap-title">
-        <h1>map.art</h1>
-        <p>
-          {projects.length === 0
-            ? 'No exported maps yet.'
-            : `${projects.length} ${projects.length === 1 ? 'map' : 'maps'} · click a pin to explore`}
-        </p>
-      </div>
     </div>
   );
 }
