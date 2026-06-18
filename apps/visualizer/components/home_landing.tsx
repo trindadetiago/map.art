@@ -34,19 +34,28 @@ const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
  * the project blurb and the team. A faint pixel-grid background scrolls behind
  * the pinned hero.
  */
+const easeInOut = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
+
 export function HomeLanding({ projects }: { projects: WorldProject[] }) {
   const heroRef = useRef<HTMLDivElement>(null);
-  const [p, setP] = useState(0);
+  // Morph progress: 0 = world map, 1 = globe.
+  const [t, setT] = useState(0);
+  const [replaying, setReplaying] = useState(false);
+  const replayRef = useRef(false);
 
+  // Scroll only ever pushes the morph forward (map → globe) — scrolling back up
+  // never reverses it, so once the globe is revealed it stays the globe.
   useEffect(() => {
     let raf = 0;
     const update = (): void => {
       raf = 0;
+      if (replayRef.current) return;
       const hero = heroRef.current;
       if (!hero) return;
       const rect = hero.getBoundingClientRect();
       const span = rect.height - window.innerHeight;
-      setP(span > 0 ? clamp01(-rect.top / span) : 0);
+      const prog = span > 0 ? clamp01(-rect.top / span) : 0;
+      setT((cur) => Math.max(cur, prog));
     };
     const onScroll = (): void => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -61,14 +70,35 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
     };
   }, []);
 
+  // Clicking the globe replays the whole morph (map appears, collapses, globe
+  // expands) as a one-shot tween, independent of scroll.
+  const replay = (): void => {
+    if (replayRef.current) return;
+    replayRef.current = true;
+    setReplaying(true);
+    const dur = 1200;
+    let start = 0;
+    const tick = (now: number): void => {
+      if (!start) start = now;
+      const k = clamp01((now - start) / dur);
+      setT(easeInOut(k));
+      if (k < 1) requestAnimationFrame(tick);
+      else {
+        replayRef.current = false;
+        setReplaying(false);
+      }
+    };
+    requestAnimationFrame(tick);
+  };
+
   // Map collapses over the first ~45%; the globe expands over the last ~45%,
   // with a brief "closed" beat at the midpoint where both are a flat line.
-  const collapse = clamp01(p / 0.45);
-  const expand = clamp01((p - 0.5) / 0.45);
+  const collapse = clamp01(t / 0.45);
+  const expand = clamp01((t - 0.5) / 0.45);
   const mapScaleY = 1 - collapse;
-  const mapOpacity = 1 - clamp01(p / 0.42);
-  const globeScaleY = expand;
-  const hint = 1 - clamp01(p / 0.12);
+  const mapOpacity = 1 - clamp01(t / 0.42);
+  const hint = 1 - clamp01(t / 0.12);
+  const globeActive = expand > 0.99 && !replaying;
 
   return (
     <div className="relative bg-white text-[#1a1714]">
@@ -83,25 +113,35 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
             style={{
               transform: `scaleY(${mapScaleY})`,
               opacity: mapOpacity,
-              pointerEvents: collapse > 0.15 ? 'none' : 'auto',
+              pointerEvents: collapse > 0.15 || replaying ? 'none' : 'auto',
             }}
           >
             <WorldMapPanel projects={projects} />
           </div>
 
-          {/* Globe — expands back out (the reverse of the collapse). */}
+          {/* Globe — expands back out (the reverse of the collapse). Clicking it
+              replays the morph; it lifts + glows on hover. */}
           <div
             className="absolute aspect-square h-[min(70vh,520px)]"
-            style={{ transform: `scaleY(${globeScaleY})`, opacity: expand }}
+            style={{ transform: `scaleY(${expand})`, opacity: expand }}
           >
-            {expand > 0.01 && (
-              <Globe
-                variant="pixelated"
-                pixelSize={6}
-                interactive={false}
-                className="h-full w-full"
-              />
-            )}
+            <button
+              type="button"
+              onClick={replay}
+              title="Replay"
+              aria-label="Replay the intro"
+              className="group block h-full w-full cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 hover:scale-[1.04]"
+              style={{ pointerEvents: globeActive ? 'auto' : 'none' }}
+            >
+              <div className="h-full w-full transition-[filter] duration-200 group-hover:[filter:drop-shadow(0_10px_30px_rgba(90,160,224,0.5))]">
+                <Globe
+                  variant="pixelated"
+                  pixelSize={6}
+                  interactive={false}
+                  className="h-full w-full"
+                />
+              </div>
+            </button>
           </div>
 
           <div
@@ -131,8 +171,8 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="mx-auto max-w-[1040px] px-6 pb-32">
+      {/* Team — same container width as the about section. */}
+      <section className="mx-auto max-w-[760px] px-6 pb-32">
         <h2 className="font-pixel text-[28px] text-[#14110c]">the team</h2>
         <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-3">
           {TEAM.map((m) => (
@@ -156,7 +196,7 @@ function TeamCard({ member }: { member: Member }) {
         <img
           src={`/team/${member.photo}_pixel.jpg`}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-100 transition-opacity duration-200 [image-rendering:pixelated] group-hover:opacity-0"
+          className="absolute inset-0 h-full w-full object-cover [clip-path:inset(0_0_0_0)] transition-[clip-path] duration-500 ease-out [image-rendering:pixelated] group-hover:[clip-path:inset(0_0_0_100%)]"
         />
       </div>
       <div className="mt-4 font-pixel text-[18px] text-[#14110c]">{member.name}</div>
