@@ -11,6 +11,17 @@ body {
   color: #eae6dc;
 }
 
+/* Pixel display font (loaded via next/font as --font-pixel). */
+.font-pixel {
+  font-family: var(--font-pixel), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Faint pixel-grid motif for the landing background. */
+.pixel-grid {
+  background-image: radial-gradient(rgba(20, 20, 20, 0.12) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
 /* Pixel-art must stay crisp at every zoom — kill the browser's own smoothing on
    the OpenSeadragon canvas (which OSD injects, so it can't carry a class). */
 .viewer canvas {

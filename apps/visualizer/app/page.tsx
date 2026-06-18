@@ -1,5 +1,5 @@
 import { Frame } from '@/components/frame';
-import { WorldMapHome } from '@/components/worldmap_home';
+import { HomeLanding } from '@/components/home_landing';
 import { repos } from '@mapart/db';
 import { vizMetadataKey } from '@mapart/export/keys';
 import { getProjectPins } from '@mapart/export/pins';
@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
     const storage = getStorage();
     const exported = await Promise.all(located.map((p) => storage.has(vizMetadataKey(p.id))));
     const projects = located.filter((_, i) => exported[i]);
-    return <WorldMapHome projects={projects} />;
+    return <HomeLanding projects={projects} />;
   }
 
   const project = await repos.getProjectById(projectId);
