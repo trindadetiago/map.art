@@ -2,36 +2,59 @@
 
 import type { VizMetadata, VizPin } from '@mapart/export/types';
 import { type CSSProperties, useState } from 'react';
+import { AboutTeam } from './about_team';
 import { Viewer } from './viewer';
 
-const frameBtn = (active: boolean): string =>
-  `inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border text-[15px] leading-none no-underline backdrop-blur-[6px] transition-colors ${
-    active
-      ? 'border-[#e4c879] bg-[#e4c879] text-[#1c160c]'
-      : 'border-[rgba(234,230,220,0.14)] bg-[rgba(12,11,10,0.72)] text-[#eae6dc] hover:border-[rgba(234,230,220,0.4)]'
-  }`;
-
-// Gilded moulding, mat lines, and the brass placard: gradients + multi-layer
-// shadows that don't read well as utility classes, so they stay inline.
+// Pixel-art frame: flat fills with hard (0-blur) stepped bevels and crisp dark
+// outlines, sharp corners — like an 8-bit game window. No smooth gradients.
+const OUTLINE = '#241a09';
+const wallStyle: CSSProperties = {
+  background: 'radial-gradient(120% 110% at 50% -5%, #2a241c 0%, #15110c 55%, #0a0807 100%)',
+};
 const frameStyle: CSSProperties = {
-  borderImageSource: 'linear-gradient(135deg,#efd99a,#b07f2c 30%,#6f4e16 55%,#e7cd86 80%,#936a22)',
-  borderImageSlice: 1,
-  boxShadow:
-    '0 0 0 1px rgba(0,0,0,0.6), 0 24px 60px -18px rgba(0,0,0,0.8), inset 0 0 0 2px rgba(0,0,0,0.35)',
+  background: '#c19a3a',
+  boxShadow: [
+    `0 0 0 3px ${OUTLINE}`, // outer pixel outline
+    'inset 6px 6px 0 0 #ecd283', // top-left highlight band
+    'inset -6px -6px 0 0 #6f5018', // bottom-right shadow band
+    '0 30px 70px -30px rgba(0,0,0,0.85)', // soft float (kept subtle)
+  ].join(', '),
 };
-const matteStyle: CSSProperties = {
-  boxShadow: '0 0 0 1px rgba(0,0,0,0.7), inset 0 0 0 3px #e9e2cf, inset 0 0 0 4px rgba(0,0,0,0.5)',
+const matStyle: CSSProperties = {
+  background: '#f3ecd9',
+  boxShadow: [
+    `0 0 0 3px ${OUTLINE}`, // dark channel between gold and mat
+    'inset 4px 4px 0 0 #fffaf0',
+    'inset -4px -4px 0 0 #d8cdaa',
+  ].join(', '),
 };
-const placardStyle: CSSProperties = {
-  background: 'linear-gradient(180deg,#e4c879,#b8923f)',
-  boxShadow: '0 6px 16px -6px rgba(0,0,0,0.8)',
+const plateStyle: CSSProperties = {
+  background: '#caa24e',
+  boxShadow: [
+    `0 0 0 2px ${OUTLINE}`,
+    'inset 3px 3px 0 0 #e9cd7e',
+    'inset -3px -3px 0 0 #7a5a22',
+  ].join(', '),
 };
+
+const CTRL =
+  'inline-flex h-9 select-none items-center gap-1.5 px-3 font-pixel text-[12px] transition-none';
+const ctrlStyle = (active: boolean): CSSProperties => ({
+  background: active ? '#d8b75e' : '#1b140b',
+  color: active ? '#1c160c' : '#e9cd7e',
+  boxShadow: [
+    `0 0 0 2px ${OUTLINE}`,
+    `inset 2px 2px 0 0 ${active ? '#f0d98e' : '#3a2c14'}`,
+    `inset -2px -2px 0 0 ${active ? '#8a6a26' : '#000'}`,
+  ].join(', '),
+});
 
 /**
- * Museum/gallery chrome around the deep-zoom map: the pixel-art sits matted in a
- * gilded frame on a dark wall, with a brass placard (name · year) and a control
- * cluster — home (back to the globe), a pins toggle, and a "more information"
- * drawer carrying the full description + export stats.
+ * Museum/gallery chrome around the deep-zoom map: the pixel-art hangs in a
+ * pixel-bevelled gold frame with a cream mat on a spotlit wall, an engraved
+ * brass nameplate, and labelled controls — Home (back to the globe), Pins
+ * (toggle the map markers), and Info (the about-the-project + team overlay,
+ * same content as the home page).
  */
 export function Frame({
   projectId,
@@ -39,112 +62,143 @@ export function Frame({
   pins,
   name,
   year,
-  description,
 }: {
   projectId: string;
   meta: VizMetadata;
   pins: VizPin[];
   name: string;
   year: number | null;
-  description: string | null;
 }) {
   const [showPins, setShowPins] = useState(true);
   const [infoOpen, setInfoOpen] = useState(false);
 
   return (
-    <div className="fixed inset-0 flex bg-[radial-gradient(120%_90%_at_50%_38%,#1a1814_0%,#0c0b0a_70%)]">
-      <div
-        className="relative m-[clamp(18px,4.5vmin,64px)] flex-1 rounded-[3px] border-[clamp(10px,1.8vmin,22px)] border-[#b8923f] border-solid bg-[#0c0b0a] p-[clamp(10px,1.4vmin,18px)]"
-        style={frameStyle}
-      >
-        <div
-          className="absolute inset-[clamp(10px,1.4vmin,18px)] overflow-hidden bg-[#0c0b0a]"
-          style={matteStyle}
-        >
-          <Viewer projectId={projectId} meta={meta} pins={pins} showPins={showPins} />
+    <div className="fixed inset-0 flex" style={wallStyle}>
+      <figure className="relative flex flex-1 p-[clamp(12px,1.8vmin,24px)]" style={frameStyle}>
+        <div className="h-full w-full p-[clamp(14px,3vmin,40px)]" style={matStyle}>
+          <div className="relative h-full w-full overflow-hidden border-[3px] border-[#241a09] bg-[#0c0b0a]">
+            <Viewer projectId={projectId} meta={meta} pins={pins} showPins={showPins} />
+          </div>
         </div>
 
-        <div
-          className="-translate-x-1/2 absolute bottom-[clamp(-22px,-1.6vmin,-14px)] left-1/2 z-20 inline-flex max-w-[80vw] items-baseline gap-2.5 overflow-hidden whitespace-nowrap rounded-md border border-black/30 px-[18px] py-[7px] text-[#1c160c]"
-          style={placardStyle}
+        {/* Engraved brass nameplate resting near the bottom of the mat. */}
+        <figcaption
+          className="-translate-x-1/2 absolute bottom-[clamp(20px,3.5vmin,48px)] left-1/2 z-20 flex items-baseline gap-2 px-4 py-1.5"
+          style={plateStyle}
         >
-          <span className="font-[650] text-[14px] tracking-[0.01em]">{name}</span>
-          {year !== null && <span className="text-[12px] text-[#4a3a18] tabular-nums">{year}</span>}
-        </div>
-      </div>
+          <span
+            className="font-pixel text-[14px] text-[#2c2008]"
+            style={{ textShadow: '0 1px 0 rgba(255,255,255,0.35)' }}
+          >
+            {name}
+          </span>
+          {year !== null && <span className="text-[12px] text-[#5a4718] tabular-nums">{year}</span>}
+        </figcaption>
+      </figure>
 
-      <div className="fixed top-[18px] left-[18px] z-30 flex gap-2">
-        <a href="/" className={frameBtn(false)} title="Back to globe" aria-label="Back to globe">
-          ⌂
+      {/* Controls — labelled so they're self-explanatory, styled like the frame. */}
+      <div className="fixed top-5 left-5 z-30">
+        <a href="/" className={CTRL} style={ctrlStyle(false)} aria-label="Back to globe">
+          <HomeIcon />
+          Home
         </a>
       </div>
 
-      <div className="fixed top-[18px] right-[18px] z-30 flex gap-2">
+      <div className="fixed top-5 right-5 z-30 flex gap-2">
         {pins.length > 0 && (
           <button
             type="button"
-            className={frameBtn(showPins)}
+            className={CTRL}
+            style={ctrlStyle(showPins)}
             onClick={() => setShowPins((v) => !v)}
-            title={showPins ? 'Hide pins' : 'Show pins'}
           >
-            ◉
+            <PinIcon />
+            Pins
           </button>
         )}
         <button
           type="button"
-          className={frameBtn(infoOpen)}
+          className={CTRL}
+          style={ctrlStyle(infoOpen)}
           onClick={() => setInfoOpen((v) => !v)}
-          title="More information"
         >
-          ℹ
+          <InfoIcon />
+          Info
         </button>
       </div>
 
+      {/* Info overlay — the same about + team content as the home page. */}
       {infoOpen && (
-        <>
-          {/* biome-ignore lint/a11y/useKeyWithClickEvents: click-away backdrop */}
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setInfoOpen(false)} />
-          <aside className="fixed top-0 right-0 z-50 h-full w-[min(380px,88vw)] overflow-y-auto border-[rgba(234,230,220,0.12)] border-l bg-[#16140f] px-6 py-[22px] shadow-[-20px_0_50px_-20px_rgba(0,0,0,0.8)]">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="m-0 font-[650] text-[18px]">{name}</h2>
-              <button
-                type="button"
-                className="h-7 w-7 shrink-0 cursor-pointer rounded-lg border border-[rgba(234,230,220,0.14)] bg-transparent text-[#9a9385] hover:text-[#eae6dc]"
-                onClick={() => setInfoOpen(false)}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-            {year !== null && (
-              <div className="mt-0.5 text-[13px] text-[#d8be7e] tabular-nums">{year}</div>
-            )}
-            <p
-              className={`mt-3.5 text-[14px] leading-[1.6] ${description ? 'text-[#d6d0c2]' : 'text-[#6f695c]'}`}
-            >
-              {description ?? 'No description yet.'}
-            </p>
-            <dl className="mt-5 grid gap-2.5 border-[rgba(234,230,220,0.1)] border-t pt-4 text-[13px]">
-              <div className="flex justify-between gap-3">
-                <dt className="text-[#9a9385]">Grid</dt>
-                <dd className="m-0 text-[#eae6dc] tabular-nums">
-                  {meta.gridWidth}×{meta.gridHeight} tiles
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[#9a9385]">Resolution</dt>
-                <dd className="m-0 text-[#eae6dc] tabular-nums">
-                  {meta.width.toLocaleString()}×{meta.height.toLocaleString()} px
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[#9a9385]">Source</dt>
-                <dd className="m-0 text-[#eae6dc]">{meta.source}</dd>
-              </div>
-            </dl>
-          </aside>
-        </>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+          <button
+            type="button"
+            className={`${CTRL} fixed top-5 right-5 z-10`}
+            style={ctrlStyle(false)}
+            onClick={() => setInfoOpen(false)}
+          >
+            ✕ Close
+          </button>
+          <AboutTeam />
+        </div>
       )}
     </div>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5 10v10h14V10" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 7.5h.01" />
+    </svg>
   );
 }

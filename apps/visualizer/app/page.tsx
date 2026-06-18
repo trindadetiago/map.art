@@ -58,14 +58,7 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
   const pins = await getProjectPins(projectId);
 
   return (
-    <Frame
-      projectId={projectId}
-      meta={meta}
-      pins={pins}
-      name={project.name}
-      year={project.year}
-      description={project.description}
-    />
+    <Frame projectId={projectId} meta={meta} pins={pins} name={project.name} year={project.year} />
   );
 }
 

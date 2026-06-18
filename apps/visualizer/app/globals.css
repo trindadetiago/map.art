@@ -68,7 +68,8 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
-/* Pins toggle: hide the injected markers without rebuilding the viewer. */
+/* Pins toggle: hide the injected markers without rebuilding the viewer.
+   `!important` beats the inline `display: block` OpenSeadragon sets per overlay. */
 .viz-pins-hidden .viz-pin {
-  display: none;
+  display: none !important;
 }
