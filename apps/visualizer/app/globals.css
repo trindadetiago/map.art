@@ -286,6 +286,15 @@ body {
   background: #ffffff;
 }
 
+/* The map sits in a centred, contained frame rather than edge-to-edge. */
+.worldmap-frame {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: min(86vw, 1040px);
+  height: min(78vh, 540px);
+}
+
 .worldmap-canvas {
   position: absolute;
   inset: 0;
