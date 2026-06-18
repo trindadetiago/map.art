@@ -1,18 +1,27 @@
 interface Member {
   name: string;
-  role: string;
+  role?: string;
   photo: number;
-  linkedin: string;
-  twitter: string;
+  linkedin?: string;
+  twitter?: string;
 }
 
 const TEAM: Member[] = [
-  { name: 'Ada Marsh', role: 'Founder', photo: 1, linkedin: '#', twitter: '#' },
-  { name: 'Léo Pruitt', role: 'Rendering', photo: 2, linkedin: '#', twitter: '#' },
-  { name: 'Mira Okonkwo', role: 'Model / ML', photo: 3, linkedin: '#', twitter: '#' },
-  { name: 'Tomás Vidal', role: 'Pipeline', photo: 4, linkedin: '#', twitter: '#' },
-  { name: 'Sana Iqbal', role: 'Design', photo: 5, linkedin: '#', twitter: '#' },
-  { name: 'Bruno Sato', role: 'Infra', photo: 6, linkedin: '#', twitter: '#' },
+  {
+    name: 'Tiago Trindade',
+    role: 'Lead',
+    photo: 1,
+    linkedin: 'https://www.linkedin.com/in/tiagotrindade03/',
+  },
+  { name: 'Guilherme Huther', photo: 2, linkedin: 'https://www.linkedin.com/in/guilhermehuther/' },
+  { name: 'Clara Dantas', photo: 3, linkedin: 'https://www.linkedin.com/in/claradantast/' },
+  {
+    name: 'Pedro Ernesto Vogado',
+    photo: 4,
+    linkedin: 'https://www.linkedin.com/in/pedroernestovogado/',
+  },
+  { name: 'Gabriel Carvalho', photo: 5, linkedin: 'https://www.linkedin.com/in/gabrielcarvvlho/' },
+  { name: 'Marcus Vinícius', photo: 6, linkedin: 'https://www.linkedin.com/in/marcusvs/' },
 ];
 
 /**
@@ -66,14 +75,18 @@ function TeamCard({ member }: { member: Member }) {
         />
       </div>
       <div className="mt-4 font-pixel text-[18px] text-[#14110c]">{member.name}</div>
-      <div className="text-[13px] text-[#8a857a]">{member.role}</div>
+      {member.role && <div className="text-[13px] text-[#8a857a]">{member.role}</div>}
       <div className="mt-3 flex items-center gap-2">
-        <Social href={member.linkedin} label={`${member.name} on LinkedIn`}>
-          <LinkedInIcon />
-        </Social>
-        <Social href={member.twitter} label={`${member.name} on X`}>
-          <XIcon />
-        </Social>
+        {member.linkedin && (
+          <Social href={member.linkedin} label={`${member.name} on LinkedIn`}>
+            <LinkedInIcon />
+          </Social>
+        )}
+        {member.twitter && (
+          <Social href={member.twitter} label={`${member.name} on X`}>
+            <XIcon />
+          </Social>
+        )}
       </div>
     </div>
   );
