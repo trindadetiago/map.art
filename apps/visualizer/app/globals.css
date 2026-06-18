@@ -1,248 +1,34 @@
+@import "tailwindcss";
+
 :root {
   color-scheme: dark;
 }
 
 html,
 body {
-  margin: 0;
-  padding: 0;
   height: 100%;
   background: #0c0b0a;
   color: #eae6dc;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-/* The viewer fills its matte. OpenSeadragon forces `position: relative` inline on
-   its container (defeating `inset: 0`), so size it with width/height percentages
-   of the matte, which has a definite size. */
-.viewer {
-  width: 100%;
-  height: 100%;
-  background: #0c0b0a;
 }
 
 /* Pixel-art must stay crisp at every zoom — kill the browser's own smoothing on
-   the OpenSeadragon canvas in addition to OSD's drawer settings. */
+   the OpenSeadragon canvas (which OSD injects, so it can't carry a class). */
 .viewer canvas {
   image-rendering: pixelated;
 }
 
-/* ---- Museum frame ---------------------------------------------------------
-   A dark "wall" (body), a gilded frame around a thin mat, the deep-zoom map
-   inside, and a brass placard hanging off the bottom edge. */
-.stage {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  /* Radial wash so the framed piece reads as spotlit on the wall. */
-  background: radial-gradient(120% 90% at 50% 38%, #1a1814 0%, #0c0b0a 70%);
-}
-
-.frame {
-  position: relative;
-  flex: 1;
-  margin: clamp(18px, 4.5vmin, 64px);
-  padding: clamp(10px, 1.4vmin, 18px);
-  border-radius: 3px;
-  /* Gilded moulding: a gradient border with depth from layered shadows. */
-  border: clamp(10px, 1.8vmin, 22px) solid #b8923f;
-  border-image-source: linear-gradient(
-    135deg,
-    #efd99a,
-    #b07f2c 30%,
-    #6f4e16 55%,
-    #e7cd86 80%,
-    #936a22
-  );
-  border-image-slice: 1;
-  background: #0c0b0a;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 24px 60px -18px rgba(0, 0, 0, 0.8), inset 0 0 0 2px
-    rgba(0, 0, 0, 0.35);
-}
-
-.matte {
-  position: absolute;
-  inset: clamp(10px, 1.4vmin, 18px);
-  /* Thin cream mat line around the art. */
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), inset 0 0 0 3px #e9e2cf, inset 0 0 0 4px
-    rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  background: #0c0b0a;
-}
-
-.placard {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(-14px, -1.6vmin, -22px);
-  transform: translateX(-50%);
-  z-index: 20;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 7px 18px;
-  border-radius: 6px;
-  color: #1c160c;
-  background: linear-gradient(180deg, #e4c879, #b8923f);
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.8);
-  white-space: nowrap;
-  max-width: 80vw;
-  overflow: hidden;
-}
-
-.placard-name {
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-}
-
-.placard-year {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: #4a3a18;
-}
-
-/* ---- Controls ------------------------------------------------------------- */
-.toolbar {
-  position: fixed;
-  top: 18px;
-  z-index: 30;
-  display: flex;
-  gap: 8px;
-}
-.toolbar-left {
-  left: 18px;
-}
-.toolbar-right {
-  right: 18px;
-}
-
-.frame-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  font-size: 15px;
-  line-height: 1;
-  color: #eae6dc;
-  text-decoration: none;
-  cursor: pointer;
-  background: rgba(12, 11, 10, 0.72);
-  border: 1px solid rgba(234, 230, 220, 0.14);
-  border-radius: 9px;
-  backdrop-filter: blur(6px);
-  transition: border-color 0.12s ease, background 0.12s ease;
-}
-.frame-btn:hover {
-  border-color: rgba(234, 230, 220, 0.4);
-}
-.frame-btn.is-active {
-  background: #e4c879;
-  border-color: #e4c879;
-  color: #1c160c;
-}
-
-/* ---- Info drawer ---------------------------------------------------------- */
-.drawer-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 50;
-  width: min(380px, 88vw);
-  height: 100%;
-  padding: 22px 24px;
-  background: #16140f;
-  border-left: 1px solid rgba(234, 230, 220, 0.12);
-  box-shadow: -20px 0 50px -20px rgba(0, 0, 0, 0.8);
-  overflow-y: auto;
-}
-
-.drawer-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.drawer-head h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 650;
-}
-.drawer-close {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  color: #9a9385;
-  background: none;
-  border: 1px solid rgba(234, 230, 220, 0.14);
-  border-radius: 8px;
-  cursor: pointer;
-}
-.drawer-close:hover {
-  color: #eae6dc;
-}
-
-.drawer-year {
-  margin-top: 2px;
-  color: #d8be7e;
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-}
-
-.drawer-desc {
-  margin: 14px 0 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #d6d0c2;
-}
-.drawer-desc.muted {
-  color: #6f695c;
-}
-
-.drawer-meta {
-  margin: 20px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid rgba(234, 230, 220, 0.1);
-  display: grid;
-  gap: 10px;
-}
-.drawer-meta div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-}
-.drawer-meta dt {
-  color: #9a9385;
-}
-.drawer-meta dd {
-  margin: 0;
-  color: #eae6dc;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Geolocation pins. The label sits above the dot; OpenSeadragon anchors the
-   element by its bottom-centre, so the dot's base lands on the real-world point.
-   Constant screen size — they don't scale with zoom. OSD forces the overlay root
-   to `display: block`, so the flex column lives on `.viz-pin-inner`. */
+/* Geolocation pins are built imperatively by the viewer (OpenSeadragon overlays),
+   so they live as global CSS rather than Tailwind classes. The label sits above
+   the dot; OSD anchors the element by its bottom-centre. OSD forces the overlay
+   root to `display: block`, so the flex column lives on `.viz-pin-inner`. */
 .viz-pin {
   z-index: 9;
 }
-
 .viz-pin-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .viz-pin-dot {
   width: 10px;
   height: 10px;
@@ -251,7 +37,6 @@ body {
   border: 2px solid #14110c;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }
-
 .viz-pin-label {
   margin-bottom: 5px;
   padding: 2px 8px;
@@ -268,140 +53,11 @@ body {
   transition: opacity 0.12s ease, transform 0.12s ease;
   pointer-events: none;
 }
-
 .viz-pin:hover .viz-pin-label {
   opacity: 1;
   transform: translateY(0);
 }
-
-/* Pins toggle: hide the injected overlay markers without rebuilding the viewer. */
+/* Pins toggle: hide the injected markers without rebuilding the viewer. */
 .viz-pins-hidden .viz-pin {
   display: none;
-}
-
-/* ---- World map home ------------------------------------------------------- */
-.worldmap-stage {
-  position: fixed;
-  inset: 0;
-  background: #ffffff;
-}
-
-/* The map sits in a centred, contained frame rather than edge-to-edge. */
-.worldmap-frame {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: min(86vw, 1040px);
-  height: min(78vh, 540px);
-}
-
-.worldmap-canvas {
-  position: absolute;
-  inset: 0;
-}
-
-.worldmap-pins {
-  position: absolute;
-  inset: 0;
-}
-
-/* Bottom-centre of the pin (the dot) lands on the projected location. */
-.worldmap-pin {
-  position: absolute;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translate(-50%, -100%);
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.worldmap-pin-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #ffcf4d;
-  border: 2px solid #14110c;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
-  transition: transform 0.1s ease;
-}
-.worldmap-pin.is-hovered .worldmap-pin-dot {
-  transform: scale(1.4);
-}
-
-.worldmap-pin-label {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  white-space: nowrap;
-  color: #eae6dc;
-  background: rgba(12, 11, 10, 0.9);
-  border: 1px solid rgba(234, 230, 220, 0.18);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  font-size: 12px;
-  font-weight: 600;
-  opacity: 0;
-  transform: translateY(3px);
-  transition: opacity 0.12s ease, transform 0.12s ease;
-}
-.worldmap-pin.is-hovered .worldmap-pin-label {
-  opacity: 1;
-  transform: translateY(0);
-}
-.worldmap-pin-year {
-  color: #d8be7e;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.center {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-}
-
-.panel {
-  max-width: 520px;
-  width: 100%;
-  background: #16140f;
-  border: 1px solid rgba(234, 230, 220, 0.12);
-  border-radius: 14px;
-  padding: 22px 24px;
-}
-
-.panel h1 {
-  font-size: 18px;
-  margin: 0 0 10px;
-}
-
-.panel code {
-  background: #221f17;
-  border: 1px solid rgba(234, 230, 220, 0.1);
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12.5px;
-}
-
-.panel ul {
-  margin: 12px 0 0;
-  padding-left: 18px;
-}
-
-.panel a {
-  color: #6ea8fe;
-  text-decoration: none;
-}
-
-.panel a:hover {
-  text-decoration: underline;
 }

@@ -32,7 +32,6 @@ export function WorldMapHome({ projects }: { projects: WorldProject[] }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [placed, setPlaced] = useState<Placed[]>([]);
-  const [hovered, setHovered] = useState<string | null>(null);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -58,26 +57,29 @@ export function WorldMapHome({ projects }: { projects: WorldProject[] }) {
   }, [projects]);
 
   return (
-    <div className="worldmap-stage">
-      <div ref={frameRef} className="worldmap-frame">
-        <canvas ref={canvasRef} className="worldmap-canvas" />
+    <div className="fixed inset-0 bg-white">
+      <div
+        ref={frameRef}
+        className="absolute inset-0 m-auto h-[min(78vh,540px)] w-[min(86vw,1040px)]"
+      >
+        <canvas ref={canvasRef} className="absolute inset-0" />
 
-        <div className="worldmap-pins">
+        <div className="absolute inset-0">
           {placed.map(({ project, x, y }) => (
             <button
               type="button"
               key={project.id}
-              className={`worldmap-pin${hovered === project.id ? ' is-hovered' : ''}`}
+              className="group -translate-x-1/2 -translate-y-full absolute z-10 flex cursor-pointer flex-col items-center border-none bg-transparent p-0"
               style={{ left: x, top: y }}
-              onMouseEnter={() => setHovered(project.id)}
-              onMouseLeave={() => setHovered((h) => (h === project.id ? null : h))}
               onClick={() => router.push(`/?project=${project.id}`)}
             >
-              <span className="worldmap-pin-label">
+              <span className="mb-[5px] inline-flex translate-y-[3px] items-baseline gap-1.5 whitespace-nowrap rounded-full border border-[rgba(234,230,220,0.18)] bg-[rgba(12,11,10,0.9)] px-[9px] py-[3px] font-semibold text-[#eae6dc] text-[12px] opacity-0 shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition group-hover:translate-y-0 group-hover:opacity-100">
                 {project.name}
-                {project.year !== null && <span className="worldmap-pin-year">{project.year}</span>}
+                {project.year !== null && (
+                  <span className="font-medium text-[#d8be7e] tabular-nums">{project.year}</span>
+                )}
               </span>
-              <span className="worldmap-pin-dot" />
+              <span className="block h-[11px] w-[11px] rounded-full border-2 border-[#14110c] bg-[#ffcf4d] shadow-[0_1px_4px_rgba(0,0,0,0.7)] transition-transform group-hover:scale-[1.4]" />
             </button>
           ))}
         </div>

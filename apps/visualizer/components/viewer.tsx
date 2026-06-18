@@ -105,7 +105,12 @@ export function Viewer({
   // Toggling pins only flips this class; the effect doesn't depend on showPins,
   // so the (expensive) OSD instance and its overlays are never rebuilt — CSS
   // hides the markers in place.
-  return <div ref={elRef} className={`viewer${showPins ? '' : ' viz-pins-hidden'}`} />;
+  return (
+    <div
+      ref={elRef}
+      className={`viewer h-full w-full bg-[#0c0b0a]${showPins ? '' : ' viz-pins-hidden'}`}
+    />
+  );
 }
 
 /** Build a pin overlay: a marker dot with a label that reveals on hover. The
