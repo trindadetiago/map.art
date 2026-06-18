@@ -70,18 +70,19 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
     };
   }, []);
 
-  // Clicking the globe replays the whole morph (map appears, collapses, globe
-  // expands) as a one-shot tween, independent of scroll.
-  const replay = (): void => {
+  // Clicking the globe opens the world map: animate the morph back to the map
+  // (globe collapses, map expands) and stay there.
+  const openMap = (): void => {
     if (replayRef.current) return;
     replayRef.current = true;
     setReplaying(true);
-    const dur = 1200;
+    const from = t;
+    const dur = 900;
     let start = 0;
     const tick = (now: number): void => {
       if (!start) start = now;
       const k = clamp01((now - start) / dur);
-      setT(easeInOut(k));
+      setT(from * (1 - easeInOut(k)));
       if (k < 1) requestAnimationFrame(tick);
       else {
         replayRef.current = false;
@@ -120,16 +121,16 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
           </div>
 
           {/* Globe — expands back out (the reverse of the collapse). Clicking it
-              replays the morph; it lifts + glows on hover. */}
+              opens the world map; it lifts + glows on hover. */}
           <div
             className="absolute aspect-square h-[min(70vh,520px)]"
             style={{ transform: `scaleY(${expand})`, opacity: expand }}
           >
             <button
               type="button"
-              onClick={replay}
-              title="Replay"
-              aria-label="Replay the intro"
+              onClick={openMap}
+              title="Open the world map"
+              aria-label="Open the world map"
               className="group block h-full w-full cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 hover:scale-[1.04]"
               style={{ pointerEvents: globeActive ? 'auto' : 'none' }}
             >
