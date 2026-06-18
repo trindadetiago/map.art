@@ -283,7 +283,7 @@ body {
 .worldmap-stage {
   position: fixed;
   inset: 0;
-  background: radial-gradient(120% 100% at 50% 30%, #14161d 0%, #08080a 70%);
+  background: #ffffff;
 }
 
 .worldmap-canvas {
@@ -363,11 +363,12 @@ body {
   font-size: 22px;
   font-weight: 680;
   letter-spacing: -0.01em;
+  color: #1a1714;
 }
 .worldmap-title p {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #9a9385;
+  color: #6f6a5e;
 }
 
 .center {

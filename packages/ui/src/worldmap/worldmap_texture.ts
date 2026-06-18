@@ -62,6 +62,10 @@ export function paintWorldMap(
     canvas.width = iw;
     canvas.height = ih;
     drawWorldMap(ctx, equalEarthProjection(iw, ih), config, iw, ih);
+    // Canvas fills are anti-aliased, so every land/ocean edge has blended
+    // pixels; nearest-neighbour upscaling would smear them into soft blocks.
+    // Snap each pixel to the nearest palette colour for hard pixel-art edges.
+    snapToPalette(ctx, iw, ih, config);
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     canvas.style.imageRendering = 'pixelated';
@@ -75,4 +79,57 @@ export function paintWorldMap(
   }
 
   return equalEarthProjection(width, height);
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [
+    Number.parseInt(h.slice(0, 2), 16),
+    Number.parseInt(h.slice(2, 4), 16),
+    Number.parseInt(h.slice(4, 6), 16),
+  ];
+}
+
+/**
+ * Hard-quantise a rendered canvas to the variant's palette: clear near-empty
+ * pixels (the anti-aliased sphere edge) and snap the rest to the nearest palette
+ * colour, so no blended edge pixels survive into the upscaled pixel-art.
+ */
+function snapToPalette(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  config: WorldMapVariantConfig,
+): void {
+  const palette: [number, number, number][] = [
+    hexToRgb(config.palette.ocean),
+    hexToRgb(config.palette.land),
+  ];
+  if (config.borderWidth > 0) palette.push(hexToRgb(config.palette.border));
+
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if ((d[i + 3] ?? 0) < 128) {
+      d[i + 3] = 0;
+      continue;
+    }
+    const r = d[i] ?? 0;
+    const g = d[i + 1] ?? 0;
+    const b = d[i + 2] ?? 0;
+    let best = palette[0] ?? [0, 0, 0];
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (const c of palette) {
+      const dist = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = c;
+      }
+    }
+    d[i] = best[0];
+    d[i + 1] = best[1];
+    d[i + 2] = best[2];
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
 }
