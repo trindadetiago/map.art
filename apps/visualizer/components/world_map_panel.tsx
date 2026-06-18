@@ -65,7 +65,10 @@ export function WorldMapPanel({ projects }: { projects: WorldProject[] }) {
             key={project.id}
             className="group -translate-x-1/2 -translate-y-full absolute z-10 flex cursor-pointer flex-col items-center border-none bg-transparent p-0"
             style={{ left: x, top: y }}
-            onClick={() => router.push(`/?project=${project.id}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/?project=${project.id}`);
+            }}
           >
             <span className="mb-[5px] inline-flex translate-y-[3px] items-baseline gap-1.5 whitespace-nowrap rounded-full border border-[rgba(234,230,220,0.18)] bg-[rgba(12,11,10,0.9)] px-[9px] py-[3px] font-semibold text-[#eae6dc] text-[12px] opacity-0 shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition group-hover:translate-y-0 group-hover:opacity-100">
               {project.name}

@@ -42,14 +42,19 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
   const [t, setT] = useState(0);
   const [replaying, setReplaying] = useState(false);
   const replayRef = useRef(false);
+  // Once the user clicks to switch map/globe, scroll stops driving the morph —
+  // from then on it's click-only (click globe → map, click map → globe).
+  const [manual, setManual] = useState(false);
+  const manualRef = useRef(false);
 
   // Scroll only ever pushes the morph forward (map → globe) — scrolling back up
-  // never reverses it, so once the globe is revealed it stays the globe.
+  // never reverses it, so once the globe is revealed it stays the globe. After a
+  // manual click takes over, scroll no longer drives it at all.
   useEffect(() => {
     let raf = 0;
     const update = (): void => {
       raf = 0;
-      if (replayRef.current) return;
+      if (replayRef.current || manualRef.current) return;
       const hero = heroRef.current;
       if (!hero) return;
       const rect = hero.getBoundingClientRect();
@@ -70,9 +75,8 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
     };
   }, []);
 
-  // Clicking the globe opens the world map: animate the morph back to the map
-  // (globe collapses, map expands) and stay there.
-  const openMap = (): void => {
+  // Animate the morph to a target (0 = map, 1 = globe) as a one-shot tween.
+  const tweenTo = (target: number): void => {
     if (replayRef.current) return;
     replayRef.current = true;
     setReplaying(true);
@@ -82,7 +86,7 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
     const tick = (now: number): void => {
       if (!start) start = now;
       const k = clamp01((now - start) / dur);
-      setT(from * (1 - easeInOut(k)));
+      setT(from + (target - from) * easeInOut(k));
       if (k < 1) requestAnimationFrame(tick);
       else {
         replayRef.current = false;
@@ -91,6 +95,15 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
     };
     requestAnimationFrame(tick);
   };
+
+  // Clicking the globe opens the map (and hands control to clicks); clicking the
+  // map goes back to the globe.
+  const openMap = (): void => {
+    manualRef.current = true;
+    setManual(true);
+    tweenTo(0);
+  };
+  const openGlobe = (): void => tweenTo(1);
 
   // Map collapses over the first ~45%; the globe expands over the last ~45%,
   // with a brief "closed" beat at the midpoint where both are a flat line.
@@ -108,14 +121,17 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
       {/* Pinned hero: tall so there's scroll distance to drive the morph. */}
       <section ref={heroRef} className="relative h-[240vh]">
         <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden">
-          {/* World map — collapses from top+bottom to a centre line. */}
+          {/* World map — collapses from top+bottom to a centre line. Once in
+              manual mode, clicking empty map (not a pin) returns to the globe. */}
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: globe toggle is also reachable by clicking the globe */}
           <div
-            className="absolute h-[min(70vh,520px)] w-[min(86vw,1040px)]"
+            className={`absolute h-[min(70vh,520px)] w-[min(86vw,1040px)] ${manual ? 'cursor-pointer' : ''}`}
             style={{
               transform: `scaleY(${mapScaleY})`,
               opacity: mapOpacity,
               pointerEvents: collapse > 0.15 || replaying ? 'none' : 'auto',
             }}
+            onClick={manual ? openGlobe : undefined}
           >
             <WorldMapPanel projects={projects} />
           </div>
