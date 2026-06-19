@@ -16,3 +16,4 @@ export {
   WATER_FILL_RGB,
 } from './water';
 export { stylizeKey, stylizeStepKey, STYLIZE_STEPS, type StylizeStep } from './keys';
+export { OUTPUT_FORMAT, WEBP_OUTPUT, PNG_OUTPUT, type OutputFormat } from './format';

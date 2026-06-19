@@ -57,11 +57,49 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  stylizeDebugArtifacts: {
+    envKey: 'STYLIZE_DEBUG_ARTIFACTS',
+    description:
+      'Set to "1" to make worker-stylize persist per-tile pipeline artifacts (model composite + raw output) to storage for inspection. Off by default — they double the upload volume per tile.',
+  },
+  appPassword: {
+    envKey: 'APP_PASSWORD',
+    description:
+      'Shared password gating the whole apps/web site. When set, visitors must enter it at /login before any page loads; leave empty to disable the gate (e.g. local dev).',
+  },
+  railwayEnvironmentName: {
+    envKey: 'RAILWAY_ENVIRONMENT_NAME',
+    description:
+      'Injected automatically by Railway (e.g. "production"). Presence signals the process runs on Railway; leave unset locally.',
+  },
   renderWorkerPort: {
     envKey: 'RENDER_WORKER_PORT',
     description:
       'Port apps/worker-render listens on. Serves the render-page on GET / (via embedded Vite in dev) and the render API on POST /render. Puppeteer also navigates to this same port internally.',
     default: '9999',
+  },
+  logLevel: {
+    envKey: 'LOG_LEVEL',
+    description:
+      'Minimum log level emitted by @mapart/logger: debug, info, warn, or error. Defaults to info on Railway and debug locally.',
+    validate: (v) => {
+      const allowed = ['debug', 'info', 'warn', 'error'];
+      if (!allowed.includes(v.toLowerCase())) {
+        throw new Error(`LOG_LEVEL must be one of ${allowed.join(', ')}`);
+      }
+      return v.toLowerCase();
+    },
+  },
+  logFormat: {
+    envKey: 'LOG_FORMAT',
+    description:
+      'Log line format from @mapart/logger: "pretty" (human-readable, coloured on a TTY) or "json" (one JSON object per line). Defaults to json on Railway and pretty locally.',
+    validate: (v) => {
+      if (v.toLowerCase() !== 'pretty' && v.toLowerCase() !== 'json') {
+        throw new Error('LOG_FORMAT must be "pretty" or "json"');
+      }
+      return v.toLowerCase();
+    },
   },
 } as const satisfies Record<string, EnvFieldDef>;
 

@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>map.art — visualizer</title>
+    <style>
+      :root {
+        --bg: #f7f5ef;
+        --panel: #ffffff;
+        --ink: #14110d;
+        --ink-soft: #3f3a32;
+        --muted: #7a7368;
+        --line: #e7e2d4;
+        --line-strong: #d8d2c1;
+        --tint: #f0ece1;
+        --accent: #2563eb;
+        --good: #15803d;
+        --warn: #b45309;
+        --bad: #b91c1c;
+
+        --shadow-xs: 0 1px 2px rgba(20, 17, 13, 0.04);
+        --shadow-sm: 0 1px 2px rgba(20, 17, 13, 0.04), 0 2px 6px rgba(20, 17, 13, 0.04);
+        --shadow-md: 0 1px 2px rgba(20, 17, 13, 0.04), 0 8px 24px rgba(20, 17, 13, 0.06);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; color: var(--ink); }
+      body {
+        font: 15px/1.6 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 56px 28px 96px;
+        background: var(--bg);
+      }
+      h1 {
+        font-size: 36px;
+        font-weight: 700;
+        margin: 0 0 6px;
+        letter-spacing: -0.025em;
+        background: linear-gradient(180deg, #14110d 0%, #4a443b 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 56px 0 14px;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line), transparent);
+        margin-left: 4px;
+      }
+      h3 {
+        font-size: 15.5px;
+        font-weight: 650;
+        margin: 14px 0 8px;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      p { margin: 6px 0; color: var(--ink-soft); }
+      .lede { color: var(--muted); margin-bottom: 32px; font-size: 16px; max-width: 820px; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px 22px 18px;
+        box-shadow: var(--shadow-xs);
+        position: relative;
+        overflow: hidden;
+      }
+      .card h3 { margin-top: 4px; }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px 3px 9px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        background: var(--tint);
+        color: var(--ink-soft);
+        border: 1px solid var(--line);
+      }
+      .tag::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .tag.good::before { background: #15803d; }
+      .tag.warn::before { background: #b45309; }
+      .tag.info::before { background: #2563eb; }
+
+      ul, ol { padding-left: 20px; margin: 6px 0; color: var(--ink-soft); }
+      li { margin: 4px 0; }
+      code {
+        background: var(--tint);
+        padding: 1.5px 6px;
+        border-radius: 5px;
+        font: 12.5px/1.4 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #4a443b;
+        border: 1px solid #e6e0cf;
+      }
+      pre {
+        background: linear-gradient(180deg, #1a1815 0%, #14110d 100%);
+        color: #eaeaea;
+        padding: 16px 18px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font: 12.5px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #0a0907;
+      }
+      pre.tree { background: var(--panel); color: var(--ink-soft); border: 1px solid var(--line); box-shadow: var(--shadow-xs); }
+      pre .c { color: #807a70; }
+      pre .k { color: #93c5fd; }
+      pre .s { color: #fcd34d; }
+
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+      .callout {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin: 18px 0;
+        box-shadow: var(--shadow-xs);
+      }
+      .callout.warn { border-left-color: var(--warn); }
+      .callout.good { border-left-color: var(--good); }
+      .callout p { margin: 4px 0; }
+      .callout strong { color: var(--ink); }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 13.5px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { background: var(--tint); font-weight: 700; color: var(--ink-soft); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+      tr:last-child td { border-bottom: none; }
+      td code { white-space: nowrap; }
+
+      .steps {
+        counter-reset: step;
+        list-style: none;
+        padding-left: 0;
+        margin: 16px 0 0;
+      }
+      .steps > li {
+        position: relative;
+        padding: 0 0 22px 46px;
+        margin: 0;
+        border-left: 2px solid var(--line);
+        margin-left: 14px;
+      }
+      .steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+      .steps > li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: -15px;
+        top: -2px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        color: var(--ink-soft);
+        font: 700 12px/28px "Inter", sans-serif;
+        text-align: center;
+        box-shadow: var(--shadow-xs);
+      }
+      .steps .who {
+        display: inline-block;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: var(--tint);
+        border: 1px solid var(--line);
+        color: var(--ink-soft);
+        margin-bottom: 4px;
+      }
+      .steps .who.build { background: #eef4ff; border-color: #cfe0ff; color: #1e40af; }
+      .steps .who.serve { background: #fef3e7; border-color: #f5dcbf; color: #92400e; }
+      .steps .who.client { background: #ecfdf3; border-color: #c5ead4; color: #15803d; }
+      .steps h3 { margin: 2px 0 4px; }
+      .steps p { margin: 2px 0; }
+
+      .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+      .pill {
+        font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+        background: var(--panel); border: 1px solid var(--line); color: var(--ink-soft);
+      }
+
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+      .mapart { color: var(--accent); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>map.art — visualizer</h1>
+    <p class="lede">
+      The shipped deep-zoom viewer — the realized build of what the
+      <a href="isometric-nyc--viewer.html">isometric.nyc teardown</a> sketched as the shape we'd likely adopt.
+      One sentence: <strong>worker-stylize</strong> produces per-tile pixel-art →
+      <strong>@mapart/export</strong> stitches them into one raster and slices a DZI/WebP pyramid →
+      <strong>OpenSeadragon</strong> pans/zooms it with smoothing off → static tiles sit in S3/t3,
+      streamed through a thin Next route with immutable cache + CORS.
+    </p>
+
+    <h2>Two halves, don't confuse them</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag info">build-time · offline</span>
+        <h3>The export (<code>@mapart/export</code>)</h3>
+        <p>Pure server-side. <code>exportProjectDzi(projectId)</code> reads a project's tiles, stitches the
+        per-tile <code>(x,y)</code> stylized images into one giant raster, and slices a DZI/WebP pyramid into
+        <code>viz/{projectId}/</code> in storage. Runs from the CLI or a one-off Railway service — never in the
+        request path.</p>
+      </div>
+      <div class="card">
+        <span class="tag good">runtime · the viewer</span>
+        <h3>The viewer (<code>apps/visualizer</code>)</h3>
+        <p>Next.js on <code>:3220</code>. One OpenSeadragon instance over a project's pre-built pyramid
+        (<code>/?project=&lt;id&gt;</code>). At view time there's no scene and no camera — the isometric look is
+        baked into the pixels, so this is a flat raster pan/zoom widget. This doc is mostly about how the two
+        connect.</p>
+      </div>
+    </div>
+
+    <h2>The stack</h2>
+    <div class="pills">
+      <span class="pill">Next.js 15 (App Router)</span>
+      <span class="pill">OpenSeadragon (tile viewer)</span>
+      <span class="pill">sharp / libvips (dzsave)</span>
+      <span class="pill">DZI / WebP (tile format)</span>
+      <span class="pill">@mapart/storage (S3 / t3)</span>
+      <span class="pill">Railway (export-runner)</span>
+    </div>
+
+    <h2>Pipeline, end to end</h2>
+    <ol class="steps">
+      <li>
+        <span class="who build">build · export</span>
+        <h3>Stitch the tiles, slice the pyramid</h3>
+        <p><code>exportProjectDzi</code> downloads each present tile to a temp dir, then stitches in
+        <strong>two passes</strong>: one full-width strip per grid row (a memory-mapped libvips <code>.v</code>),
+        then the strips assembled into the pyramid via sharp's <code>.tile({ layout: 'dz' })</code>. Two passes
+        cap concurrent inputs to dozens instead of thousands — compositing every tile at once OOM-kills a
+        multi-gigapixel canvas. The grid's <code>y</code> is inverted (north on top). Everything uploads under one
+        prefix:</p>
+        <pre class="tree">viz/{projectId}/
+  metadata.json          <span class="c"># VizMetadata: dims, tileSize, format, grid, source, geo anchor</span>
+  pins.json              <span class="c"># VizPin[]: real-world lat/lng markers (optional)</span>
+  tiles.dzi              <span class="c"># the DZI descriptor sharp emits (kept for debugging)</span>
+  tiles_files/
+    0/0_0.webp           <span class="c"># lowest zoom level (1 tile)</span>
+    ...
+    16/97_77.webp        <span class="c"># full-res 512px WebP tiles</span></pre>
+      </li>
+      <li>
+        <span class="who serve">serve · next route</span>
+        <h3>A thin tile proxy (the Cloudflare-Worker analog)</h3>
+        <p><code>app/api/viz/[...path]/route.ts</code> streams <code>viz/&lt;path&gt;</code> out of storage and stamps
+        <code>Cache-Control: public, max-age=31536000, immutable</code> + CORS. No tile logic. It also smooths the
+        opening burst with a process-wide semaphore, retries transient storage failures, and returns
+        <code>503</code> (retryable) rather than <code>404</code> when a fetch is throttled — so a stampede of tile
+        requests can't leave OpenSeadragon with permanent black gaps.</p>
+      </li>
+      <li>
+        <span class="who client">client · openseadragon</span>
+        <h3>One viewer instance does the rest</h3>
+        <p><code>components/viewer.tsx</code> mounts a single OSD instance over the pyramid, built from
+        <code>metadata.json</code>. Pan/zoom, the built-in navigator minimap, and the pixel-art crispness settings
+        all live here. Details below.</p>
+      </li>
+    </ol>
+
+    <h2>Inside the export — the load-bearing bits</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag">memory</span>
+        <h3>Two-pass strip stitch</h3>
+        <p>Compositing ~2000 tile layers onto a ~2-gigapixel canvas in one shot gets OOM-killed (exit 137).
+        Build per-row strips first (≤gridWidth inputs each), then assemble gridHeight strips — peak memory stays
+        in the hundreds of MB regardless of project size.</p>
+      </div>
+      <div class="card">
+        <span class="tag">memory</span>
+        <h3>Download to disk, not RAM</h3>
+        <p>Tiles are written to a temp dir and composited from file paths (lazy libvips reads), so we never hold
+        thousands of decoded buffers resident. Fetches and uploads are bounded (16 inflight) — an unbounded
+        <code>Promise.all</code> saturates the S3 pool and remote storage starts cancelling requests.</p>
+      </div>
+      <div class="card">
+        <span class="tag good">orientation</span>
+        <h3>Row axis inverted</h3>
+        <p>Grid <code>y</code> increases northward, but image rows run top→down. The stitch places the highest
+        <code>y</code> on top so the map comes out the right way up; columns map straight across.</p>
+      </div>
+      <div class="card">
+        <span class="tag info">robustness</span>
+        <h3>Probe, don't assume</h3>
+        <p>The source tile pixel size is read from the first image rather than hard-coded (renders are 1024px,
+        not 512). The pyramid tile size stays 512 — the OSD/DZI default — independent of the source.</p>
+      </div>
+    </div>
+
+    <h2>Inside the viewer — the clever bits</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag bad">gotcha</span>
+        <h3>Own the tile URL</h3>
+        <p>The tile source uses an explicit <code>getTileUrl</code>, <em>not</em> the legacy DZI <code>{ Image }</code>
+        descriptor. OSD's built-in DZI URL builder concatenates <code>fileFormat + queryParams</code>, and the
+        <strong>minified prod bundle appends a literal <code>undefined</code></strong> — every tile requested
+        <code>…_y.webp undefined</code> and 404'd. It worked in dev (unminified) and only broke in production.</p>
+      </div>
+      <div class="card">
+        <span class="tag good">pixel art</span>
+        <h3>Keep pixels crisp</h3>
+        <p><code>imageSmoothingEnabled: false</code> (no bilinear blur), <code>maxZoomPixelRatio: 8</code> with
+        nearest-neighbour over-zoom (inspect individual pixels without mush), <code>smoothTileEdgesMinZoom:
+        Infinity</code>, plus <code>image-rendering: pixelated</code> on the canvas.</p>
+      </div>
+      <div class="card">
+        <span class="tag warn">layout</span>
+        <h3>Size the container explicitly</h3>
+        <p>OSD forces <code>position: relative</code> inline on its element, which defeats <code>inset: 0</code>
+        sizing — the div collapses to height 0 and the canvas draws into 1px. The <code>.viewer</code> uses
+        <code>100vw/100vh</code> so it fills the viewport regardless.</p>
+      </div>
+      <div class="card">
+        <span class="tag info">free features</span>
+        <h3>Minimap + fallbacks</h3>
+        <p>The minimap is OSD's built-in navigator. The page also handles the no-pyramid-yet state (with the exact
+        <code>mapart export</code> command to run) and a project picker when <code>?project</code> is absent.</p>
+      </div>
+    </div>
+
+    <h2>Pins — real-world overlays</h2>
+    <p class="lede" style="margin-bottom: 18px;">
+      Pins put labelled markers — a landmark, a neighbourhood, anything with a coordinate — onto the map at
+      their true geographic location. The trick is that the runtime is a flat raster with no idea where on Earth
+      it sits, so the lat/lng → pixel mapping has to be carried across from build time.
+    </p>
+
+    <div class="callout">
+      <p>The chain is three linear hops:
+      <strong>lat/lng → grid <code>(x,y)</code> → raster pixel → OpenSeadragon viewport point</strong>.
+      The middle hop is fixed by how the export stitches; the first is recovered from a fit baked into
+      <code>metadata.json</code>; the last is OSD's own <code>imageToViewportCoordinates</code>.</p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <span class="who build">build · export</span>
+        <h3>Bake a geo anchor into the metadata</h3>
+        <p>Each tile row carries its real-world centre (<code>lat</code>, <code>lng</code>) alongside its grid
+        <code>(x,y)</code>. At export, <code>computeGeoAnchor</code> least-squares-fits those centres into a
+        <code>VizGeoAnchor</code> — the grid is mercator-aligned, so longitude tracks grid&nbsp;X and latitude
+        tracks grid&nbsp;Y, each with a near-constant per-tile step. A project one tile wide or tall has no spread
+        to fit on that axis, so the step is recovered from the other via the <code>cos(latitude)</code> aspect
+        (tiles are square on the ground). The anchor rides in <code>metadata.json</code>.</p>
+        <pre class="tree">geo: {
+  anchorLat, anchorLng,   <span class="c"># centre of the grid's (minX, minY) tile</span>
+  latPerTileY,            <span class="c"># °lat per +1 grid Y (north-positive)</span>
+  lngPerTileX             <span class="c"># °lng per +1 grid X (east-positive)</span>
+}</pre>
+      </li>
+      <li>
+        <span class="who serve">author · admin / cli</span>
+        <h3>Define the pins</h3>
+        <p>Pins live as a plain <code>VizPin[]</code> JSON array at <code>viz/{projectId}/pins.json</code> — each
+        is <code>{ lat, lng, label, kind? }</code>. Author them two ways:</p>
+        <ul>
+          <li><strong>Admin panel</strong> (<code>apps/web</code> → <code>/admin/pins</code>): pick a project, click a
+          Google Map to drop pins, drag markers to nudge them, edit labels, save. The panel reads/writes the same
+          <code>pins.json</code>.</li>
+          <li><strong>CLI</strong>: <code>pnpm mapart export pins --project &lt;id&gt; --file pins.json</code> —
+          validates the array and uploads it.</li>
+        </ul>
+        <p>Both go through <code>@mapart/export/pins</code> (<code>getProjectPins</code> /
+        <code>setProjectPins</code> / <code>validatePins</code>), which validates ranges and rejects malformed
+        entries loudly rather than dropping them.</p>
+      </li>
+      <li>
+        <span class="who client">client · openseadragon</span>
+        <h3>Project to pixels, render as overlays</h3>
+        <p><code>page.tsx</code> reads <code>pins.json</code> server-side and hands it to the viewer.
+        <code>lib/geo.ts</code>'s <code>latLngToImagePoint</code> inverts the anchor to a raster pixel (mirroring the
+        export's half-tile offset and flipped row axis), and each pin is added as an OSD overlay anchored to that
+        image point. Because overlays are placed <em>by point</em>, they hold a constant screen size and their
+        position tracks pan/zoom for free; the label reveals on hover.</p>
+      </li>
+    </ol>
+
+    <div class="callout warn">
+      <p><strong>Pins need an anchored pyramid.</strong> The mapping lives in <code>metadata.json</code>, so a
+      pyramid exported before geo anchoring existed has no <code>geo</code> field — the viewer skips pins silently
+      until the project is re-exported with <code>mapart export dzi</code>. <code>pins.json</code> itself is read
+      live, so editing pins doesn't require a re-export.</p>
+    </div>
+
+    <h2>Running an export</h2>
+    <p>The export is a build step, not a request. Two ways to run it:</p>
+    <ol class="steps">
+      <li>
+        <span class="who build">local · dev</span>
+        <h3>Against local MinIO</h3>
+        <pre class="tree">pnpm mapart export dzi --project &lt;id&gt;    <span class="c"># --source stylized|rendered, --quality</span></pre>
+      </li>
+      <li>
+        <span class="who serve">prod · railway</span>
+        <h3>Against t3 storage, from inside Railway</h3>
+        <p>Running the export against prod from a laptop <strong>stalls</strong> — t3 throttles/cancels requests
+        over the public internet and the prod DB is private-only. So run it <em>inside</em> Railway:</p>
+        <pre class="tree">node scripts/export-on-railway.mjs &lt;projectId&gt; [stylized|rendered]</pre>
+        <p>This deploys a reusable, normally-idle <code>export-runner</code> service (internal DB + local-fast t3),
+        runs the CLI, polls the new deployment's logs to completion, then goes idle (no compute billed). Re-running
+        just redeploys it with a new project id.</p>
+      </li>
+    </ol>
+
+    <h2>Scale, for reference</h2>
+    <table>
+      <tr><th>A real project (João Pessoa)</th><th></th></tr>
+      <tr><td>Source tiles (stylized, 1024px)</td><td>1,911 on a 49×39 grid</td></tr>
+      <tr><td>Stitched raster</td><td>50,176 × 39,936 px (~2 gigapixel)</td></tr>
+      <tr><td>Pyramid levels</td><td>0 → 16</td></tr>
+      <tr><td>Objects uploaded</td><td>~10,249 WebP tiles + descriptor + metadata</td></tr>
+      <tr><td>Export wall-clock (in Railway)</td><td>~8 min stitch + upload</td></tr>
+    </table>
+
+    <h2>Files worth reading</h2>
+    <table>
+      <tr><th>Path</th><th>What</th></tr>
+      <tr><td><code>packages/export/src/export.ts</code></td><td>The whole export: download, two-pass stitch, dzsave, upload.</td></tr>
+      <tr><td><code>apps/visualizer/components/viewer.tsx</code></td><td>OSD setup, custom tile source, crispness settings.</td></tr>
+      <tr><td><code>apps/visualizer/app/api/viz/[...path]/route.ts</code></td><td>The tile proxy: semaphore, retry, cache, CORS.</td></tr>
+      <tr><td><code>apps/visualizer/app/page.tsx</code></td><td>Metadata load, pins load, picker + no-pyramid fallbacks.</td></tr>
+      <tr><td><code>apps/visualizer/lib/geo.ts</code></td><td>lat/lng → image-pixel projection via the geo anchor.</td></tr>
+      <tr><td><code>packages/export/src/pins.ts</code></td><td>Pin read/write/validate over storage.</td></tr>
+      <tr><td><code>apps/web/components/admin/pins/pins_editor.tsx</code></td><td>The map-based pin editor (admin panel).</td></tr>
+      <tr><td><code>scripts/export-on-railway.mjs</code></td><td>The reusable Railway export-runner.</td></tr>
+    </table>
+
+    <footer>
+      <span class="mapart">map.art</span> — the deep-zoom viewer, realized. Companion to
+      <a href="isometric-nyc--viewer.html">the isometric.nyc teardown</a> and
+      <a href="architecture.html">the architecture sketch</a>.
+    </footer>
+  </body>
+</html>

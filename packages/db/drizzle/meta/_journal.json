@@ -15,6 +15,13 @@
       "when": 1780096901508,
       "tag": "0001_breezy_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781721358126,
+      "tag": "0002_flat_war_machine",
+      "breakpoints": true
     }
   ]
 }

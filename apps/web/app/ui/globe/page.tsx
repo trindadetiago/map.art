@@ -1,11 +1,11 @@
 'use client';
 
-import { GLOBE_VARIANTS, type GlobeVariant } from '@/components/globe/variants';
+import { GLOBE_VARIANTS, type GlobeVariant } from '@mapart/ui/globe';
 import dynamic from 'next/dynamic';
 import { type ReactNode, useEffect, useState } from 'react';
 import { PageHeader } from '../_components/spec';
 
-const Globe = dynamic(() => import('@/components/globe/globe').then((m) => m.Globe), {
+const Globe = dynamic(() => import('@mapart/ui/globe/react').then((m) => m.Globe), {
   ssr: false,
   loading: () => <div className="h-full w-full animate-pulse rounded-full bg-stone-200/60" />,
 });

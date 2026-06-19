@@ -144,7 +144,7 @@ export const CATEGORIES: Category[] = [
     slug: 'globe',
     title: 'Globe',
     blurb: 'A 3D globe built from real country geometry — realistic or pixelated.',
-    source: '@/components/globe · three.js + d3-geo',
+    source: '@mapart/ui/globe · three.js + d3-geo',
     Preview: () => (
       <svg viewBox="0 0 96 96" className="h-24 w-24" role="img" aria-label="Globe illustration">
         <defs>

@@ -24,6 +24,16 @@ describe('extractStylized', () => {
     const meta = await sharp(out).metadata();
     expect(meta.width).toBe(TILE_SIZE);
     expect(meta.height).toBe(TILE_SIZE);
-    expect(await pixel(out, 512, 512)).toEqual([10, 20, 30]);
+    // OUTPUT_FORMAT may be lossy (WebP), so the centre colour is preserved within
+    // a small tolerance rather than exactly — this asserts the crop landed, not
+    // byte-exact encoding.
+    const [r, g, b] = await pixel(out, 512, 512);
+    for (const [actual, expected] of [
+      [r, 10],
+      [g, 20],
+      [b, 30],
+    ]) {
+      expect(Math.abs(actual - expected)).toBeLessThanOrEqual(5);
+    }
   });
 });

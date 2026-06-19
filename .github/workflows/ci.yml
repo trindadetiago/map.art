@@ -1,0 +1,117 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jp
+          POSTGRES_PASSWORD: jp
+          POSTGRES_DB: jp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jp"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://jp:jp@localhost:5432/jp
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: ci
+      S3_SECRET_ACCESS_KEY: ci-secret
+      S3_BUCKET: ci-bucket
+      GOOGLE_MAPS_API_KEY: ci-dummy-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      services: ${{ steps.services.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        id: filter
+        with:
+          filters: |
+            shared: &shared
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            web:
+              - *shared
+              - 'apps/web/**'
+            visualizer:
+              - *shared
+              - 'apps/visualizer/**'
+            worker_render:
+              - *shared
+              - 'apps/worker-render/**'
+            worker_stylize:
+              - *shared
+              - 'apps/worker-stylize/**'
+      - name: List changed services
+        id: services
+        env:
+          WEB: ${{ steps.filter.outputs.web }}
+          VISUALIZER: ${{ steps.filter.outputs.visualizer }}
+          WORKER_RENDER: ${{ steps.filter.outputs.worker_render }}
+          WORKER_STYLIZE: ${{ steps.filter.outputs.worker_stylize }}
+        run: |
+          services=()
+          if [ "$WEB" = "true" ]; then services+=('"web"'); fi
+          if [ "$VISUALIZER" = "true" ]; then services+=('"visualizer"'); fi
+          if [ "$WORKER_RENDER" = "true" ]; then services+=('"worker-render"'); fi
+          if [ "$WORKER_STYLIZE" = "true" ]; then services+=('"worker-stylize"'); fi
+          list=$(IFS=,; echo "[${services[*]}]")
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "changed services: $list"
+
+  deploy:
+    needs: [check, changes]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    concurrency:
+      group: deploy-${{ github.ref }}-${{ matrix.service }}
+      cancel-in-progress: false
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli@5.7.0
+      - name: Deploy ${{ matrix.service }}
+        run: railway up --ci --service ${{ matrix.service }}

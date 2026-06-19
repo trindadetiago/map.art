@@ -5,6 +5,7 @@ import { createProject } from '../src/repos/projects';
 import {
   MAX_RETRIES,
   type TileCell,
+  addProjectTiles,
   claimNextRender,
   claimNextStylize,
   createProjectTiles,
@@ -92,6 +93,40 @@ describe('createProjectTiles', () => {
     // adjacency is symmetric
     expect(at(0, 0).neighbors).toContain(at(1, 1).id);
     expect(at(1, 1).neighbors).toContain(at(0, 0).id);
+  });
+});
+
+describe('addProjectTiles', () => {
+  it('rewires neighbors across the old/new boundary, negative coords included', async () => {
+    const created = await project(grid(2, 2));
+    const projectId = created[0]?.projectId;
+    if (!projectId) throw new Error('no project id');
+
+    // Expand one column west (negative x) — a 3×2 grid after the merge.
+    const added = await addProjectTiles(projectId, [
+      { x: -1, y: 0, lat: 40, lng: -74.001 },
+      { x: -1, y: 1, lat: 40.001, lng: -74.001 },
+    ]);
+    expect(added).toHaveLength(2);
+
+    const t = await getDb().select().from(tiles).where(eq(tiles.projectId, projectId));
+    const at = (x: number, y: number) => {
+      const tile = t.find((r) => r.x === x && r.y === y);
+      if (!tile) throw new Error(`no tile at ${x},${y}`);
+      return tile;
+    };
+
+    // new edge tiles see the old grid: (-1,0) touches (-1,1), (0,0), (0,1)
+    expect(at(-1, 0).neighbors).toHaveLength(3);
+    // old boundary tiles gained the new column: (0,0) had 3, now 5
+    expect(at(0, 0).neighbors).toHaveLength(5);
+    expect(at(0, 0).neighbors).toContain(at(-1, 0).id);
+    expect(at(-1, 0).neighbors).toContain(at(0, 0).id);
+    // the far column is untouched
+    expect(at(1, 0).neighbors).toHaveLength(3);
+    // new tiles enter the render queue
+    expect(at(-1, 0).currentStatusType).toBe('render');
+    expect(at(-1, 0).status).toBe('pending');
   });
 });
 

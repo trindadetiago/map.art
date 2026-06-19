@@ -6,6 +6,15 @@ import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
+/** Parse a year form field → integer or null; throws on a non-numeric value. */
+function parseYear(raw: FormDataEntryValue | null): number | null {
+  const s = String(raw ?? '').trim();
+  if (!s) return null;
+  const n = Number.parseInt(s, 10);
+  if (!Number.isInteger(n) || String(n) !== s) throw new Error('year must be a whole number');
+  return n;
+}
+
 async function createProjectAction(
   fd: FormData,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
@@ -17,9 +26,31 @@ async function createProjectAction(
     const row = await repos.createProject({
       name,
       description: description || null,
+      year: parseYear(fd.get('year')),
     });
     revalidatePath('/admin/projects');
     return { ok: true, id: row.id };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+async function updateProjectAction(
+  id: string,
+  fd: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  'use server';
+  try {
+    const name = String(fd.get('name') ?? '').trim();
+    if (!name) return { ok: false, error: 'name is required' };
+    const description = String(fd.get('description') ?? '').trim();
+    await repos.updateProject(id, {
+      name,
+      description: description || null,
+      year: parseYear(fd.get('year')),
+    });
+    revalidatePath('/admin/projects');
+    return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
@@ -41,6 +72,7 @@ export default async function ProjectsPage() {
       id: p.id,
       name: p.name,
       description: p.description,
+      year: p.year,
       createdAt: p.createdAt,
     }));
   } catch {
@@ -78,7 +110,12 @@ export default async function ProjectsPage() {
         ) : (
           <div className="grid grid-cols-3 gap-4">
             {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} deleteAction={deleteProjectAction} />
+              <ProjectCard
+                key={p.id}
+                project={p}
+                deleteAction={deleteProjectAction}
+                updateAction={updateProjectAction}
+              />
             ))}
           </div>
         )}

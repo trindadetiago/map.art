@@ -1,5 +1,8 @@
 # map.art
 
+<img width="1600" height="1348" alt="image" src="https://github.com/user-attachments/assets/0e1fad64-bdbd-42f4-9975-c0ca799656f5" />
+
+
 Pixel-art map tool. Turns aerial map tiles into isometric SimCity-style pixel-art. Early R&D — building toward fine-tuning Qwen Image-Edit on rendered/stylized pairs.
 
 See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architecture.html`](docs/architecture.html) for the planned SaaS shape.

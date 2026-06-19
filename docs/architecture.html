@@ -394,7 +394,7 @@
         <text x="442" y="890" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace" fill="#3f3a32">render/{project}/{x}_{y}.png</text>
 
         <rect x="710" y="870" width="290" height="32" rx="6" fill="#fafaf6" stroke="#e7e2d4"/>
-        <text x="722" y="890" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace" fill="#3f3a32">stylize/{project}/{x}_{y}.png</text>
+        <text x="722" y="890" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace" fill="#3f3a32">stylize/{project}/{x}_{y}.webp</text>
 
         <text x="202" y="934" font-size="11" font-style="italic" fill="#7a7368">Workers write. web reads tile paths from Postgres and serves the images (omitted from the diagram).</text>
 
@@ -570,9 +570,38 @@
       <li>
         <span class="who stylize">worker-stylize</span>
         <h3>Stylize with neighbor context → store → done</h3>
-        <p>Reads the tile's render plus its neighbors' images from storage, generates the stylized tile through <code>@mapart/models</code>, writes the PNG, then sets <code>stylized_img_path</code> and <code>status = done</code>. Terminal state.</p>
+        <p>Reads the tile's render plus its neighbors' images from storage, composites them into the model input, generates the stylized tile through <code>@mapart/models</code>, crops and encodes the result, then sets <code>stylized_img_path</code> and <code>status = done</code>. Terminal state. (See <em>Image formats &amp; the stylize transformation</em>.)</p>
       </li>
     </ol>
+
+    <h2>Image formats &amp; the stylize transformation</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="tag info">render output</span>
+        <h3>Truecolour PNG</h3>
+        <p class="summary">worker-render writes each tile as a lossless PNG at <code>render/{project}/{x}_{y}.png</code> — the raw aerial render, and the source material every stylize job reads back.</p>
+      </div>
+      <div class="card">
+        <span class="tag info">model input</span>
+        <h3>The neighbor composite</h3>
+        <p class="summary">A single 1024² image: the rendered center tile surrounded by its up-to-8 neighbors in their compass positions, with the center region outlined. The image-edit model infills that outlined center in pixel-art style, reading the surroundings so seams stay continuous.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>Each neighbor slot is filled with that neighbor's stylized output when it has one, falling back to its raw render otherwise — so the model always sees real context at the edges instead of a bare border. The composite is the model's <em>input</em> only, kept truecolour so nothing degrades what the model sees.</p>
+          </div>
+        </details>
+      </div>
+      <div class="card">
+        <span class="tag info">stylize output</span>
+        <h3>WebP</h3>
+        <p class="summary">The model output is cropped back to the outlined center, resized to 1024², and encoded as WebP at <code>stylize/{project}/{x}_{y}.webp</code> — a fraction of the size of an equivalent truecolour PNG, which matters because every upload to the bucket is billed egress.</p>
+        <details class="more"><summary></summary>
+          <div class="body">
+            <p>The output format lives behind a single descriptor in <code>@mapart/stylize</code> that pairs the encoder with the key extension, so the bytes and the filename can never drift apart. Reads stay format-agnostic — the serving route maps any extension to its content type — so the format is a one-line change.</p>
+          </div>
+        </details>
+      </div>
+    </div>
 
     <h2>How the queue works</h2>
     <div class="grid">

@@ -19,6 +19,7 @@ import {
   Group,
   LineBasicMaterial,
   LineLoop,
+  LinearFilter,
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
@@ -28,8 +29,7 @@ import {
   SRGBColorSpace,
   Shape,
   ShapeGeometry,
-  type Texture,
-  TextureLoader,
+  Texture,
   Scene as ThreeScene,
   Vector2,
   Vector3,
@@ -44,6 +44,8 @@ export interface OverlayTile {
   y: number;
   state: TileState;
   imageUrl: string | null;
+  /** Raw render beneath a stylized tile, revealed as the blend slider moves off 1. */
+  underUrl?: string | null;
 }
 
 export interface AreaSceneProps {
@@ -73,6 +75,11 @@ export interface AreaSceneProps {
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void;
   /** Pan + zoom the camera onto this tile. A new object (even same x,y) re-focuses. */
   focusTarget?: { x: number; y: number } | null;
+  /**
+   * Stylized-layer opacity, 0–1: 1 shows finished tiles fully stylized, 0 shows
+   * their raw renders, in between cross-fades the two. Default 1.
+   */
+  blend?: number;
 }
 
 /** Per-tile footprint corners (scene coords) for a grid centered on the origin. */
@@ -125,13 +132,20 @@ const STATE_FILL: Partial<Record<TileState, { color: number; opacity: number }>>
 };
 
 /** Material for a tile state: image (full / dimmed) or a translucent status fill. */
-function materialFor(state: TileState, texture: Texture | null): MeshBasicMaterial {
+function materialFor(state: TileState, texture: Texture | null, blend: number): MeshBasicMaterial {
   const base = { side: DoubleSide, depthTest: false, depthWrite: false } as const;
   if (texture && state === 'stylized') {
-    return new MeshBasicMaterial({ ...base, map: texture });
+    return new MeshBasicMaterial({ ...base, map: texture, transparent: true, opacity: blend });
   }
   if (texture && state === 'rendered') {
-    return new MeshBasicMaterial({ ...base, map: texture, transparent: true, opacity: 0.5 });
+    // Un-stylized renders dim toward 0.5 at full blend so they read as "not done
+    // yet" next to stylized tiles, and show plain at blend 0 (pure render view).
+    return new MeshBasicMaterial({
+      ...base,
+      map: texture,
+      transparent: true,
+      opacity: 1 - 0.5 * blend,
+    });
   }
   if (texture && state === 'stylizing') {
     // Rendered preview washed amber and pulsed (opacity driven in the tick) so
@@ -235,6 +249,7 @@ interface SceneState {
   setDimOutside: (on: boolean) => void;
   setShowLines: (on: boolean) => void;
   setMapVisible: (on: boolean) => void;
+  setBlend: (blend: number) => void;
   focusTile: (x: number, y: number) => void;
   dispose: () => void;
 }
@@ -251,6 +266,7 @@ function createAreaScene(
     dimOutside?: boolean;
     showLines?: boolean;
     showMap?: boolean;
+    blend?: number;
   },
   onCenterChange?: (center: LatLng) => void,
   onTileContext?: (x: number, y: number, clientX: number, clientY: number) => void,
@@ -262,8 +278,30 @@ function createAreaScene(
   scene.add(sun);
 
   const renderer = new WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  // Cap the framebuffer cost: at a large tile count the GPU is already carrying a
+  // texture per tile, and a 2x+ retina framebuffer on top is what tips a tab into
+  // a lost WebGL context. 1.5x keeps the canvas crisp without the full doubling.
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   container.appendChild(renderer.domElement);
+
+  // When VRAM pressure (or a GPU reset) drops the WebGL context the canvas goes
+  // black; the browser restores it shortly after. Pause our per-frame work while
+  // it's gone and flag textures for re-upload on the way back, so recovery is
+  // clean instead of a flash of broken state.
+  let contextLost = false;
+  const onContextLost = (e: Event): void => {
+    e.preventDefault(); // signal we'll restore, so the browser re-grants a context
+    contextLost = true;
+  };
+  const onContextRestored = (): void => {
+    contextLost = false;
+    for (const e of overlaid.values()) {
+      if (e.texture) e.texture.needsUpdate = true;
+      if (e.underTexture) e.underTexture.needsUpdate = true;
+    }
+  };
+  renderer.domElement.addEventListener('webglcontextlost', onContextLost, false);
+  renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false);
 
   const camera = new OrthographicCamera();
   // Pan via a parent group, never `tiles.group` directly — the
@@ -285,13 +323,66 @@ function createAreaScene(
   mask.visible = initial.dimOutside ?? false;
   scene.add(mask);
 
-  // Finished stylized tiles, textured onto their footprints (build step).
+  // Finished stylized tiles, textured onto their footprints (build step). A
+  // stylized tile may carry a second quad underneath with its raw render; the
+  // blend value fades the stylized layer over it.
   const overlayGroup = new Group();
   scene.add(overlayGroup);
-  const loader = new TextureLoader();
+
+  // Tile textures load through a small concurrency gate. The naive path fires one
+  // image request + GPU upload per tile the instant it appears, so a grid of a
+  // thousand-plus tiles stampedes the network and the main thread on first paint.
+  // Capping in-flight loads spreads the work so tiles fill in steadily instead of
+  // freezing the page. Each texture also drops mipmaps (a tile is viewed near 1:1,
+  // so the chain is wasted VRAM + an upload pass) to keep GPU memory in budget.
+  const MAX_TEXTURE_LOADS = 12;
+  let activeLoads = 0;
+  const loadQueue: Array<() => void> = [];
+  const pumpLoads = (): void => {
+    while (activeLoads < MAX_TEXTURE_LOADS && loadQueue.length > 0) {
+      const start = loadQueue.shift();
+      if (start) {
+        activeLoads++;
+        start();
+      }
+    }
+  };
+  const loadTexture = (url: string): Texture => {
+    const texture = new Texture();
+    texture.colorSpace = SRGBColorSpace;
+    texture.generateMipmaps = false;
+    texture.minFilter = LinearFilter;
+    loadQueue.push(() => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const done = (): void => {
+        activeLoads--;
+        pumpLoads();
+      };
+      img.onload = (): void => {
+        texture.image = img;
+        texture.needsUpdate = true;
+        done();
+      };
+      img.onerror = done;
+      img.src = url;
+    });
+    pumpLoads();
+    return texture;
+  };
+
+  let blend = Math.max(0, Math.min(1, initial.blend ?? 1));
   const overlaid = new Map<
     string,
-    { mesh: Mesh; state: TileState; url: string | null; texture: Texture | null }
+    {
+      mesh: Mesh;
+      under: Mesh | null;
+      state: TileState;
+      url: string | null;
+      underUrl: string | null;
+      texture: Texture | null;
+      underTexture: Texture | null;
+    }
   >();
 
   let cols = initial.cols;
@@ -378,6 +469,8 @@ function createAreaScene(
   let disposed = false;
   const tick = (): void => {
     if (disposed) return;
+    requestAnimationFrame(tick);
+    if (contextLost) return; // canvas has no GPU context — nothing to draw
     if (tilesState) {
       tilesState.tiles.setResolutionFromRenderer(camera, renderer);
       tilesState.tiles.update();
@@ -391,7 +484,6 @@ function createAreaScene(
       }
     }
     renderer.render(scene, camera);
-    requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 
@@ -518,43 +610,114 @@ function createAreaScene(
   };
   if (onTileContext) renderer.domElement.addEventListener('contextmenu', onContextMenu);
 
+  const removeUnder = (e: { under: Mesh | null; underTexture: Texture | null }): void => {
+    if (!e.under) return;
+    overlayGroup.remove(e.under);
+    e.under.geometry.dispose();
+    (e.under.material as MeshBasicMaterial).dispose();
+    e.underTexture?.dispose();
+  };
+
   const clearOverlay = (): void => {
-    for (const { mesh, texture } of overlaid.values()) {
-      overlayGroup.remove(mesh);
-      mesh.geometry.dispose();
-      (mesh.material as MeshBasicMaterial).dispose();
-      texture?.dispose();
+    for (const e of overlaid.values()) {
+      overlayGroup.remove(e.mesh);
+      e.mesh.geometry.dispose();
+      (e.mesh.material as MeshBasicMaterial).dispose();
+      e.texture?.dispose();
+      removeUnder(e);
     }
     overlaid.clear();
   };
 
+  // The list is authoritative: tiles absent from it are removed from the scene.
   const setOverlay = (list: OverlayTile[]): void => {
+    const keep = new Set(list.map((t) => `${t.x},${t.y}`));
+    for (const [key, e] of overlaid) {
+      if (keep.has(key)) continue;
+      overlayGroup.remove(e.mesh);
+      e.mesh.geometry.dispose();
+      (e.mesh.material as MeshBasicMaterial).dispose();
+      e.texture?.dispose();
+      removeUnder(e);
+      overlaid.delete(key);
+    }
     for (const t of list) {
       const key = `${t.x},${t.y}`;
+      const underUrl = t.underUrl ?? null;
       const cur = overlaid.get(key);
-      if (cur && cur.state === t.state && cur.url === t.imageUrl) continue; // unchanged
+      if (cur && cur.state === t.state && cur.url === t.imageUrl && cur.underUrl === underUrl)
+        continue; // unchanged
 
       let texture: Texture | null = null;
       if (
         t.imageUrl &&
         (t.state === 'rendered' || t.state === 'stylizing' || t.state === 'stylized')
       ) {
-        texture = loader.load(t.imageUrl);
-        texture.colorSpace = SRGBColorSpace;
+        texture = loadTexture(t.imageUrl);
       }
-      const material = materialFor(t.state, texture);
+      const material = materialFor(t.state, texture, blend);
 
+      let mesh: Mesh;
       if (cur) {
         (cur.mesh.material as MeshBasicMaterial).dispose();
         cur.texture?.dispose();
+        removeUnder(cur); // rebuilt below if the tile still wants one
         cur.mesh.material = material;
-        overlaid.set(key, { mesh: cur.mesh, state: t.state, url: t.imageUrl, texture });
+        mesh = cur.mesh;
       } else {
-        const mesh = new Mesh(quadGeometry(t.x, t.y, cols, rows), material);
-        mesh.renderOrder = 1000; // above grid lines (999) and streamed tiles
+        mesh = new Mesh(quadGeometry(t.x, t.y, cols, rows), material);
+        mesh.renderOrder = 1001; // above the under layer (1000) and grid lines (999)
         mesh.userData.tile = { x: t.x, y: t.y };
         overlayGroup.add(mesh);
-        overlaid.set(key, { mesh, state: t.state, url: t.imageUrl, texture });
+      }
+      mesh.visible = t.state !== 'stylized' || blend > 0;
+
+      // Raw render beneath a stylized tile. Its texture loads lazily on the
+      // first blend < 1, so the default stylized view downloads nothing extra.
+      let under: Mesh | null = null;
+      let underTexture: Texture | null = null;
+      if (underUrl && t.state === 'stylized') {
+        const m = new MeshBasicMaterial({ side: DoubleSide, depthTest: false, depthWrite: false });
+        if (blend < 1) {
+          underTexture = loadTexture(underUrl);
+          m.map = underTexture;
+        }
+        under = new Mesh(quadGeometry(t.x, t.y, cols, rows), m);
+        under.renderOrder = 1000;
+        under.userData.tile = { x: t.x, y: t.y };
+        under.visible = blend < 1;
+        overlayGroup.add(under);
+      }
+
+      overlaid.set(key, {
+        mesh,
+        under,
+        state: t.state,
+        url: t.imageUrl,
+        underUrl,
+        texture,
+        underTexture,
+      });
+    }
+  };
+
+  const setBlend = (value: number): void => {
+    blend = Math.max(0, Math.min(1, value));
+    for (const e of overlaid.values()) {
+      if (e.state === 'stylized') {
+        (e.mesh.material as MeshBasicMaterial).opacity = blend;
+        e.mesh.visible = blend > 0;
+      } else if (e.state === 'rendered') {
+        (e.mesh.material as MeshBasicMaterial).opacity = 1 - 0.5 * blend;
+      }
+      if (e.under) {
+        e.under.visible = blend < 1;
+        if (blend < 1 && e.underUrl && !e.underTexture) {
+          e.underTexture = loadTexture(e.underUrl);
+          const m = e.under.material as MeshBasicMaterial;
+          m.map = e.underTexture;
+          m.needsUpdate = true;
+        }
       }
     }
   };
@@ -593,6 +756,7 @@ function createAreaScene(
       panGroup.position.set(0, 0, 0);
     },
     setOverlay,
+    setBlend,
     setMapVisible(on) {
       if (on) createTiles();
       else destroyTiles();
@@ -633,6 +797,8 @@ function createAreaScene(
       renderer.domElement.removeEventListener('pointerup', onPanUp);
       renderer.domElement.removeEventListener('wheel', onWheel);
       renderer.domElement.removeEventListener('contextmenu', onContextMenu);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored);
       clearOverlay();
       scene.remove(grid);
       disposeGrid(grid);
@@ -661,6 +827,7 @@ export function AreaScene({
   showMap,
   onTileContext,
   focusTarget,
+  blend,
 }: AreaSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<SceneState | null>(null);
@@ -674,6 +841,7 @@ export function AreaScene({
     dimOutside: dimOutside ?? false,
     showLines: showLines ?? true,
     showMap: showMap ?? true,
+    blend: blend ?? 1,
   });
   const onCenterChangeRef = useRef(onCenterChange);
   onCenterChangeRef.current = onCenterChange;
@@ -707,7 +875,7 @@ export function AreaScene({
   }, [center]);
 
   useEffect(() => {
-    if (overlay) stateRef.current?.setOverlay(overlay);
+    stateRef.current?.setOverlay(overlay ?? []);
   }, [overlay]);
 
   useEffect(() => {
@@ -721,6 +889,10 @@ export function AreaScene({
   useEffect(() => {
     stateRef.current?.setMapVisible(showMap ?? true);
   }, [showMap]);
+
+  useEffect(() => {
+    stateRef.current?.setBlend(blend ?? 1);
+  }, [blend]);
 
   useEffect(() => {
     if (focusTarget) stateRef.current?.focusTile(focusTarget.x, focusTarget.y);

@@ -1,0 +1,22 @@
+{
+  "name": "@mapart/export",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./geo": "./src/geo.ts",
+    "./keys": "./src/keys.ts",
+    "./pins": "./src/pins.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mapart/db": "workspace:*",
+    "@mapart/logger": "workspace:*",
+    "@mapart/storage": "workspace:*",
+    "sharp": "^0.33.5"
+  }
+}

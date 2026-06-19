@@ -6,15 +6,17 @@
   "scripts": {
     "dev": "tsx worker.ts",
     "build:page": "vite build --root render-page --outDir dist --emptyOutDir",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
+    "@mapart/logger": "workspace:*",
     "@mapart/renderer": "workspace:*",
     "@mapart/storage": "workspace:*",
-    "puppeteer": "^24.0.0",
+    "pptr": "npm:puppeteer@^24.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "vite": "^6.0.0"

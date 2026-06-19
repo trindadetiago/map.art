@@ -10,6 +10,7 @@
  * so each tile maps to a request through renderParamsForLatLng.
  */
 import { claimNextRender, completeRender, failOrRetry, findRenderedAt } from '@mapart/db/repos';
+import type { Logger } from '@mapart/logger';
 import { renderParamsForLatLng } from '@mapart/renderer';
 import { getStorage } from '@mapart/storage';
 
@@ -34,14 +35,12 @@ export interface RenderConsumer {
   readonly done: Promise<void>;
 }
 
-const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /** Storage key for a tile's raw render. Mirrors docs/architecture.html. */
 export function renderKey(projectId: string, x: number, y: number): string {
   return `render/${projectId}/${x}_${y}.png`;
 }
 
-export function startRenderConsumer(render: RenderFn, log: (msg: string) => void): RenderConsumer {
+export function startRenderConsumer(render: RenderFn, log: Logger): RenderConsumer {
   let stopping = false;
   let wake: (() => void) | null = null;
 
@@ -66,21 +65,27 @@ export function startRenderConsumer(render: RenderFn, log: (msg: string) => void
       };
     });
 
+  let idleLogged = false;
   const done = (async () => {
     while (!stopping) {
       let tile: Awaited<ReturnType<typeof claimNextRender>>;
       try {
         tile = await claimNextRender();
       } catch (e) {
-        log(`claim query failed: ${errMsg(e)} — retrying in ${IDLE_POLL_MS / 1000}s`);
+        log.error('claim query failed — backing off', { err: e, retryInMs: IDLE_POLL_MS });
         await idle();
         continue;
       }
 
       if (!tile) {
+        if (!idleLogged) {
+          log.info('no render-pending tiles — idle', { idlePollMs: IDLE_POLL_MS });
+          idleLogged = true;
+        }
         await idle(); // empty queue — back off
         continue;
       }
+      idleLogged = false;
 
       const startedAt = Date.now();
       try {
@@ -110,16 +115,22 @@ export function startRenderConsumer(render: RenderFn, log: (msg: string) => void
 
         await storage.put(key, png);
         await completeRender(tile.id, key);
-        const how = reusedFrom ? `reused ${reusedFrom}` : 'rendered';
-        log(`tile ${tile.x},${tile.y} → ${key} (${how}, ${Date.now() - startedAt}ms)`);
+        log.info('tile rendered', {
+          x: tile.x,
+          y: tile.y,
+          key,
+          source: reusedFrom ? 'reused' : 'rendered',
+          ...(reusedFrom ? { reusedFrom } : {}),
+          ms: Date.now() - startedAt,
+        });
       } catch (e) {
         let status = 'unknown';
         try {
           status = await failOrRetry(tile.id);
         } catch (err) {
-          log(`failOrRetry failed for tile ${tile.id}: ${errMsg(err)}`);
+          log.error('failOrRetry failed', { tileId: tile.id, err });
         }
-        log(`tile ${tile.x},${tile.y} render failed: ${errMsg(e)} → ${status}`);
+        log.error('tile render failed', { x: tile.x, y: tile.y, status, err: e });
       }
       // claimed a tile this round — loop straight back to drain the backlog
     }

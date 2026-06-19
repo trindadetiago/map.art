@@ -1,5 +1,6 @@
 import { repos } from '@mapart/db';
 import { NextResponse } from 'next/server';
+import { log } from '../../../../../lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,12 +28,14 @@ export async function GET(
           status: t.status,
           renderedImgPath: t.renderedImgPath,
           stylizedImgPath: t.stylizedImgPath,
+          v: t.updatedAt.getTime(),
         })),
         counts,
       },
       { headers: { 'cache-control': 'no-cache' } },
     );
   } catch (e) {
+    log.error('project tiles query failed', { projectId: id, err: e });
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'unknown' },
       { status: 500 },

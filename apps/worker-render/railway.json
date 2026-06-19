@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm --filter @mapart/worker-render exec puppeteer browsers install chrome"
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter @mapart/worker-render exec tsx worker.ts",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}

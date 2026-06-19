@@ -2,7 +2,16 @@
 
 import type { LatLng } from '@mapart/geo';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { cancelAll, restyleAll, restylizeTile, retryProjectErrors, retryTile } from './actions';
+import {
+  cancelAll,
+  requeueStuckTile,
+  restyleAll,
+  restylizeTile,
+  resumeAll,
+  resumeTile,
+  retryProjectErrors,
+  retryTile,
+} from './actions';
 import { AreaScene, type OverlayTile } from './area_scene';
 
 export interface TileLite {
@@ -12,9 +21,10 @@ export interface TileLite {
   status: 'pending' | 'progress' | 'done' | 'error';
   renderedImgPath: string | null;
   stylizedImgPath: string | null;
+  /** Row version (updatedAt epoch ms) — cache-busts image URLs on change. */
+  v: number;
 }
 
-type View = 'stylized' | 'render';
 interface Menu {
   x: number;
   y: number;
@@ -24,6 +34,10 @@ interface Menu {
 
 const isTerminal = (t: TileLite): boolean =>
   (t.currentStatusType === 'stylize' && t.status === 'done') || t.status === 'error';
+
+/** Cancelled = the signature `Cancel all` leaves: stylize/done with no output. */
+const isCancelled = (t: TileLite): boolean =>
+  t.currentStatusType === 'stylize' && t.status === 'done' && !t.stylizedImgPath;
 
 export function StepBuild({
   apiKey,
@@ -43,7 +57,8 @@ export function StepBuild({
   initialTiles: TileLite[];
 }) {
   const [tiles, setTiles] = useState<TileLite[]>(initialTiles);
-  const [view, setView] = useState<View>('stylized');
+  // Stylized-layer opacity: 1 = stylized view, 0 = raw renders, between = both.
+  const [blend, setBlend] = useState(1);
   const [dimOutside, setDimOutside] = useState(false);
   const [showLines, setShowLines] = useState(true);
   // On by default: the live Google 3D map is the only paid (Map Tiles API) part
@@ -86,37 +101,51 @@ export function StepBuild({
     };
   }, [projectId, pollNonce]);
 
-  // Each tile painted onto its footprint over the live city. In stylized view,
-  // status drives the look (stylized image / dimmed render / pulsing amber
-  // in-progress / grey pending / red error). In render view, every rendered
-  // tile shows its raw render at full opacity.
+  // Grid extent from the live tiles — expansion can add tiles beyond (even
+  // north/west of, with negative coords) the original grid, so the scene frame
+  // derives from the data. The scene works in normalized 0-based coordinates;
+  // everything that talks to the server uses the tiles' real coordinates.
+  const extent = useMemo(() => {
+    if (tiles.length === 0) return { minX: 0, minY: 0, cols, rows };
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    for (const t of tiles) {
+      if (t.x < minX) minX = t.x;
+      if (t.x > maxX) maxX = t.x;
+      if (t.y < minY) minY = t.y;
+      if (t.y > maxY) maxY = t.y;
+    }
+    return { minX, minY, cols: maxX - minX + 1, rows: maxY - minY + 1 };
+  }, [tiles, cols, rows]);
+
+  // Each tile painted onto its footprint over the live city: stylized image
+  // (with its raw render underneath for the blend slider) / dimmed render /
+  // pulsing amber in-progress / grey pending / red error.
   const overlay = useMemo<OverlayTile[]>(
     () =>
       tiles.map((t) => {
-        const rendered = t.renderedImgPath ? `/api/storage/${t.renderedImgPath}` : null;
-        const stylized = t.stylizedImgPath ? `/api/storage/${t.stylizedImgPath}` : null;
-        if (t.status === 'error') return { x: t.x, y: t.y, state: 'error', imageUrl: null };
-
-        if (view === 'render') {
-          if (rendered) return { x: t.x, y: t.y, state: 'stylized', imageUrl: rendered }; // full image
-          if (t.status === 'progress') return { x: t.x, y: t.y, state: 'progress', imageUrl: null };
-          return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
-        }
+        const x = t.x - extent.minX;
+        const y = t.y - extent.minY;
+        const rendered = t.renderedImgPath ? `/api/storage/${t.renderedImgPath}?v=${t.v}` : null;
+        const stylized = t.stylizedImgPath ? `/api/storage/${t.stylizedImgPath}?v=${t.v}` : null;
+        if (t.status === 'error') return { x, y, state: 'error', imageUrl: null };
 
         // A tile actively (re)stylizing pulses amber even if it still holds an
         // old image — otherwise a re-stylize looks like nothing is happening.
         if (t.currentStatusType === 'stylize' && t.status === 'progress')
-          return { x: t.x, y: t.y, state: 'stylizing', imageUrl: rendered ?? stylized };
+          return { x, y, state: 'stylizing', imageUrl: rendered ?? stylized };
         // Re-queued for restyle: drop back to the render so it visibly reverts
         // while it waits (the DB still keeps the old image for neighbour context).
         if (t.currentStatusType === 'stylize' && t.status === 'pending' && rendered)
-          return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
-        if (stylized) return { x: t.x, y: t.y, state: 'stylized', imageUrl: stylized };
-        if (rendered) return { x: t.x, y: t.y, state: 'rendered', imageUrl: rendered };
-        if (t.status === 'progress') return { x: t.x, y: t.y, state: 'progress', imageUrl: null };
-        return { x: t.x, y: t.y, state: 'pending', imageUrl: null };
+          return { x, y, state: 'rendered', imageUrl: rendered };
+        if (stylized) return { x, y, state: 'stylized', imageUrl: stylized, underUrl: rendered };
+        if (rendered) return { x, y, state: 'rendered', imageUrl: rendered };
+        if (t.status === 'progress') return { x, y, state: 'progress', imageUrl: null };
+        return { x, y, state: 'pending', imageUrl: null };
       }),
-    [tiles, view],
+    [tiles, extent],
   );
 
   // Counts a finished stylization only — re-queued tiles (still holding their old
@@ -130,7 +159,7 @@ export function StepBuild({
     (t) => t.status === 'error' && t.currentStatusType === 'stylize',
   ).length;
   const errors = renderErrors + stylizeErrors;
-  const total = cols * rows;
+  const total = tiles.length || cols * rows;
 
   const rendering = tiles.filter(
     (t) => t.currentStatusType === 'render' && t.status === 'progress',
@@ -140,6 +169,7 @@ export function StepBuild({
   );
   const stylizePhase = tiles.filter((t) => t.currentStatusType === 'stylize');
   const pendingStylize = stylizePhase.filter((t) => t.status === 'pending').length;
+  const cancelledCount = tiles.filter(isCancelled).length;
 
   // Jump the camera to an in-progress tile, cycling through them on each click.
   function focusInProgress(phase: 'render' | 'stylize'): void {
@@ -148,7 +178,7 @@ export function StepBuild({
     const i = focusCursor.current[phase] % list.length;
     focusCursor.current[phase] = i + 1;
     const t = list[i];
-    if (t) setFocusTarget({ x: t.x, y: t.y });
+    if (t) setFocusTarget({ x: t.x - extent.minX, y: t.y - extent.minY });
   }
 
   async function doRestylize(x: number, y: number): Promise<void> {
@@ -185,6 +215,14 @@ export function StepBuild({
     setPollNonce((n) => n + 1); // re-arm polling to follow the retries
   }
 
+  async function doRequeueStuck(x: number, y: number): Promise<void> {
+    setMenu(null);
+    // Optimistic: drop the tile back to pending so it reads as re-queued.
+    setTiles((ts) => ts.map((t) => (t.x === x && t.y === y ? { ...t, status: 'pending' } : t)));
+    await requeueStuckTile({ projectId, x, y });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the re-claim
+  }
+
   async function doRestyleAll(): Promise<void> {
     if (stylizePhase.length === 0) return;
     if (
@@ -208,6 +246,21 @@ export function StepBuild({
     );
     await cancelAll({ projectId });
     setPollNonce((n) => n + 1);
+  }
+
+  async function doResumeAll(): Promise<void> {
+    // Optimistic: cancelled tiles drop back to pending so they read as queued.
+    setTiles((ts) => ts.map((t) => (isCancelled(t) ? { ...t, status: 'pending' } : t)));
+    await resumeAll({ projectId });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the resumed work
+  }
+
+  async function doResume(x: number, y: number): Promise<void> {
+    setMenu(null);
+    // Optimistic: the tile drops back to pending so it reads as queued immediately.
+    setTiles((ts) => ts.map((t) => (t.x === x && t.y === y ? { ...t, status: 'pending' } : t)));
+    await resumeTile({ projectId, x, y });
+    setPollNonce((n) => n + 1); // re-arm polling to follow the resumed tile
   }
 
   const menuTile = menu ? (tiles.find((t) => t.x === menu.x && t.y === menu.y) ?? null) : null;
@@ -251,14 +304,21 @@ export function StepBuild({
         </div>
 
         <div className="flex items-center gap-2">
-          <Segmented
-            value={view}
-            onChange={setView}
-            options={[
-              { value: 'stylized', label: 'Stylized' },
-              { value: 'render', label: 'Render' },
-            ]}
-          />
+          <div
+            className="flex h-8 items-center gap-2 rounded-full border border-stone-200 bg-white px-3"
+            title={`Stylized ${Math.round(blend * 100)}%`}
+          >
+            <span className="text-[11px] text-stone-500">Render</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(blend * 100)}
+              onChange={(e) => setBlend(Number(e.target.value) / 100)}
+              className="w-24 accent-stone-900"
+            />
+            <span className="text-[11px] text-stone-500">Stylized</span>
+          </div>
           <Toggle on={hideMap} onClick={() => setHideMap((v) => !v)}>
             Hide map
           </Toggle>
@@ -282,6 +342,15 @@ export function StepBuild({
               Cancel all
             </button>
           )}
+          {cancelledCount > 0 && (
+            <button
+              type="button"
+              onClick={doResumeAll}
+              className="h-8 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-[12px] text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100"
+            >
+              Resume all ({cancelledCount})
+            </button>
+          )}
           <button
             type="button"
             onClick={doRestyleAll}
@@ -297,18 +366,28 @@ export function StepBuild({
         <AreaScene
           apiKey={apiKey}
           center={center}
-          cols={cols}
-          rows={rows}
+          cols={extent.cols}
+          rows={extent.rows}
           interactive={false}
           overlay={overlay}
           dimOutside={dimOutside}
           showLines={showLines}
           showMap={!hideMap}
           focusTarget={focusTarget}
-          onTileContext={(x, y, clientX, clientY) => {
-            const t = tiles.find((tile) => tile.x === x && tile.y === y);
-            if (t && (t.status === 'error' || t.stylizedImgPath))
-              setMenu({ x, y, clientX, clientY });
+          blend={blend}
+          onTileContext={(gx, gy, clientX, clientY) => {
+            // The scene reports normalized grid coords; the menu stores real ones.
+            const t = tiles.find(
+              (tile) => tile.x - extent.minX === gx && tile.y - extent.minY === gy,
+            );
+            if (
+              t &&
+              (t.status === 'error' ||
+                t.status === 'progress' ||
+                t.stylizedImgPath ||
+                isCancelled(t))
+            )
+              setMenu({ x: t.x, y: t.y, clientX, clientY });
           }}
         />
       </div>
@@ -328,6 +407,22 @@ export function StepBuild({
                 className="block w-full px-4 py-2 text-left text-[13px] text-red-700 hover:bg-red-50"
               >
                 Retry tile {menu.x},{menu.y}
+              </button>
+            ) : menuTile?.status === 'progress' ? (
+              <button
+                type="button"
+                onClick={() => doRequeueStuck(menu.x, menu.y)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-amber-700 hover:bg-amber-50"
+              >
+                Requeue tile {menu.x},{menu.y} (stuck?)
+              </button>
+            ) : menuTile && isCancelled(menuTile) ? (
+              <button
+                type="button"
+                onClick={() => doResume(menu.x, menu.y)}
+                className="block w-full px-4 py-2 text-left text-[13px] text-emerald-700 hover:bg-emerald-50"
+              >
+                Resume tile {menu.x},{menu.y}
               </button>
             ) : (
               <button
@@ -466,32 +561,5 @@ function Toggle({
     >
       {children}
     </button>
-  );
-}
-
-function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-}) {
-  return (
-    <div className="flex h-8 items-center rounded-full border border-stone-200 bg-white p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={`h-7 rounded-full px-3 text-[12px] transition ${
-            value === o.value ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   );
 }

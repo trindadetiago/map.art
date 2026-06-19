@@ -7,11 +7,13 @@
     "mapart": "./bin/mapart.ts"
   },
   "scripts": {
-    "start": "tsx bin/mapart.ts"
+    "start": "tsx bin/mapart.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
+    "@mapart/export": "workspace:*",
     "@mapart/geo": "workspace:*",
     "@mapart/models": "workspace:*",
     "@mapart/renderer": "workspace:*",

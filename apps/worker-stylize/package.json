@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx worker.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@mapart/db": "workspace:*",
     "@mapart/env": "workspace:*",
+    "@mapart/logger": "workspace:*",
     "@mapart/models": "workspace:*",
     "@mapart/storage": "workspace:*",
     "@mapart/stylize": "workspace:*"

@@ -1,5 +1,11 @@
-import puppeteer from 'puppeteer';
-import type { Browser } from 'puppeteer';
+// puppeteer is installed under the npm alias "pptr": Railpack scans every
+// workspace package.json for a dependency literally named "puppeteer" and,
+// when found, bakes Chrome's ~40 apt packages into every service's image —
+// not just this one. The alias keeps that detection from firing; this
+// service declares the libraries it needs via RAILPACK_DEPLOY_APT_PACKAGES.
+import type { Logger } from '@mapart/logger';
+import puppeteer from 'pptr';
+import type { Browser } from 'pptr';
 
 export const VIEWPORT_PAD = 100;
 
@@ -26,8 +32,8 @@ function chromeArgs(): string[] {
   ];
 }
 
-export async function launchBrowser(): Promise<Browser> {
+export async function launchBrowser(log: Logger): Promise<Browser> {
   const args = chromeArgs();
-  console.log(`[chrome] launching — angle=${angleBackend()} args=${args.join(' ')}`);
+  log.info('launching chrome', { angle: angleBackend(), args: args.join(' ') });
   return puppeteer.launch({ headless: true, args });
 }
