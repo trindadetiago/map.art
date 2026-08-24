@@ -35,5 +35,9 @@
     "mprocs": "^0.9.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@posthog/react": "^1.10.4",
+    "posthog-js": "^1.418.10"
   }
 }
