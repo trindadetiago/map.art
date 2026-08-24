@@ -1,6 +1,7 @@
+import { env } from '@mapart/env';
+import { AnalyticsProvider } from '@mapart/ui/analytics';
 import type { ReactNode } from 'react';
 import './globals.css';
-import { PostHogProvider } from './posthog_provider';
 
 export const metadata = {
   title: 'map.art',
@@ -10,9 +11,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <PostHogProvider>
-        <body>{children}</body>
-      </PostHogProvider>
+      <body>
+        <AnalyticsProvider projectToken={env.posthogKey}>{children}</AnalyticsProvider>
+      </body>
     </html>
   );
 }

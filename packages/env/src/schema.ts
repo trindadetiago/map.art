@@ -67,6 +67,16 @@ export const SCHEMA = {
     description:
       'Shared password gating the whole apps/web site. When set, visitors must enter it at /login before any page loads; leave empty to disable the gate (e.g. local dev).',
   },
+  posthogKey: {
+    envKey: 'POSTHOG_KEY',
+    description:
+      'PostHog project API key (the public "Project API Key", safe to ship to the browser). Read by the Next apps\' root layouts and handed to @mapart/ui/analytics. Leave empty to disable analytics.',
+  },
+  posthogDashboardToken: {
+    envKey: 'POSTHOG_DASHBOARD_TOKEN',
+    description:
+      'Share token of a PostHog dashboard with sharing enabled, embedded by /admin/analytics. Distinct from POSTHOG_KEY. Anyone holding it can read that dashboard without logging in. Leave empty to show the setup instructions instead.',
+  },
   railwayEnvironmentName: {
     envKey: 'RAILWAY_ENVIRONMENT_NAME',
     description:

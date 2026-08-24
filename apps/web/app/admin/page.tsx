@@ -1,6 +1,7 @@
 import { Card, Metric } from '@/components/admin/card';
 import {
   IconCamera,
+  IconChart,
   IconDatabase,
   IconEnv,
   IconLayers,
@@ -11,7 +12,7 @@ import {
 } from '@/components/admin/icons';
 import { Section } from '@/components/admin/section';
 import { repos } from '@mapart/db';
-import { getEnvStatus } from '@mapart/env';
+import { env, getEnvStatus } from '@mapart/env';
 import { getStorage } from '@mapart/storage';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ interface Stats {
   envSet: number;
   envDefault: number;
   envUnset: number;
+  analyticsShared: boolean;
 }
 
 async function loadStats(): Promise<Stats> {
@@ -37,6 +39,7 @@ async function loadStats(): Promise<Stats> {
     envSet: 0,
     envDefault: 0,
     envUnset: 0,
+    analyticsShared: Boolean(env.posthogDashboardToken),
   };
 
   const envStatus = getEnvStatus();
@@ -92,7 +95,7 @@ export default async function AdminIndex() {
       </Section>
 
       <Section label="Infra" description="data + config">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <Card
             icon={IconDatabase}
             label="Database"
@@ -119,6 +122,21 @@ export default async function AdminIndex() {
             <Metric
               value={s.envSet + s.envDefault}
               caption={`${s.envDefault} default · ${s.envUnset} unset`}
+            />
+          </Card>
+          <Card
+            icon={IconChart}
+            label="Analytics"
+            href="/admin/analytics"
+            badge={s.analyticsShared ? 'shared' : 'off'}
+          >
+            <Metric
+              value={s.analyticsShared ? 'on' : 'off'}
+              caption={
+                s.analyticsShared
+                  ? 'PostHog dashboard embedded'
+                  : 'no share token — see setup steps'
+              }
             />
           </Card>
         </div>

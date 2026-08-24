@@ -7,13 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@posthog/react':
-        specifier: ^1.10.4
-        version: 1.10.4(@types/react@19.2.14)(posthog-js@1.418.10)(react@19.2.5)
-      posthog-js:
-        specifier: ^1.418.10
-        version: 1.418.10
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -399,9 +392,15 @@ importers:
 
   packages/ui:
     dependencies:
+      '@posthog/react':
+        specifier: ^1.10.4
+        version: 1.10.4(@types/react@19.2.14)(posthog-js@1.418.10)(react@19.2.5)
       d3-geo:
         specifier: ^3.1.1
         version: 3.1.1
+      posthog-js:
+        specifier: ^1.418.10
+        version: 1.418.10
       react:
         specifier: ^19.0.0
         version: 19.2.5

@@ -88,6 +88,17 @@ export function IconWorkflow(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChart(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path d="M7 15v-3" />
+      <path d="M12 15V7" />
+      <path d="M17 15v-6" />
+    </svg>
+  );
+}
+
 export function IconArrowUpRight(p: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...p}>

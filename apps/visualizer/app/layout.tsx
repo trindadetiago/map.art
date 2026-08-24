@@ -1,3 +1,5 @@
+import { env } from '@mapart/env';
+import { AnalyticsProvider } from '@mapart/ui/analytics';
 import { Pixelify_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import './globals.css';
@@ -17,7 +19,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={pixel.variable}>
-      <body>{children}</body>
+      <body>
+        <AnalyticsProvider projectToken={env.posthogKey}>{children}</AnalyticsProvider>
+      </body>
     </html>
   );
 }

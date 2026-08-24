@@ -16,6 +16,19 @@ const mapartPackages = readdirSync(join(repoRoot, 'packages'))
 const config: NextConfig = {
   // `three` (via @mapart/ui globe) ships untranspiled ESM under three/examples/jsm.
   transpilePackages: [...mapartPackages, 'three'],
+  // Proxy PostHog through our own origin: @mapart/ui/analytics points posthog-js at
+  // /ingest, and content blockers match on the posthog.com hostname it never sees.
+  // Ingestion paths end in a slash, so the redirect skip is what keeps them intact.
+  skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      { source: '/ingest/:path*', destination: 'https://us.i.posthog.com/:path*' },
+    ];
+  },
 };
 
 export default config;

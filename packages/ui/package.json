@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./analytics": "./src/analytics/analytics_provider.tsx",
     "./globe": "./src/globe/index.ts",
     "./globe/react": "./src/globe/globe.tsx",
     "./worldmap": "./src/worldmap/index.ts",
@@ -13,7 +14,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@posthog/react": "^1.10.4",
     "d3-geo": "^3.1.1",
+    "posthog-js": "^1.418.10",
     "three": "^0.169.0",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2"
