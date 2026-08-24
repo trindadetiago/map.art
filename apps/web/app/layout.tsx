@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import './globals.css';
+import { PostHogProvider } from './posthog_provider';
 
 export const metadata = {
   title: 'map.art',
@@ -9,7 +10,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <PostHogProvider>
+        <body>{children}</body>
+      </PostHogProvider>
     </html>
   );
 }
