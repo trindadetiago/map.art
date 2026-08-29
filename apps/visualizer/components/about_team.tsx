@@ -99,7 +99,7 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
             type="button"
             onClick={() => go(`/${featured.slug}`, MAP_BG)}
             aria-label={`Open the ${featured.name} map`}
-            className="group mx-auto mt-12 block w-full max-w-[520px] cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 ease-out hover:-translate-y-1"
+            className="group mt-12 block w-full cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 ease-out hover:-translate-y-1"
           >
             <MiniMap project={featured} />
             <div className="mt-4 font-pixel text-[13px] text-[#8a857a] transition-colors group-hover:text-[#14110c]">
