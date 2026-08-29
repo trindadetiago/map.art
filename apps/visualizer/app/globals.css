@@ -62,6 +62,44 @@ html:has(.home-page) {
   }
 }
 
+/* Map pin: a square ring that expands and fades out of the marker, so the one
+   pin on a world-sized map still catches the eye. Hard-edged to match the
+   pixel-art marker; it gets out of the way while the pin is hovered. */
+.map-pin-pulse {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border: 2px solid #ffcf4d;
+  opacity: 0;
+  animation: map-pin-pulse 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+/* Killing the animation outright, not pausing it — a paused keyframe would keep
+   whatever opacity it was frozen at. */
+.map-pin:hover .map-pin-pulse {
+  animation: none;
+  opacity: 0;
+}
+@keyframes map-pin-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.75;
+  }
+  70%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin-pulse {
+    animation: none;
+  }
+}
+
 /* Pixel display font (loaded via next/font as --font-pixel). */
 .font-pixel {
   font-family: var(--font-pixel), ui-sans-serif, system-ui, sans-serif;

@@ -1,8 +1,7 @@
 import { HomeLanding } from '@/components/home_landing';
 import { CODE, Notice } from '@/components/notice';
+import { listExportedProjects } from '@/lib/project';
 import { repos } from '@mapart/db';
-import { vizMetadataKey } from '@mapart/export/keys';
-import { getStorage } from '@mapart/storage';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -28,12 +27,5 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
     );
   }
 
-  // Only pin projects that actually have an exported pyramid — a project can
-  // have tiles (so a location) without ever being exported, and clicking such
-  // a pin would only land on the "no pyramid yet" notice.
-  const located = await repos.listProjectsWithLocation();
-  const storage = getStorage();
-  const exported = await Promise.all(located.map((p) => storage.has(vizMetadataKey(p.id))));
-  const projects = located.filter((_, i) => exported[i]);
-  return <HomeLanding projects={projects} />;
+  return <HomeLanding projects={await listExportedProjects()} />;
 }

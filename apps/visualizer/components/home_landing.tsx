@@ -1,10 +1,11 @@
 'use client';
 
+import type { VizProject } from '@/lib/project';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { AboutTeam } from './about_team';
 import { HOME_BG, MAP_BG, PageFade, useCurtainNav } from './transition';
-import { WorldMapPanel, type WorldProject } from './world_map_panel';
+import { WorldMapPanel } from './world_map_panel';
 
 const Globe = dynamic(() => import('@mapart/ui/globe/react').then((m) => m.Globe), {
   ssr: false,
@@ -21,7 +22,7 @@ const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
  */
 const easeInOut = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
 
-export function HomeLanding({ projects }: { projects: WorldProject[] }) {
+export function HomeLanding({ projects }: { projects: VizProject[] }) {
   // The curtain lives at the landing root: the hero panels are `transform`ed,
   // and a transformed ancestor would trap a `position: fixed` child inside it.
   const { go, curtain } = useCurtainNav();
@@ -161,7 +162,7 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
         </div>
       </section>
 
-      <AboutTeam />
+      <AboutTeam {...(projects[0] ? { featured: projects[0] } : {})} />
     </div>
   );
 }

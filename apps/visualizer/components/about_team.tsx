@@ -1,6 +1,9 @@
 'use client';
 
+import type { VizProject } from '@/lib/project';
 import { useCallback, useState } from 'react';
+import { MiniMap } from './mini_map';
+import { MAP_BG, useCurtainNav } from './transition';
 
 interface Member {
   name: string;
@@ -35,14 +38,23 @@ const TEAM: Member[] = [
 ];
 
 const TIAGO_X = 'https://x.com/tiagotrindadeo';
+const COENEN_X = 'https://x.com/_coenen';
+const ISOMETRIC_NYC = 'https://isometric.nyc/';
+
+const LINK =
+  'font-semibold text-[#14110c] underline decoration-[#c9c3b5] underline-offset-2 transition-colors hover:decoration-[#14110c]';
 
 /**
  * The "about map.art + the team" content, shared by the home landing (as page
- * sections) and the project viewer's Info drawer.
+ * sections) and the project viewer's Info drawer. `featured` hangs one project's
+ * map under the blurb as a framed miniature that opens it.
  */
-export function AboutTeam() {
+export function AboutTeam({ featured }: { featured?: VizProject }) {
+  const { go, curtain } = useCurtainNav();
+
   return (
     <div className="mx-auto max-w-[760px] px-6">
+      {curtain}
       <section className="py-24">
         <h2 className="font-pixel text-[34px] text-[#14110c] leading-tight">map.art</h2>
         <div className="mt-6 space-y-4 text-[16px] text-[#4a463e] leading-[1.75]">
@@ -59,20 +71,42 @@ export function AboutTeam() {
             made.
           </p>
           <p>
+            The inspiration is{' '}
+            <a href={COENEN_X} target="_blank" rel="noreferrer" className={LINK}>
+              @_coenen
+            </a>{' '}
+            and his work on{' '}
+            <a href={ISOMETRIC_NYC} target="_blank" rel="noreferrer" className={LINK}>
+              isometric.nyc
+            </a>
+            , which does the same thing for New York. map.art is our run at it, built to go
+            anywhere.
+          </p>
+          <p>
             That compute is the hard part: running the models is genuinely expensive. If you want to
             see this keep going, we happily take support, funding — or honestly, just sharing it.
             Come talk to{' '}
-            <a
-              href={TIAGO_X}
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-[#14110c] underline decoration-[#c9c3b5] underline-offset-2 transition-colors hover:decoration-[#14110c]"
-            >
+            <a href={TIAGO_X} target="_blank" rel="noreferrer" className={LINK}>
               @tiagotrindadeo
             </a>{' '}
             on Twitter.
           </p>
         </div>
+
+        {/* One map hung under the copy, so the page shows what it's describing. */}
+        {featured && (
+          <button
+            type="button"
+            onClick={() => go(`/${featured.slug}`, MAP_BG)}
+            aria-label={`Open the ${featured.name} map`}
+            className="group mx-auto mt-12 block w-full max-w-[520px] cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 ease-out hover:-translate-y-1"
+          >
+            <MiniMap project={featured} />
+            <div className="mt-4 font-pixel text-[13px] text-[#8a857a] transition-colors group-hover:text-[#14110c]">
+              open the map →
+            </div>
+          </button>
+        )}
       </section>
 
       <section className="pb-32">

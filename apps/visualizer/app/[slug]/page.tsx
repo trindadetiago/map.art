@@ -1,5 +1,6 @@
 import { Frame } from '@/components/frame';
 import { CODE, Notice } from '@/components/notice';
+import { listExportedProjects } from '@/lib/project';
 import { repos } from '@mapart/db';
 import { vizMetadataKey } from '@mapart/export/keys';
 import { getProjectPins } from '@mapart/export/pins';
@@ -71,8 +72,18 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   const meta = JSON.parse((await storage.get(metaKey)).toString('utf8')) as VizMetadata;
   const pins = await getProjectPins(project.id);
+  // The Info drawer hangs a map under the blurb — one you aren't already
+  // looking at, so it's somewhere to go rather than a link back to here.
+  const featured = (await listExportedProjects()).find((p) => p.id !== project.id);
 
   return (
-    <Frame projectId={project.id} meta={meta} pins={pins} name={project.name} year={project.year} />
+    <Frame
+      projectId={project.id}
+      meta={meta}
+      pins={pins}
+      name={project.name}
+      year={project.year}
+      {...(featured ? { featured } : {})}
+    />
   );
 }

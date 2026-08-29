@@ -1,42 +1,18 @@
 'use client';
 
+import type { VizProject } from '@/lib/project';
 import type { VizMetadata, VizPin } from '@mapart/export/types';
 import { type CSSProperties, useEffect, useState } from 'react';
 import { AboutTeam } from './about_team';
+import { OUTLINE, brassPlate, creamMat, goldFrame } from './frame_style';
 import { HOME_BG, MAP_BG, PageFade, useCurtainNav } from './transition';
 import { Viewer } from './viewer';
 
-// Pixel-art frame: flat fills with hard (0-blur) stepped bevels and crisp dark
-// outlines, sharp corners — like an 8-bit game window. No smooth gradients.
-const OUTLINE = '#241a09';
 const wallStyle: CSSProperties = {
   background: 'radial-gradient(120% 110% at 50% -5%, #2a241c 0%, #15110c 55%, #0a0807 100%)',
 };
-const frameStyle: CSSProperties = {
-  background: '#c19a3a',
-  boxShadow: [
-    `0 0 0 3px ${OUTLINE}`, // outer pixel outline
-    'inset 6px 6px 0 0 #ecd283', // top-left highlight band
-    'inset -6px -6px 0 0 #6f5018', // bottom-right shadow band
-    '0 30px 70px -30px rgba(0,0,0,0.85)', // soft float (kept subtle)
-  ].join(', '),
-};
-const matStyle: CSSProperties = {
-  background: '#f3ecd9',
-  boxShadow: [
-    `0 0 0 3px ${OUTLINE}`, // dark channel between gold and mat
-    'inset 4px 4px 0 0 #fffaf0',
-    'inset -4px -4px 0 0 #d8cdaa',
-  ].join(', '),
-};
-const plateStyle: CSSProperties = {
-  background: '#caa24e',
-  boxShadow: [
-    `0 0 0 2px ${OUTLINE}`,
-    'inset 3px 3px 0 0 #e9cd7e',
-    'inset -3px -3px 0 0 #7a5a22',
-  ].join(', '),
-};
+const frameStyle = goldFrame(6, '0 30px 70px -30px rgba(0,0,0,0.85)');
+const matStyle = creamMat(4);
 
 const CTRL =
   'inline-flex h-9 select-none items-center gap-1.5 px-3 font-pixel text-[12px] transition-none';
@@ -63,12 +39,14 @@ export function Frame({
   pins,
   name,
   year,
+  featured,
 }: {
   projectId: string;
   meta: VizMetadata;
   pins: VizPin[];
   name: string;
   year: number | null;
+  featured?: VizProject;
 }) {
   const [showPins, setShowPins] = useState(true);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -97,7 +75,7 @@ export function Frame({
         {/* Engraved brass nameplate resting near the bottom of the mat. */}
         <figcaption
           className="-translate-x-1/2 absolute bottom-[clamp(20px,3.5vmin,48px)] left-1/2 z-20 flex items-baseline gap-2 px-4 py-1.5"
-          style={plateStyle}
+          style={brassPlate}
         >
           <span
             className="font-pixel text-[14px] text-[#2c2008]"
@@ -153,8 +131,8 @@ export function Frame({
           mounted it stays mounted and only fades, so reopening is instant. */}
       {(infoReady || infoOpen) && (
         <div
-          className={`fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-white transition-[opacity,transform] duration-300 ease-out ${
-            infoOpen ? 'opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
+          className={`fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-white transition-opacity duration-300 ease-out ${
+            infoOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
           inert={!infoOpen}
         >
@@ -166,7 +144,7 @@ export function Frame({
           >
             ✕ Close
           </button>
-          <AboutTeam />
+          <AboutTeam {...(featured ? { featured } : {})} />
         </div>
       )}
     </div>
