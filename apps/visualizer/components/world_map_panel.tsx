@@ -1,7 +1,6 @@
 'use client';
 
 import { WORLDMAP_VARIANTS, paintWorldMap } from '@mapart/ui/worldmap';
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 export interface WorldProject {
@@ -24,11 +23,16 @@ const VARIANT = 'pixelated' as const;
 
 /**
  * A flat Equal Earth world map that fills its parent, with one pin per project.
- * Hover reveals the name; click opens its framed deep-zoom view. Pins are DOM
+ * Hover reveals the name; click hands the slug to `onOpenProject`. Pins are DOM
  * overlays positioned through the map's own projection, so they track resizes.
  */
-export function WorldMapPanel({ projects }: { projects: WorldProject[] }) {
-  const router = useRouter();
+export function WorldMapPanel({
+  projects,
+  onOpenProject,
+}: {
+  projects: WorldProject[];
+  onOpenProject: (slug: string) => void;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [placed, setPlaced] = useState<Placed[]>([]);
@@ -68,7 +72,7 @@ export function WorldMapPanel({ projects }: { projects: WorldProject[] }) {
             style={{ left: x, top: y }}
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/${project.slug}`);
+              onOpenProject(project.slug);
             }}
           >
             <span className="mb-[5px] inline-flex translate-y-[3px] items-baseline gap-1.5 whitespace-nowrap rounded-full border border-[rgba(234,230,220,0.18)] bg-[rgba(12,11,10,0.9)] px-[9px] py-[3px] font-semibold text-[#eae6dc] text-[12px] opacity-0 shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition group-hover:translate-y-0 group-hover:opacity-100">

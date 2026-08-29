@@ -11,6 +11,57 @@ body {
   color: #eae6dc;
 }
 
+/* The landing is a light page, and it is the only one the document itself
+   scrolls. Paint the document white while it's on screen so rubber-banding past
+   either end shows white rather than the dark shell the framed viewer wants. */
+html:has(.home-page),
+html:has(.home-page) body {
+  background: #fff;
+  color: #1a1714;
+}
+html:has(.home-page) {
+  color-scheme: light;
+}
+
+/* Navigation curtain: a full-screen wash in the destination's own background
+   colour, faded in over the outgoing page and back out over the incoming one so
+   the swap reads as a cross-dissolve rather than a flash. */
+.page-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+.page-curtain-in {
+  animation: curtain-in 240ms ease-out forwards;
+}
+.page-curtain-out {
+  animation: curtain-out 420ms ease-out forwards;
+}
+@keyframes curtain-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes curtain-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-curtain-in,
+  .page-curtain-out {
+    animation-duration: 1ms;
+  }
+}
+
 /* Pixel display font (loaded via next/font as --font-pixel). */
 .font-pixel {
   font-family: var(--font-pixel), ui-sans-serif, system-ui, sans-serif;

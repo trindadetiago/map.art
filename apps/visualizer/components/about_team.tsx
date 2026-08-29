@@ -1,3 +1,7 @@
+'use client';
+
+import { useCallback, useState } from 'react';
+
 interface Member {
   name: string;
   role?: string;
@@ -12,6 +16,7 @@ const TEAM: Member[] = [
     role: 'Lead',
     photo: 1,
     linkedin: 'https://www.linkedin.com/in/tiagotrindade03/',
+    twitter: 'https://x.com/tiagotrindadeo',
   },
   { name: 'Guilherme Huther', photo: 2, linkedin: 'https://www.linkedin.com/in/guilhermehuther/' },
   { name: 'Clara Dantas', photo: 3, linkedin: 'https://www.linkedin.com/in/claradantast/' },
@@ -20,9 +25,16 @@ const TEAM: Member[] = [
     photo: 4,
     linkedin: 'https://www.linkedin.com/in/pedroernestovogado/',
   },
-  { name: 'Gabriel Carvalho', photo: 5, linkedin: 'https://www.linkedin.com/in/gabrielcarvvlho/' },
+  {
+    name: 'Gabriel (Harry) Carvalho',
+    photo: 5,
+    linkedin: 'https://www.linkedin.com/in/gabrielcarvvlho/',
+    twitter: 'https://x.com/carvvlhogabriel',
+  },
   { name: 'Marcus Vinícius', photo: 6, linkedin: 'https://www.linkedin.com/in/marcusvs/' },
 ];
+
+const TIAGO_X = 'https://x.com/tiagotrindadeo';
 
 /**
  * The "about map.art + the team" content, shared by the home landing (as page
@@ -35,14 +47,30 @@ export function AboutTeam() {
         <h2 className="font-pixel text-[34px] text-[#14110c] leading-tight">map.art</h2>
         <div className="mt-6 space-y-4 text-[16px] text-[#4a463e] leading-[1.75]">
           <p>
-            map.art turns aerial map tiles into isometric, SimCity-style pixel-art. Pick an area on
-            a map and get back a stylized, zoomable version of it — every block hand-rendered by a
-            model trained on real cities.
+            map.art turns aerial map tiles into isometric, SimCity-style pixel-art. It&apos;s a work
+            in progress: an image model we fine-tuned on hand-made pixel cities, wrapped in a
+            pipeline we engineered to render, stylize and stitch map tiles on its own.
           </p>
           <p>
-            Each project is rendered tile by tile, stylized, and stitched into a deep-zoom pyramid
-            you can explore down to the pixel. The globe is every map we&apos;ve made, pinned where
-            it was made.
+            None of that is tied to a particular city. It works tile by tile, so it scales sideways
+            — point it at any coordinates and it renders them, then stacks the result into a
+            deep-zoom pyramid you can explore down to the pixel. Given enough compute, it can draw
+            the entire world. The globe is every map we&apos;ve made so far, pinned where it was
+            made.
+          </p>
+          <p>
+            That compute is the hard part: running the models is genuinely expensive. If you want to
+            see this keep going, we happily take support, funding — or honestly, just sharing it.
+            Come talk to{' '}
+            <a
+              href={TIAGO_X}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-[#14110c] underline decoration-[#c9c3b5] underline-offset-2 transition-colors hover:decoration-[#14110c]"
+            >
+              @tiagotrindadeo
+            </a>{' '}
+            on Twitter.
           </p>
         </div>
       </section>
@@ -60,22 +88,39 @@ export function AboutTeam() {
 }
 
 function TeamCard({ member }: { member: Member }) {
+  // The pixel portrait is the resting state and much the heavier file, so the
+  // photo underneath stays hidden until it has decoded — otherwise the card
+  // shows the real face first and snaps to pixels once the PNG lands.
+  const [pixelReady, setPixelReady] = useState(false);
+  const ready = useCallback((el: HTMLImageElement | null): void => {
+    if (el?.complete) setPixelReady(true);
+  }, []);
+
   return (
     <div className="flex flex-col items-center text-center">
       <div className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-black/10 bg-[#f1efe9] shadow-sm">
         <img
           src={`/team/${member.photo}_real.jpg`}
           alt={member.name}
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${
+            pixelReady ? 'opacity-100' : 'opacity-0'
+          }`}
         />
         <img
+          ref={ready}
           src={`/team/${member.photo}.png`}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover [clip-path:inset(0_0_0_0)] transition-[clip-path] duration-500 ease-out [image-rendering:pixelated] group-hover:[clip-path:inset(0_0_0_100%)]"
+          onLoad={() => setPixelReady(true)}
+          onError={() => setPixelReady(true)}
+          className={`absolute inset-0 h-full w-full object-cover [clip-path:inset(0_0_0_0)] transition-[clip-path,opacity] duration-500 ease-out [image-rendering:pixelated] group-hover:[clip-path:inset(0_0_0_100%)] ${
+            pixelReady ? 'opacity-100' : 'opacity-0'
+          }`}
         />
       </div>
-      <div className="mt-4 font-pixel text-[18px] text-[#14110c]">{member.name}</div>
-      {member.role && <div className="text-[13px] text-[#8a857a]">{member.role}</div>}
+      <div className="mt-4 flex items-baseline justify-center gap-2">
+        <span className="font-pixel text-[18px] text-[#14110c]">{member.name}</span>
+        {member.role && <span className="text-[13px] text-[#8a857a]">{member.role}</span>}
+      </div>
       <div className="mt-3 flex items-center gap-2">
         {member.linkedin && (
           <Social href={member.linkedin} label={`${member.name} on LinkedIn`}>

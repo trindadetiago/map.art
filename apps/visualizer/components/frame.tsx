@@ -1,8 +1,9 @@
 'use client';
 
 import type { VizMetadata, VizPin } from '@mapart/export/types';
-import { type CSSProperties, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import { AboutTeam } from './about_team';
+import { HOME_BG, MAP_BG, PageFade, useCurtainNav } from './transition';
 import { Viewer } from './viewer';
 
 // Pixel-art frame: flat fills with hard (0-blur) stepped bevels and crisp dark
@@ -71,9 +72,21 @@ export function Frame({
 }) {
   const [showPins, setShowPins] = useState(true);
   const [infoOpen, setInfoOpen] = useState(false);
+  // The overlay mounts once the viewer has had the network to itself for a
+  // beat, so its portraits are already decoded by the time Info is clicked —
+  // opening it then costs nothing but the fade.
+  const [infoReady, setInfoReady] = useState(false);
+  const { go, curtain } = useCurtainNav();
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setInfoReady(true), 2000);
+    return () => window.clearTimeout(id);
+  }, []);
 
   return (
     <div className="fixed inset-0 flex" style={wallStyle}>
+      <PageFade color={MAP_BG} />
+      {curtain}
       <figure className="relative flex flex-1 p-[clamp(12px,1.8vmin,24px)]" style={frameStyle}>
         <div className="h-full w-full p-[clamp(14px,3vmin,40px)]" style={matStyle}>
           <div className="relative h-full w-full overflow-hidden border-[3px] border-[#241a09] bg-[#0c0b0a]">
@@ -98,7 +111,16 @@ export function Frame({
 
       {/* Controls — labelled so they're self-explanatory, styled like the frame. */}
       <div className="fixed top-5 left-5 z-30">
-        <a href="/" className={CTRL} style={ctrlStyle(false)} aria-label="Back to globe">
+        <a
+          href="/"
+          className={CTRL}
+          style={ctrlStyle(false)}
+          aria-label="Back to globe"
+          onClick={(e) => {
+            e.preventDefault();
+            go('/', HOME_BG);
+          }}
+        >
           <HomeIcon />
           Home
         </a>
@@ -127,9 +149,15 @@ export function Frame({
         </button>
       </div>
 
-      {/* Info overlay — the same about + team content as the home page. */}
-      {infoOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+      {/* Info overlay — the same about + team content as the home page. Once
+          mounted it stays mounted and only fades, so reopening is instant. */}
+      {(infoReady || infoOpen) && (
+        <div
+          className={`fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-white transition-[opacity,transform] duration-300 ease-out ${
+            infoOpen ? 'opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
+          }`}
+          inert={!infoOpen}
+        >
           <button
             type="button"
             className={`${CTRL} fixed top-5 right-5 z-10`}

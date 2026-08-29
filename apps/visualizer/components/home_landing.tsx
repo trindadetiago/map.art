@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { AboutTeam } from './about_team';
+import { HOME_BG, MAP_BG, PageFade, useCurtainNav } from './transition';
 import { WorldMapPanel, type WorldProject } from './world_map_panel';
 
 const Globe = dynamic(() => import('@mapart/ui/globe/react').then((m) => m.Globe), {
@@ -21,6 +22,9 @@ const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 const easeInOut = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
 
 export function HomeLanding({ projects }: { projects: WorldProject[] }) {
+  // The curtain lives at the landing root: the hero panels are `transform`ed,
+  // and a transformed ancestor would trap a `position: fixed` child inside it.
+  const { go, curtain } = useCurtainNav();
   const heroRef = useRef<HTMLDivElement>(null);
   // Morph progress: 0 = world map, 1 = globe.
   const [t, setT] = useState(0);
@@ -99,7 +103,9 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
   const globeActive = expand > 0.99 && !replaying;
 
   return (
-    <div className="relative bg-white text-[#1a1714]">
+    <div className="home-page relative bg-white text-[#1a1714]">
+      <PageFade color={HOME_BG} />
+      {curtain}
       <div className="pixel-grid pointer-events-none absolute inset-0 -z-10" />
 
       {/* Pinned hero: tall so there's scroll distance to drive the morph. */}
@@ -117,11 +123,11 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
             }}
             onClick={manual ? openGlobe : undefined}
           >
-            <WorldMapPanel projects={projects} />
+            <WorldMapPanel projects={projects} onOpenProject={(slug) => go(`/${slug}`, MAP_BG)} />
           </div>
 
           {/* Globe — expands back out (the reverse of the collapse). Clicking it
-              opens the world map; it lifts + glows on hover. */}
+              opens the world map; it lifts on hover. */}
           <div
             className="absolute aspect-square h-[min(70vh,520px)]"
             style={{ transform: `scaleY(${expand})`, opacity: expand }}
@@ -134,7 +140,7 @@ export function HomeLanding({ projects }: { projects: WorldProject[] }) {
               className="group block h-full w-full cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 hover:scale-[1.04]"
               style={{ pointerEvents: globeActive ? 'auto' : 'none' }}
             >
-              <div className="h-full w-full transition-[filter] duration-200 group-hover:[filter:drop-shadow(0_10px_30px_rgba(90,160,224,0.5))]">
+              <div className="h-full w-full">
                 <Globe
                   variant="pixelated"
                   pixelSize={6}
