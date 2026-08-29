@@ -130,7 +130,7 @@ export function HomeLanding({ projects }: { projects: VizProject[] }) {
           {/* Globe — expands back out (the reverse of the collapse). Clicking it
               opens the world map; it lifts on hover. */}
           <div
-            className="absolute aspect-square h-[min(70vh,520px)]"
+            className="absolute aspect-square h-[min(70vh,86vw,520px)]"
             style={{ transform: `scaleY(${expand})`, opacity: expand }}
           >
             <button

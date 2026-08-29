@@ -61,6 +61,11 @@ const PALETTE_VERTEX = `
 
 // Snap every rendered pixel to the nearest palette colour so the pixelated
 // globe stays a hard 2–3 colours instead of muddy anti-aliased blends.
+//
+// The output is premultiplied, which the transparent background makes
+// load-bearing: the canvas composites as premultiplied alpha, so emitting a
+// palette colour at alpha 0 would *add* that colour to whatever is behind the
+// canvas and wash the page over the globe's whole rectangle.
 const PALETTE_FRAGMENT = `
   uniform sampler2D tDiffuse;
   uniform vec3 uPalette[4];
@@ -75,7 +80,7 @@ const PALETTE_FRAGMENT = `
       float d = distance(c.rgb, uPalette[i]);
       if (d < bestD) { bestD = d; best = uPalette[i]; }
     }
-    gl_FragColor = vec4(best, c.a);
+    gl_FragColor = vec4(best * c.a, c.a);
   }
 `;
 
