@@ -112,6 +112,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Railway CLI
-        run: npm i -g @railway/cli@5.7.0
+        # The package's postinstall fetches a binary from GitHub's release
+        # assets, which drops the connection often enough to fail a deploy on
+        # its own. Three attempts, then let it fail for real.
+        run: |
+          for attempt in 1 2 3; do
+            if npm i -g @railway/cli@5.7.0; then exit 0; fi
+            echo "railway CLI install failed (attempt $attempt of 3), retrying"
+            sleep $((attempt * 10))
+          done
+          exit 1
       - name: Deploy ${{ matrix.service }}
         run: railway up --ci --service ${{ matrix.service }}
