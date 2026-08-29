@@ -26,8 +26,8 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on every request except Next internals and static asset files.
+  // Run on every request except the healthcheck, Next internals and static assets.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
