@@ -25,7 +25,8 @@ afterAll(async () => {
 
 describe('tilesByIds', () => {
   it('returns rows for given ids, ignores unknown ids, and [] for empty input', async () => {
-    const p = await createProject({ name: `vitest-${crypto.randomUUID()}` });
+    const name = `vitest-${crypto.randomUUID()}`;
+    const p = await createProject({ name, slug: name });
     const cells: TileCell[] = [
       { x: 0, y: 0, lat: 40, lng: -74 },
       { x: 1, y: 0, lat: 40, lng: -73.999 },

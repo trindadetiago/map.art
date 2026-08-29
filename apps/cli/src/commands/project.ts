@@ -11,6 +11,7 @@ export function registerProjectCommands(parent: Command): void {
     .requiredOption('--lng <n>', 'origin (tile 0,0) longitude', Number.parseFloat)
     .requiredOption('--cols <n>', 'grid width in tiles', (v) => Number.parseInt(v, 10))
     .requiredOption('--rows <n>', 'grid height in tiles', (v) => Number.parseInt(v, 10))
+    .option('--slug <s>', 'url key (default: derived from name)')
     .option('--desc <s>', 'project description')
     .action(async (opts) => {
       try {
@@ -27,11 +28,13 @@ export function registerProjectCommands(parent: Command): void {
         const cells = gridCells({ lat: opts.lat, lng: opts.lng }, opts.cols, opts.rows);
         const project = await repos.createProject({
           name: opts.name,
+          slug: repos.toSlug(opts.slug ?? '', opts.name),
           ...(opts.desc ? { description: opts.desc } : {}),
         });
         const tiles = await repos.createProjectTiles(project.id, cells);
         console.log(`project ${project.id}`);
         console.log(`  name   ${project.name}`);
+        console.log(`  slug   /${project.slug}`);
         console.log(`  grid   ${opts.cols}×${opts.rows} = ${tiles.length} tiles (render/pending)`);
       } finally {
         await closeDb();

@@ -6,6 +6,7 @@
   },
   "deploy": {
     "startCommand": "pnpm --filter @mapart/visualizer exec next start --port $PORT --hostname 0.0.0.0",
+    "preDeployCommand": "pnpm mapart db migrate",
     "healthcheckPath": "/",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10

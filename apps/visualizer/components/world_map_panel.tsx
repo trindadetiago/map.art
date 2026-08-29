@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export interface WorldProject {
   id: string;
+  slug: string;
   name: string;
   year: number | null;
   lat: number;
@@ -67,7 +68,7 @@ export function WorldMapPanel({ projects }: { projects: WorldProject[] }) {
             style={{ left: x, top: y }}
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/?project=${project.id}`);
+              router.push(`/${project.slug}`);
             }}
           >
             <span className="mb-[5px] inline-flex translate-y-[3px] items-baseline gap-1.5 whitespace-nowrap rounded-full border border-[rgba(234,230,220,0.18)] bg-[rgba(12,11,10,0.9)] px-[9px] py-[3px] font-semibold text-[#eae6dc] text-[12px] opacity-0 shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition group-hover:translate-y-0 group-hover:opacity-100">

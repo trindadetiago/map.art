@@ -11,12 +11,14 @@ const INPUT =
 export function EditProjectForm({
   id,
   name,
+  slug,
   year,
   description,
   action,
 }: {
   id: string;
   name: string;
+  slug: string;
   year: number | null;
   description: string | null;
   action: (id: string, fd: FormData) => Promise<UpdateResult>;
@@ -60,6 +62,15 @@ export function EditProjectForm({
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL}>name</span>
           <input name="name" defaultValue={name} required className={INPUT} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={FIELD_LABEL}>slug</span>
+          <input
+            name="slug"
+            defaultValue={slug}
+            spellCheck={false}
+            className={`${INPUT} font-mono`}
+          />
         </label>
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL}>year</span>

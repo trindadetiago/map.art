@@ -25,6 +25,7 @@ async function createProjectAction(
     const description = String(fd.get('description') ?? '').trim();
     const row = await repos.createProject({
       name,
+      slug: repos.toSlug(String(fd.get('slug') ?? ''), name),
       description: description || null,
       year: parseYear(fd.get('year')),
     });
@@ -46,6 +47,7 @@ async function updateProjectAction(
     const description = String(fd.get('description') ?? '').trim();
     await repos.updateProject(id, {
       name,
+      slug: repos.toSlug(String(fd.get('slug') ?? ''), name),
       description: description || null,
       year: parseYear(fd.get('year')),
     });
@@ -71,6 +73,7 @@ export default async function ProjectsPage() {
     projects = rows.map((p) => ({
       id: p.id,
       name: p.name,
+      slug: p.slug,
       description: p.description,
       year: p.year,
       createdAt: p.createdAt,
