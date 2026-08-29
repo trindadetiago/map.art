@@ -64,11 +64,15 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
             pipeline we engineered to render, stylize and stitch map tiles on its own.
           </p>
           <p>
-            None of that is tied to a particular city. It works tile by tile, so it scales sideways
-            — point it at any coordinates and it renders them, then stacks the result into a
-            deep-zoom pyramid you can explore down to the pixel. Given enough compute, it can draw
-            the entire world. The globe is every map we&apos;ve made so far, pinned where it was
-            made.
+            What we&apos;re building is the platform around that, not a single map. Nothing in it is
+            tied to a particular city: point it at any coordinates and it renders them, stylizes
+            them, and stacks the result into a deep-zoom pyramid you can explore down to the pixel.
+            Given enough compute, it could draw the entire world.
+          </p>
+          <p>
+            So far we&apos;ve taken exactly one city all the way through — João Pessoa, in Brazil,
+            where the team is from. It&apos;s the first trial and the only map that&apos;s 100%
+            finished. The globe pins every map we&apos;ve made, where we made it.
           </p>
           <p>
             The inspiration is{' '}

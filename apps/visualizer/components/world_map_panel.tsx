@@ -90,6 +90,13 @@ export function WorldMapPanel({
               </div>
 
               <span className="map-pin relative block">
+                {/* A 20px marker is a small thing to land on. This invisible box
+                    around it widens the target without moving the pin: hovering
+                    a child counts as hovering its ancestors, overflow included. */}
+                <span
+                  className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-14 w-14"
+                  aria-hidden="true"
+                />
                 <span className="map-pin-pulse" aria-hidden="true" />
                 <PinGlyph />
               </span>

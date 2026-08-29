@@ -12,7 +12,7 @@ const wallStyle: CSSProperties = {
   background: 'radial-gradient(120% 110% at 50% -5%, #2a241c 0%, #15110c 55%, #0a0807 100%)',
 };
 const frameStyle = goldFrame(6, '0 30px 70px -30px rgba(0,0,0,0.85)');
-const matStyle = creamMat(4);
+const matStyle = creamMat(2);
 
 const CTRL =
   'inline-flex h-9 select-none items-center gap-1.5 px-3 font-pixel text-[12px] transition-none';
@@ -66,7 +66,7 @@ export function Frame({
       <PageFade color={MAP_BG} />
       {curtain}
       <figure className="relative flex flex-1 p-[clamp(12px,1.8vmin,24px)]" style={frameStyle}>
-        <div className="h-full w-full p-[clamp(14px,3vmin,40px)]" style={matStyle}>
+        <div className="h-full w-full p-[clamp(6px,1.1vmin,14px)]" style={matStyle}>
           <div className="relative h-full w-full overflow-hidden border-[3px] border-[#241a09] bg-[#0c0b0a]">
             <Viewer projectId={projectId} meta={meta} pins={pins} showPins={showPins} />
           </div>
