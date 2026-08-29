@@ -69,7 +69,7 @@ function TeamCard({ member }: { member: Member }) {
           className="absolute inset-0 h-full w-full object-cover"
         />
         <img
-          src={`/team/${member.photo}_pixel.jpg`}
+          src={`/team/${member.photo}.png`}
           alt=""
           className="absolute inset-0 h-full w-full object-cover [clip-path:inset(0_0_0_0)] transition-[clip-path] duration-500 ease-out [image-rendering:pixelated] group-hover:[clip-path:inset(0_0_0_100%)]"
         />
