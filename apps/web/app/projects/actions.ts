@@ -58,6 +58,7 @@ export async function createProjectWithGrid(input: {
     const cells = gridCells({ lat: input.lat, lng: input.lng }, input.cols, input.rows);
     const project = await repos.createProject({
       name,
+      slug: repos.toSlug('', name),
       description: input.description?.trim() || null,
     });
     await repos.createProjectTiles(project.id, cells);

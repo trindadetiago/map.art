@@ -73,14 +73,16 @@ export function registerDbCommands(parent: Command): void {
     .command('create')
     .description('Create a project')
     .requiredOption('--name <name>')
+    .option('--slug <slug>', 'url key (default: derived from name)')
     .option('--description <text>')
     .action(async (opts) => {
       try {
         const project = await repos.createProject({
           name: opts.name,
+          slug: repos.toSlug(opts.slug ?? '', opts.name),
           description: opts.description ?? null,
         });
-        console.log(`created ${project.id} (${project.name})`);
+        console.log(`created ${project.id} (${project.name}) /${project.slug}`);
       } finally {
         await closeDb();
       }

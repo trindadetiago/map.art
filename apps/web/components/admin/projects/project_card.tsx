@@ -5,6 +5,7 @@ import { EditProjectForm, type UpdateResult } from './edit_project_form';
 export interface ProjectCardData {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   year: number | null;
   createdAt: Date;
@@ -36,6 +37,7 @@ export function ProjectCard({
             <span className="text-[12px] text-stone-400 tabular-nums">{project.year}</span>
           )}
         </div>
+        <div className="mt-0.5 font-mono text-[11px] text-stone-400">/{project.slug}</div>
         {project.description && (
           <p className="mt-1 mb-0 line-clamp-2 text-[13px] text-stone-500">{project.description}</p>
         )}
@@ -47,6 +49,7 @@ export function ProjectCard({
           <EditProjectForm
             id={project.id}
             name={project.name}
+            slug={project.slug}
             year={project.year}
             description={project.description}
             action={updateAction}

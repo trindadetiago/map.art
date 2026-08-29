@@ -56,7 +56,8 @@ function grid(w: number, h: number): TileCell[] {
 }
 
 async function project(cells: TileCell[]): Promise<string> {
-  const p = await createProject({ name: `vitest-worker-${crypto.randomUUID()}` });
+  const name = `vitest-worker-${crypto.randomUUID()}`;
+  const p = await createProject({ name, slug: name });
   await createProjectTiles(p.id, cells);
   return p.id;
 }

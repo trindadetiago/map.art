@@ -29,7 +29,8 @@ function grid(w: number, h: number): TileCell[] {
 
 /** Fresh project + its tiles. Names are prefixed so leftovers are easy to spot. */
 async function project(cells: TileCell[]): Promise<Tile[]> {
-  const p = await createProject({ name: `vitest-${crypto.randomUUID()}` });
+  const name = `vitest-${crypto.randomUUID()}`;
+  const p = await createProject({ name, slug: name });
   return createProjectTiles(p.id, cells);
 }
 

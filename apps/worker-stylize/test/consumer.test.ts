@@ -53,7 +53,8 @@ function grid(w: number, h: number): TileCell[] {
 
 /** Project whose tiles are all render/done with a real PNG render in storage. */
 async function seedRenderedProject(mem: MemStorage, w: number, h: number): Promise<string> {
-  const p = await createProject({ name: `vitest-stylize-${crypto.randomUUID()}` });
+  const name = `vitest-stylize-${crypto.randomUUID()}`;
+  const p = await createProject({ name, slug: name });
   const rows = await createProjectTiles(p.id, grid(w, h));
   const png = await sharp({
     create: { width: 64, height: 64, channels: 3, background: { r: 100, g: 100, b: 100 } },

@@ -34,10 +34,18 @@ export function CreateProjectForm({
           }
         });
       }}
-      className="grid grid-cols-[2fr_minmax(0,90px)_3fr_auto] items-end gap-3"
+      className="grid grid-cols-[2fr_2fr_minmax(0,90px)_3fr_auto] items-end gap-3"
     >
       <Field label="name">
         <input name="name" required className={INPUT} />
+      </Field>
+      <Field label="slug">
+        <input
+          name="slug"
+          placeholder="from name"
+          spellCheck={false}
+          className={`${INPUT} font-mono`}
+        />
       </Field>
       <Field label="year">
         <input name="year" type="number" inputMode="numeric" className={INPUT} />
