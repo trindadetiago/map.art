@@ -3,10 +3,32 @@ import { findRepoRoot } from '@mapart/env';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { getDb, getSql } from './client';
 
-/** Applies all pending migrations from packages/db/drizzle. */
+/**
+ * Arbitrary constant. Advisory locks share one namespace per database, so the
+ * only requirement is that nothing else in the system picks the same number.
+ */
+const MIGRATION_LOCK = 8_170_423;
+
+/**
+ * Applies all pending migrations from packages/db/drizzle.
+ *
+ * Services deploy in parallel and each applies migrations before booting.
+ * Drizzle reads the journal *outside* the transaction it then applies in, so
+ * two concurrent runs both see the same migration as pending and the loser dies
+ * on already-applied DDL. An advisory lock serializes them: the second waits,
+ * then finds nothing left to apply. The lock is session-scoped, so it has to be
+ * taken and released on one reserved connection rather than off the pool.
+ */
 export async function runMigrations(): Promise<void> {
   const migrationsFolder = resolve(findRepoRoot(), 'packages/db/drizzle');
-  await migrate(getDb(), { migrationsFolder });
+  const lock = await getSql().reserve();
+  try {
+    await lock`SELECT pg_advisory_lock(${MIGRATION_LOCK})`;
+    await migrate(getDb(), { migrationsFolder });
+  } finally {
+    await lock`SELECT pg_advisory_unlock(${MIGRATION_LOCK})`;
+    lock.release();
+  }
 }
 
 /** Drops all tables/enums in `public` plus Drizzle's migration journal. Dev-only

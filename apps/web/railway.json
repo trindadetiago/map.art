@@ -6,7 +6,7 @@
   },
   "deploy": {
     "startCommand": "pnpm --filter @mapart/web exec next start --port $PORT --hostname 0.0.0.0",
-    "preDeployCommand": "pnpm --filter @mapart/db exec drizzle-kit migrate",
+    "preDeployCommand": "pnpm mapart db migrate",
     "healthcheckPath": "/",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
