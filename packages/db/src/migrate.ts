@@ -12,12 +12,12 @@ const MIGRATION_LOCK = 8_170_423;
 /**
  * Applies all pending migrations from packages/db/drizzle.
  *
- * Services deploy in parallel and each applies migrations before booting.
- * Drizzle reads the journal *outside* the transaction it then applies in, so
- * two concurrent runs both see the same migration as pending and the loser dies
- * on already-applied DDL. An advisory lock serializes them: the second waits,
- * then finds nothing left to apply. The lock is session-scoped, so it has to be
- * taken and released on one reserved connection rather than off the pool.
+ * Drizzle reads its journal *outside* the transaction it then applies in, so
+ * two runs overlapping — a deploy landing while someone migrates by hand — both
+ * see the same migration as pending, and the loser fails on already-applied
+ * DDL. An advisory lock serializes them: the second waits, then finds nothing
+ * left to apply. The lock is session-scoped, so it has to be taken and released
+ * on one reserved connection rather than off the pool.
  */
 export async function runMigrations(): Promise<void> {
   const migrationsFolder = resolve(findRepoRoot(), 'packages/db/drizzle');
