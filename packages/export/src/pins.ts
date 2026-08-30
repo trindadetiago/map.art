@@ -1,4 +1,4 @@
-import { getStorage } from '@mapart/storage';
+import { getVizStorage } from '@mapart/storage';
 import { vizPinsKey } from './keys';
 import type { VizPin } from './types';
 
@@ -50,7 +50,7 @@ function validatePin(entry: unknown, i: number): VizPin {
 
 /** Read a project's pins from storage. Returns `[]` if none are set. */
 export async function getProjectPins(projectId: string): Promise<VizPin[]> {
-  const storage = getStorage();
+  const storage = getVizStorage();
   const key = vizPinsKey(projectId);
   if (!(await storage.has(key))) return [];
   return parsePins((await storage.get(key)).toString('utf8'));
@@ -58,5 +58,5 @@ export async function getProjectPins(projectId: string): Promise<VizPin[]> {
 
 /** Validate and write a project's pins to storage, replacing any existing set. */
 export async function setProjectPins(projectId: string, pins: VizPin[]): Promise<void> {
-  await getStorage().put(vizPinsKey(projectId), Buffer.from(JSON.stringify(pins, null, 2)));
+  await getVizStorage().put(vizPinsKey(projectId), Buffer.from(JSON.stringify(pins, null, 2)));
 }

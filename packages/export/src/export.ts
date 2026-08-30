@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { extname, join, relative } from 'node:path';
 import { repos } from '@mapart/db';
 import { createLogger } from '@mapart/logger';
-import { getStorage } from '@mapart/storage';
+import { getStorage, getVizStorage } from '@mapart/storage';
 import sharp from 'sharp';
 import { computeGeoAnchor } from './geo';
 import { vizDziKey, vizMetadataKey, vizPrefix } from './keys';
@@ -47,6 +47,9 @@ export async function exportProjectDzi(
   const source = opts.source ?? 'stylized';
   const quality = opts.quality ?? 90;
   const storage = getStorage();
+  // Source tiles come from the pipeline's bucket; the pyramid goes to the one
+  // that is served publicly.
+  const vizStorage = getVizStorage();
 
   const tiles = await repos.tilesByProject(projectId);
   const present = tiles.filter((t) => tileImagePath(t, source) !== null);
@@ -155,7 +158,7 @@ export async function exportProjectDzi(
     await mapLimit(files, STORAGE_CONCURRENCY, async (filePath) => {
       const rel = relative(outDir, filePath).split('\\').join('/');
       // tiles.dzi → viz/{pid}/tiles.dzi ; tiles_files/** → viz/{pid}/tiles_files/**
-      await storage.put(`${prefix}/${rel}`, await readFile(filePath));
+      await vizStorage.put(`${prefix}/${rel}`, await readFile(filePath));
     });
     uploaded = files.length;
 
@@ -173,7 +176,7 @@ export async function exportProjectDzi(
       geo: computeGeoAnchor(tiles, minX, minY),
       generatedAt: new Date().toISOString(),
     };
-    await storage.put(vizMetadataKey(projectId), Buffer.from(JSON.stringify(metadata, null, 2)));
+    await vizStorage.put(vizMetadataKey(projectId), Buffer.from(JSON.stringify(metadata, null, 2)));
     uploaded++;
 
     log.info('pyramid uploaded', { projectId, uploaded, dzi: vizDziKey(projectId) });

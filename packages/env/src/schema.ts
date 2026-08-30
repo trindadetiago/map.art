@@ -57,6 +57,29 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  vizS3Endpoint: {
+    envKey: 'VIZ_S3_ENDPOINT',
+    description:
+      'S3 endpoint for the bucket holding published pyramids (the one served publicly). Leave the whole VIZ_S3_* group empty to keep pyramids in the main bucket.',
+  },
+  vizS3Region: {
+    envKey: 'VIZ_S3_REGION',
+    description: 'Region for the published-pyramid bucket.',
+    default: 'auto',
+  },
+  vizS3AccessKeyId: {
+    envKey: 'VIZ_S3_ACCESS_KEY_ID',
+    description: 'Access key id for the published-pyramid bucket.',
+  },
+  vizS3SecretAccessKey: {
+    envKey: 'VIZ_S3_SECRET_ACCESS_KEY',
+    description: 'Secret access key for the published-pyramid bucket.',
+  },
+  vizS3Bucket: {
+    envKey: 'VIZ_S3_BUCKET',
+    description:
+      'Bucket name for published pyramids. Setting this is what splits them out of the main bucket; unset, everything shares one.',
+  },
   vizPublicBaseUrl: {
     envKey: 'VIZ_PUBLIC_BASE_URL',
     description:

@@ -2,7 +2,7 @@ import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
 import { vizMetadataKey, vizThumbKey } from '@mapart/export/keys';
 import type { VizMetadata } from '@mapart/export/types';
-import { getStorage } from '@mapart/storage';
+import { getVizStorage } from '@mapart/storage';
 
 /** A project the landing can point at: located, exported, and thumbnailable. */
 export interface VizProject {
@@ -38,7 +38,7 @@ export function vizObjectUrl(key: string): string {
  */
 export async function listExportedProjects(): Promise<VizProject[]> {
   const located = await repos.listProjectsWithLocation();
-  const storage = getStorage();
+  const storage = getVizStorage();
   const metas = await Promise.all(
     located.map(async (p): Promise<VizMetadata | undefined> => {
       const key = vizMetadataKey(p.id);
