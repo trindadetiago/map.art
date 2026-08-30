@@ -1,7 +1,11 @@
 import { repos } from '@mapart/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { log } from '../../../../../lib/logger';
-import { RailwayError, exportTriggerConfigured, startExportRun } from '../../../../../lib/railway';
+import {
+  RailwayError,
+  exportTriggerConfigured,
+  wakeExportRunner,
+} from '../../../../../lib/railway';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,10 +85,10 @@ export async function POST(
 
     const row = await repos.createExport(id, source);
     try {
-      await startExportRun({ projectId: id, source, exportId: row.id });
+      await wakeExportRunner();
     } catch (e) {
-      // The row exists but nothing will ever run it — close it out rather than
-      // leaving a run that polls as "queued" forever.
+      // The row is queued but nothing was woken to claim it — close it out
+      // rather than leaving a run that polls as "queued" forever.
       await repos.markExportError(row.id, e instanceof Error ? e.message : String(e));
       throw e;
     }

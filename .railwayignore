@@ -1,0 +1,14 @@
+# `railway up` uploads the working directory. Without this it ships ~2 GB of
+# history and installed packages and times out; the builder installs its own
+# dependencies from the lockfile anyway.
+.git
+node_modules
+**/node_modules
+.next
+**/.next
+.logs
+.venv
+python/.venv
+dist
+**/dist
+*.log

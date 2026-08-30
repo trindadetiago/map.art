@@ -66,6 +66,40 @@ export function registerExportCommands(parent: Command): void {
     );
 
   parent
+    .command('run-queued')
+    .description('Claim the oldest queued export and run it. Exits 0 when the queue is empty.')
+    .option('--quality <n>', 'WebP tile quality (1-100)', '90')
+    .action(async (opts: { quality: string }) => {
+      const claimed = await repos.claimNextExport();
+      if (!claimed) {
+        // Not an error: the runner restarts for reasons unrelated to exports,
+        // and an idle start should cost nothing and report success.
+        console.log('no queued export — nothing to do');
+        return;
+      }
+      const source = claimed.source === 'rendered' ? 'rendered' : 'stylized';
+      console.log(`claimed export ${claimed.id} — project ${claimed.projectId} (${source})`);
+      try {
+        const res = await exportProjectDzi(claimed.projectId, {
+          source,
+          quality: Number(opts.quality),
+        });
+        await repos.markExportDone(claimed.id, {
+          placed: res.placed,
+          skipped: res.skipped,
+          uploaded: res.uploaded,
+          width: res.width,
+          height: res.height,
+        });
+        console.log(`exported ${res.placed} ${res.source} tiles → ${res.prefix}`);
+        console.log(`  image: ${res.width}×${res.height}px · ${res.uploaded} objects uploaded`);
+      } catch (e) {
+        await repos.markExportError(claimed.id, e instanceof Error ? e.message : String(e));
+        throw e;
+      }
+    });
+
+  parent
     .command('pins')
     .description("Set a project's map pins from a local JSON file ([{ lat, lng, label, kind? }])")
     .requiredOption('--project <id>', 'project id to set pins for')
