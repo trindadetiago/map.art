@@ -1,24 +1,49 @@
 import { AUTH_COOKIE, AUTH_MAX_AGE_SECONDS, authToken } from '@/lib/auth';
+import {
+  clearLoginFailures,
+  clientIp,
+  loginRetryAfterMs,
+  recordLoginFailure,
+} from '@/lib/rate_limit';
 import { requireEnv } from '@mapart/env';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 function safeNext(next: string | undefined): string {
-  // Only allow same-site relative paths, never an open redirect.
-  return next?.startsWith('/') && !next.startsWith('//') ? next : '/';
+  // Same-site paths only. Resolving against a dummy origin normalises what a
+  // prefix check misses — a browser reads `/\evil.com` as `//evil.com` and
+  // leaves the site, so compare the resolved origin rather than the raw string.
+  if (!next) return '/';
+  try {
+    const url = new URL(next, 'http://localhost');
+    if (url.origin !== 'http://localhost') return '/';
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return '/';
+  }
 }
 
 async function login(formData: FormData) {
   'use server';
 
-  const password = formData.get('password');
   const next = safeNext(formData.get('next')?.toString());
+  const ip = clientIp(await headers());
+
+  const waitMs = loginRetryAfterMs(ip);
+  if (waitMs > 0) {
+    const minutes = Math.max(1, Math.ceil(waitMs / 60_000));
+    redirect(`/login?error=rate&retry=${minutes}&next=${encodeURIComponent(next)}`);
+  }
+
+  const password = formData.get('password');
   const expected = requireEnv('appPassword');
 
   if (typeof password !== 'string' || password !== expected) {
+    recordLoginFailure(ip);
     redirect(`/login?error=1&next=${encodeURIComponent(next)}`);
   }
 
+  clearLoginFailures(ip);
   const jar = await cookies();
   jar.set(AUTH_COOKIE, await authToken(expected), {
     httpOnly: true,
@@ -34,9 +59,10 @@ async function login(formData: FormData) {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; retry?: string }>;
 }) {
-  const { next, error } = await searchParams;
+  const { next, error, retry } = await searchParams;
+  const minutes = Number(retry) || 15;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#fcfcfc] p-6">
@@ -57,7 +83,13 @@ export default async function LoginPage({
           className="mt-6 w-full rounded-lg border border-black/15 px-3 py-2 text-sm outline-none focus:border-black/40"
         />
 
-        {error ? <p className="mt-2 text-sm text-red-600">Incorrect password.</p> : null}
+        {error === 'rate' ? (
+          <p className="mt-2 text-sm text-red-600">
+            Too many attempts. Try again in {minutes} minute{minutes === 1 ? '' : 's'}.
+          </p>
+        ) : error ? (
+          <p className="mt-2 text-sm text-red-600">Incorrect password.</p>
+        ) : null}
 
         <button
           type="submit"

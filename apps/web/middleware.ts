@@ -26,8 +26,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on every request except the healthcheck, Next internals and static assets.
-  matcher: [
-    '/((?!api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
-  ],
+  // Run on every request except the healthcheck, Next internals and the icon.
+  //
+  // Deliberately no exclusion by file extension: this app ships no static images
+  // of its own, while `/api/storage/[...key]` answers with real bucket objects
+  // at paths ending in .png/.webp. Skipping those extensions let anyone read the
+  // bucket — and collect 7-day presigned URLs — without ever seeing this gate.
+  matcher: ['/((?!api/health|_next/static|_next/image|favicon\\.ico|icon\\.png).*)'],
 };
