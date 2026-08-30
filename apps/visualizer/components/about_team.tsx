@@ -40,6 +40,7 @@ const TEAM: Member[] = [
 const TIAGO_X = 'https://x.com/tiagotrindadeo';
 const COENEN_X = 'https://x.com/_coenen';
 const ISOMETRIC_NYC = 'https://isometric.nyc/';
+const BUY_ME_A_COFFEE = 'https://buymeacoffee.com/earthtopixels';
 
 const LINK =
   'font-semibold text-[#14110c] underline decoration-[#c9c3b5] underline-offset-2 transition-colors hover:decoration-[#14110c]';
@@ -96,6 +97,24 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
             on Twitter.
           </p>
         </div>
+
+        <a
+          href={BUY_ME_A_COFFEE}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-7 inline-flex items-center gap-2.5 px-4 py-2.5 font-pixel text-[15px] text-[#2c2008] transition-transform duration-150 ease-out hover:-translate-y-0.5"
+          style={{
+            background: '#ffcf4d',
+            boxShadow: [
+              '0 0 0 2px #241a09',
+              'inset 3px 3px 0 0 #ffe7a1',
+              'inset -3px -3px 0 0 #b98a24',
+            ].join(', '),
+          }}
+        >
+          <CoffeeIcon />
+          buy us a coffee
+        </a>
 
         {/* One map hung under the copy, so the page shows what it's describing. */}
         {featured && (
@@ -194,6 +213,29 @@ function Social({
     >
       {children}
     </a>
+  );
+}
+
+/** Blocky cup on a 14x12 grid, so it sits in the same pixel world as the type. */
+function CoffeeIcon() {
+  return (
+    <svg
+      viewBox="0 0 14 12"
+      width="16"
+      height="14"
+      fill="currentColor"
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      <rect x="4" y="0" width="1" height="2" />
+      <rect x="7" y="0" width="1" height="2" />
+      <rect x="1" y="3" width="10" height="2" />
+      <rect x="2" y="5" width="8" height="4" />
+      <rect x="3" y="9" width="6" height="1" />
+      <rect x="11" y="5" width="2" height="1" />
+      <rect x="12" y="6" width="1" height="2" />
+      <rect x="11" y="8" width="2" height="1" />
+    </svg>
   );
 }
 
