@@ -1,8 +1,8 @@
 import { Frame } from '@/components/frame';
 import { CODE, Notice } from '@/components/notice';
-import { listExportedProjects } from '@/lib/project';
+import { listExportedProjects, vizObjectUrl } from '@/lib/project';
 import { repos } from '@mapart/db';
-import { vizMetadataKey } from '@mapart/export/keys';
+import { vizMetadataKey, vizTilesPrefix } from '@mapart/export/keys';
 import { getProjectPins } from '@mapart/export/pins';
 import type { VizMetadata } from '@mapart/export/types';
 import { getStorage } from '@mapart/storage';
@@ -78,7 +78,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   return (
     <Frame
-      projectId={project.id}
+      tileBaseUrl={vizObjectUrl(vizTilesPrefix(project.id))}
       meta={meta}
       pins={pins}
       name={project.name}

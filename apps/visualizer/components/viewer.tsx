@@ -15,12 +15,13 @@ import { useEffect, useRef } from 'react';
  * zoom past 1:1 to inspect individual pixels without blur.
  */
 export function Viewer({
-  projectId,
+  tileBaseUrl,
   meta,
   pins = [],
   showPins = true,
 }: {
-  projectId: string;
+  /** Resolved URL of the pyramid's `tiles_files` prefix. */
+  tileBaseUrl: string;
   meta: VizMetadata;
   pins?: VizPin[];
   showPins?: boolean;
@@ -39,7 +40,6 @@ export function Viewer({
     void import('openseadragon').then(({ default: OpenSeadragon }) => {
       if (cancelled) return;
 
-      const base = `/api/viz/${projectId}`;
       // `subPixelRoundingForTransparency` is a real runtime option the bundled
       // @types are behind on, so widen the option type to allow it.
       const options: OpenSeadragon.Options & { subPixelRoundingForTransparency?: number } = {
@@ -74,7 +74,7 @@ export function Viewer({
           tileSize: meta.tileSize,
           tileOverlap: meta.overlap,
           getTileUrl: (level: number, x: number, y: number) =>
-            `${base}/tiles_files/${level}/${x}_${y}.${meta.format}`,
+            `${tileBaseUrl}/${level}/${x}_${y}.${meta.format}`,
         },
       };
       viewer = OpenSeadragon(options);
@@ -103,7 +103,7 @@ export function Viewer({
       cancelled = true;
       viewer?.destroy();
     };
-  }, [projectId, meta, pins]);
+  }, [tileBaseUrl, meta, pins]);
 
   // Toggling pins only flips this class; the effect doesn't depend on showPins,
   // so the (expensive) OSD instance and its overlays are never rebuilt — CSS

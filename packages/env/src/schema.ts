@@ -57,6 +57,17 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  vizPublicBaseUrl: {
+    envKey: 'VIZ_PUBLIC_BASE_URL',
+    description:
+      "Origin serving the visualizer's pyramid objects directly from the bucket (e.g. https://tiles.example.com), CDN in front. Set it and the viewer requests tiles straight from there; leave empty and it falls back to the visualizer's own proxy route.",
+    validate: (v) => {
+      if (!v.startsWith('http://') && !v.startsWith('https://')) {
+        throw new Error('VIZ_PUBLIC_BASE_URL must be an absolute http(s) URL');
+      }
+      return v.replace(/\/+$/, '');
+    },
+  },
   stylizeDebugArtifacts: {
     envKey: 'STYLIZE_DEBUG_ARTIFACTS',
     description:
