@@ -98,23 +98,30 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
           </p>
         </div>
 
-        <a
-          href={BUY_ME_A_COFFEE}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-7 inline-flex items-center gap-2.5 px-4 py-2.5 font-pixel text-[15px] text-[#2c2008] transition-transform duration-150 ease-out hover:-translate-y-0.5"
-          style={{
-            background: '#ffcf4d',
-            boxShadow: [
-              '0 0 0 2px #241a09',
-              'inset 3px 3px 0 0 #ffe7a1',
-              'inset -3px -3px 0 0 #b98a24',
-            ].join(', '),
-          }}
-        >
-          <CoffeeIcon />
-          buy us a coffee
-        </a>
+        {/* Wraps on narrow screens, dropping the line under the button. */}
+        <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <a
+            href={BUY_ME_A_COFFEE}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shrink-0 items-center gap-2.5 px-4 py-2.5 font-pixel text-[15px] text-[#2c2008] transition-transform duration-150 ease-out hover:-translate-y-0.5"
+            style={{
+              background: '#ffcf4d',
+              boxShadow: [
+                '0 0 0 2px #241a09',
+                'inset 3px 3px 0 0 #ffe7a1',
+                'inset -3px -3px 0 0 #b98a24',
+              ].join(', '),
+            }}
+          >
+            <CoffeeIcon />
+            buy us a coffee
+          </a>
+          <p className="max-w-[300px] text-[13px] text-[#8a857a] leading-[1.5]">
+            every coffee goes straight into compute — and compute is the only thing between us and
+            the next city.
+          </p>
+        </div>
 
         {/* One map hung under the copy, so the page shows what it's describing. */}
         {featured && (
