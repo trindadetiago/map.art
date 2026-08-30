@@ -53,6 +53,7 @@ export default async function ProjectWorkspacePage({
       apiKey={env.googleMapsApiKey ?? ''}
       projectId={project.id}
       projectName={project.name}
+      projectSlug={project.slug}
       initial={{ center, cols, rows, cityLabel }}
       {...(geo ? { geo } : {})}
       initialPins={pins}

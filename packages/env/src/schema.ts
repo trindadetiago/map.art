@@ -57,6 +57,25 @@ export const SCHEMA = {
     envKey: 'S3_BUCKET',
     description: 'S3 bucket name. Required for blob storage.',
   },
+  railwayApiToken: {
+    envKey: 'RAILWAY_API_TOKEN',
+    description:
+      'Railway account token, used by apps/web to trigger an export on the export-runner service. Leave empty and the admin export button reports itself as unavailable instead of failing at click time.',
+  },
+  railwayProjectId: {
+    envKey: 'RAILWAY_PROJECT_ID',
+    description: 'Railway project the export-runner lives in. Injected automatically on Railway.',
+  },
+  railwayEnvironmentId: {
+    envKey: 'RAILWAY_ENVIRONMENT_ID',
+    description:
+      'Railway environment to deploy the export-runner into. Injected automatically on Railway.',
+  },
+  exportRunnerService: {
+    envKey: 'EXPORT_RUNNER_SERVICE',
+    description: 'Name of the Railway service that runs exports.',
+    default: 'export-runner',
+  },
   vizS3Endpoint: {
     envKey: 'VIZ_S3_ENDPOINT',
     description:

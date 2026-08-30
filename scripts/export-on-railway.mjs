@@ -45,7 +45,9 @@ const variables = [
   // build phase so Railpack doesn't run the root `build` script (which would
   // `next build` every app).
   'RAILPACK_BUILD_CMD=true',
-  'RAILPACK_START_CMD=pnpm mapart export dzi --project $EXPORT_PROJECT_ID --source $EXPORT_SOURCE; echo EXPORT_DONE_EXIT=$?',
+  // --export-id is optional: passing an empty one is the same as not tracking,
+  // which is what a plain CLI run from a laptop wants.
+  'RAILPACK_START_CMD=pnpm mapart export dzi --project $EXPORT_PROJECT_ID --source $EXPORT_SOURCE ${EXPORT_ID:+--export-id $EXPORT_ID}; echo EXPORT_DONE_EXIT=$?',
   'PUPPETEER_SKIP_DOWNLOAD=true', // the runner never needs Chromium
   'DATABASE_URL=${{Postgres.DATABASE_URL}}', // private network — no public proxy
   'S3_ENDPOINT=${{web.S3_ENDPOINT}}',
@@ -53,6 +55,13 @@ const variables = [
   'S3_ACCESS_KEY_ID=${{web.S3_ACCESS_KEY_ID}}',
   'S3_SECRET_ACCESS_KEY=${{web.S3_SECRET_ACCESS_KEY}}',
   'S3_BUCKET=${{web.S3_BUCKET}}',
+  // The pyramid goes to the published bucket, not the pipeline one. Without
+  // these the export writes where the visualizer no longer reads.
+  'VIZ_S3_ENDPOINT=${{web.VIZ_S3_ENDPOINT}}',
+  'VIZ_S3_REGION=${{web.VIZ_S3_REGION}}',
+  'VIZ_S3_ACCESS_KEY_ID=${{web.VIZ_S3_ACCESS_KEY_ID}}',
+  'VIZ_S3_SECRET_ACCESS_KEY=${{web.VIZ_S3_SECRET_ACCESS_KEY}}',
+  'VIZ_S3_BUCKET=${{web.VIZ_S3_BUCKET}}',
   `EXPORT_PROJECT_ID=${projectId}`,
   `EXPORT_SOURCE=${source}`,
 ];
