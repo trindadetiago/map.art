@@ -34,14 +34,14 @@ const ctrlStyle = (active: boolean): CSSProperties => ({
  * same content as the home page).
  */
 export function Frame({
-  projectId,
+  tileBaseUrl,
   meta,
   pins,
   name,
   year,
   featured,
 }: {
-  projectId: string;
+  tileBaseUrl: string;
   meta: VizMetadata;
   pins: VizPin[];
   name: string;
@@ -68,7 +68,7 @@ export function Frame({
       <figure className="relative flex flex-1 p-[clamp(12px,1.8vmin,24px)]" style={frameStyle}>
         <div className="h-full w-full p-[clamp(6px,1.1vmin,14px)]" style={matStyle}>
           <div className="relative h-full w-full overflow-hidden border-[3px] border-[#241a09] bg-[#0c0b0a]">
-            <Viewer projectId={projectId} meta={meta} pins={pins} showPins={showPins} />
+            <Viewer tileBaseUrl={tileBaseUrl} meta={meta} pins={pins} showPins={showPins} />
           </div>
         </div>
 

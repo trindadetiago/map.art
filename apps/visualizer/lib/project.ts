@@ -1,4 +1,5 @@
 import { repos } from '@mapart/db';
+import { env } from '@mapart/env';
 import { vizMetadataKey, vizThumbKey } from '@mapart/export/keys';
 import type { VizMetadata } from '@mapart/export/types';
 import { getStorage } from '@mapart/storage';
@@ -11,15 +12,23 @@ export interface VizProject {
   year: number | null;
   lat: number;
   lng: number;
-  /** The whole map as one pyramid tile, addressed through the viz proxy. */
+  /** The whole map as one pyramid tile. */
   thumbUrl: string;
   /** Stitched width/height, so a thumbnail box can reserve its shape up front. */
   aspect: number;
 }
 
-/** The tile proxy serves storage key `viz/<path>` at `/api/viz/<path>`. */
-function proxyUrl(key: string): string {
-  return `/api/viz/${key.replace(/^viz\//, '')}`;
+/**
+ * Public URL for a pyramid object, given its storage key.
+ *
+ * With a bucket origin configured the object is fetched straight from there —
+ * a CDN answers and no app process touches the bytes. Without one it routes
+ * through this app's own proxy, which serves key `viz/<path>` at
+ * `/api/viz/<path>`.
+ */
+export function vizObjectUrl(key: string): string {
+  const path = key.replace(/^viz\//, '');
+  return env.vizPublicBaseUrl ? `${env.vizPublicBaseUrl}/viz/${path}` : `/api/viz/${path}`;
 }
 
 /**
@@ -53,7 +62,7 @@ export async function listExportedProjects(): Promise<VizProject[]> {
       year: p.year,
       lat: p.lat,
       lng: p.lng,
-      thumbUrl: proxyUrl(vizThumbKey(p.id, meta)),
+      thumbUrl: vizObjectUrl(vizThumbKey(p.id, meta)),
       aspect: meta.width / meta.height,
     });
   });
