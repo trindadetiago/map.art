@@ -94,6 +94,11 @@ html:has(.home-page) {
   }
 }
 
+/* A city still being built pulses in bone, matching its pin. */
+.map-pin-pulse--building {
+  border-color: #f3ecd9;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .map-pin-pulse {
     animation: none;
