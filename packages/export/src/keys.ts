@@ -3,12 +3,18 @@
  *
  * Everything for one project lives under `viz/{projectId}/`:
  *   - `metadata.json`  — the {@link import('./types').VizMetadata} descriptor
- *   - `tiles.dzi`      — the DZI XML descriptor sharp emits (kept for debugging)
- *   - `tiles_files/{level}/{col}_{row}.webp` — the pyramid itself
+ *   - `pins.json`      — the map's lat/lng pins
+ *   - `v/{version}/tiles.dzi` — the DZI XML descriptor sharp emits
+ *   - `v/{version}/tiles_files/{level}/{col}_{row}.webp` — the pyramid itself
  *
- * The visualizer's tile-proxy serves `viz/{projectId}/<path>` verbatim, so
- * OpenSeadragon's `${Url}{level}/{col}_{row}.webp` requests map straight onto
- * these keys with no level remapping.
+ * The pyramid is written under a per-export `version`, and the descriptor names
+ * the current one. That is what makes a tile genuinely immutable: re-exporting
+ * writes new URLs rather than new bytes at old ones, so nothing a browser or CDN
+ * already holds can go stale. The two mutable objects — the descriptor and the
+ * pins — stay at fixed keys and are read through the S3 API, never cached.
+ *
+ * `version` is optional throughout: pyramids exported before this existed are
+ * still addressed at the old flat `tiles_files/` path.
  */
 
 import type { VizMetadata } from './types';
@@ -21,13 +27,18 @@ export function vizMetadataKey(projectId: string): string {
   return `${vizPrefix(projectId)}/metadata.json`;
 }
 
-export function vizDziKey(projectId: string): string {
-  return `${vizPrefix(projectId)}/tiles.dzi`;
+export function vizDziKey(projectId: string, version?: string): string {
+  return `${vizVersionPrefix(projectId, version)}/tiles.dzi`;
+}
+
+/** Everything belonging to one export of a project. */
+export function vizVersionPrefix(projectId: string, version?: string): string {
+  return version ? `${vizPrefix(projectId)}/v/${version}` : vizPrefix(projectId);
 }
 
 /** Prefix the pyramid tile folders live under (OpenSeadragon's `Url`). */
-export function vizTilesPrefix(projectId: string): string {
-  return `${vizPrefix(projectId)}/tiles_files`;
+export function vizTilesPrefix(projectId: string, version?: string): string {
+  return `${vizVersionPrefix(projectId, version)}/tiles_files`;
 }
 
 /** The project's pin overlay definitions (a JSON {@link import('./types').VizPin} array). */
@@ -55,7 +66,7 @@ export function vizThumbLevel(meta: Pick<VizMetadata, 'width' | 'height' | 'tile
 /** Key of the single tile holding the whole map at {@link vizThumbLevel}. */
 export function vizThumbKey(
   projectId: string,
-  meta: Pick<VizMetadata, 'width' | 'height' | 'tileSize' | 'format'>,
+  meta: Pick<VizMetadata, 'width' | 'height' | 'tileSize' | 'format' | 'version'>,
 ): string {
-  return `${vizTilesPrefix(projectId)}/${vizThumbLevel(meta)}/0_0.${meta.format}`;
+  return `${vizTilesPrefix(projectId, meta.version)}/${vizThumbLevel(meta)}/0_0.${meta.format}`;
 }

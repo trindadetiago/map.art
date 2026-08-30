@@ -56,4 +56,4 @@ export function __setStorageForTests(storage: Storage): void {
 }
 
 export { S3Storage } from './s3';
-export type { Storage, StorageEntry } from './types';
+export type { PutOptions, Storage, StorageEntry } from './types';

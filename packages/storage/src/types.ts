@@ -4,8 +4,14 @@ export interface StorageEntry {
   modifiedAt: Date;
 }
 
+/** Response headers stored with an object and returned on every GET. */
+export interface PutOptions {
+  contentType?: string;
+  cacheControl?: string;
+}
+
 export interface Storage {
-  put(key: string, data: Buffer): Promise<void>;
+  put(key: string, data: Buffer, opts?: PutOptions): Promise<void>;
   get(key: string): Promise<Buffer>;
   has(key: string): Promise<boolean>;
   delete(key: string): Promise<void>;

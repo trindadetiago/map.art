@@ -6,13 +6,20 @@ import { createLogger } from '@mapart/logger';
 import { getStorage, getVizStorage } from '@mapart/storage';
 import sharp from 'sharp';
 import { computeGeoAnchor } from './geo';
-import { vizDziKey, vizMetadataKey, vizPrefix } from './keys';
+import { vizDziKey, vizMetadataKey, vizPrefix, vizVersionPrefix } from './keys';
 import type { ExportResult, VizMetadata, VizSource } from './types';
 
 const log = createLogger('export');
 
 /** Pyramid tile edge. 512px is the OpenSeadragon/DZI default. */
 const PYRAMID_TILE_SIZE = 512;
+
+/**
+ * Pyramid tiles are addressed by version, so a given URL's bytes never change
+ * and `immutable` is literally true — it also stops browsers revalidating on
+ * reload, which is only safe because of that.
+ */
+const TILE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 /** Max inflight storage requests. Caps the S3 connection pool so remote storage
  * doesn't start cancelling requests under a thundering herd of GETs/PUTs. */
@@ -40,6 +47,43 @@ function tileImagePath(
  * Tiles are placed on a plain grid at `(x - minX, y - minY) * sourceTileSize`.
  * A tile with no image for the chosen `source` is left as a transparent gap.
  */
+/**
+ * Drop pyramids from earlier exports, keeping the live one and the one before
+ * it — enough to put the previous map back by editing the descriptor, without
+ * every rebuild costing another copy of the project forever.
+ *
+ * Only ever runs after the descriptor already points at the new version, so a
+ * failure here leaves storage untidy rather than the map broken.
+ */
+async function pruneOldVersions(projectId: string, current: string, keep = 2): Promise<void> {
+  const storage = getVizStorage();
+  const root = `${vizPrefix(projectId)}/v/`;
+  const versions = new Set<string>();
+  for (const entry of await storage.list(root)) {
+    const rest = entry.key.slice(root.length);
+    const v = rest.split('/')[0];
+    if (v) versions.add(v);
+  }
+  // Versions are base36 timestamps, so lexical order is chronological for any
+  // plausible range of dates.
+  const stale = [...versions]
+    .sort()
+    .reverse()
+    .slice(keep)
+    .filter((v) => v !== current);
+  if (stale.length === 0) return;
+
+  let removed = 0;
+  for (const v of stale) {
+    const keys = (await storage.list(`${vizPrefix(projectId)}/v/${v}/`)).map((e) => e.key);
+    await mapLimit(keys, STORAGE_CONCURRENCY, async (k) => {
+      await storage.delete(k);
+    });
+    removed += keys.length;
+  }
+  log.info('pruned old pyramid versions', { projectId, versions: stale, objects: removed });
+}
+
 export async function exportProjectDzi(
   projectId: string,
   opts: ExportOptions = {},
@@ -150,15 +194,21 @@ export async function exportProjectDzi(
       .tile({ size: PYRAMID_TILE_SIZE, overlap: 0, layout: 'dz' })
       .toFile(dziBase);
 
-    const prefix = vizPrefix(projectId);
+    // Each export publishes under its own version, so its tiles are URLs that
+    // have never been requested before. That is what lets them be cached
+    // forever: a rebuild can't strand a stale copy at an address someone holds.
+    const version = `${Date.now().toString(36)}`;
+    const prefix = vizVersionPrefix(projectId, version);
     const files: string[] = [];
     for await (const filePath of walk(outDir)) files.push(filePath);
     // A pyramid is hundreds-to-thousands of small objects, so a sequential
     // upload to remote storage crawls — same bounded concurrency as the fetch.
     await mapLimit(files, STORAGE_CONCURRENCY, async (filePath) => {
       const rel = relative(outDir, filePath).split('\\').join('/');
-      // tiles.dzi → viz/{pid}/tiles.dzi ; tiles_files/** → viz/{pid}/tiles_files/**
-      await vizStorage.put(`${prefix}/${rel}`, await readFile(filePath));
+      await vizStorage.put(`${prefix}/${rel}`, await readFile(filePath), {
+        contentType: rel.endsWith('.dzi') ? 'application/xml' : 'image/webp',
+        cacheControl: TILE_CACHE_CONTROL,
+      });
     });
     uploaded = files.length;
 
@@ -173,13 +223,27 @@ export async function exportProjectDzi(
       gridHeight,
       sourceTileSize,
       source,
+      version,
       geo: computeGeoAnchor(tiles, minX, minY),
       generatedAt: new Date().toISOString(),
     };
-    await vizStorage.put(vizMetadataKey(projectId), Buffer.from(JSON.stringify(metadata, null, 2)));
+    // Written last, and deliberately not cached: this is the switch. Until it
+    // lands the old pyramid is still the live one, so a failed upload leaves the
+    // map working rather than half-replaced.
+    await vizStorage.put(
+      vizMetadataKey(projectId),
+      Buffer.from(JSON.stringify(metadata, null, 2)),
+      { contentType: 'application/json', cacheControl: 'no-cache' },
+    );
     uploaded++;
 
-    log.info('pyramid uploaded', { projectId, uploaded, dzi: vizDziKey(projectId) });
+    log.info('pyramid uploaded', {
+      projectId,
+      version,
+      uploaded,
+      dzi: vizDziKey(projectId, version),
+    });
+    await pruneOldVersions(projectId, version);
     return {
       projectId,
       source,
