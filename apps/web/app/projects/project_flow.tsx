@@ -2,6 +2,7 @@
 
 import type { VizGeoAnchor, VizPin } from '@mapart/export/types';
 import type { LatLng } from '@mapart/geo';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { StepArea } from './step_area';
 import { StepBuild, type TileLite } from './step_build';
@@ -35,12 +36,23 @@ export interface ProjectFlowProps {
  */
 export function ProjectFlow(props: ProjectFlowProps) {
   const isView = props.mode === 'view';
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [center, setCenter] = useState<LatLng>(props.initial?.center ?? DEFAULT_CENTER);
   const [cityLabel, setCityLabel] = useState(props.initial?.cityLabel ?? '');
   const [cols, setCols] = useState(props.initial?.cols ?? 5);
   const [rows, setRows] = useState(props.initial?.rows ?? 5);
   const [hasCity, setHasCity] = useState(isView);
-  const [active, setActive] = useState<StepId>(isView ? 3 : 1);
+  // Opening on the step the URL names, so a reload or a shared link lands where
+  // you were rather than back on Build. Only steps reachable from props are
+  // honoured — ?step=5 on a project with no geo would render an empty pane.
+  const [active, setActive] = useState<StepId>(() => {
+    const asked = Number(searchParams.get('step'));
+    if (!isView || !Number.isInteger(asked) || asked < 1 || asked > 6) return isView ? 3 : 1;
+    if (asked === 5 && !props.geo) return 3;
+    if (asked === 6 && !props.projectId) return 3;
+    return asked as StepId;
+  });
 
   const canArea = isView || hasCity;
   const canBuild = isView;
@@ -59,6 +71,13 @@ export function ProjectFlow(props: ProjectFlowProps) {
     if (s === 5 && !canPins) return;
     if (s === 6 && !canPublish) return;
     setActive(s);
+    // `replace`, not `push`: stepping through the flow shouldn't bury the page
+    // you arrived from under six history entries.
+    if (isView) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('step', String(s));
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }
   };
 
   return (
