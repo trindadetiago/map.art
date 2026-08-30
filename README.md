@@ -5,12 +5,16 @@
 
 Pixel-art map tool. Turns aerial map tiles into isometric SimCity-style pixel-art. Early R&D — building toward fine-tuning Qwen Image-Edit on rendered/stylized pairs.
 
+Live at **[earthtopixels.com](https://earthtopixels.com)** — each map is a deep-zoom pyramid served from object storage behind a CDN, at `/<project-slug>`.
+
 See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architecture.html`](docs/architecture.html) for the planned SaaS shape.
 
 ## Apps
 
-- `apps/web` — Next.js UI + thin API + `/admin` inspector pages
+- `apps/web` — Next.js UI on `:3210`. Project workspace (city → area → build → review → pins → publish) plus `/admin` inspector pages
+- `apps/visualizer` — Next.js deep-zoom viewer on `:3220`. OpenSeadragon over a project's pre-built pyramid, reached at `/<slug>`; lat/lng pins are placed as overlays through the pyramid's geo anchor
 - `apps/worker-render` — server-side render service. Single process on `:9999`: hosts the render-page (Vite middleware), drives Puppeteer/Chromium, exposes `POST /render` returning a PNG
+- `apps/worker-stylize` — claims rendered tiles and runs them through the image-edit model
 - `apps/cli` — `mapart` binary (one entry, subcommands per domain)
 
 ## Packages
@@ -20,7 +24,11 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 - `geo` — foundational geo primitives (`LatLng`, `Bbox`, `Polygon`, `TileCoord`) + web-mercator tile math + coverage (`bboxToTiles`, `polygonToTiles`, `circleToPolygon`)
 - `models` — OpenAI image-edit clients (gpt-image-1.5, gpt-image-2)
 - `renderer` — Three.js + Google 3D Tiles. Ships the React `<Scene>` component plus pure render-side helpers + types
-- `storage` — blob storage (S3/MinIO)
+- `stylize` — the per-tile stylize pipeline: composite, model call, crop, output format
+- `export` — stitches a project's tiles into one raster and slices the deep-zoom pyramid the visualizer serves
+- `ui` — shared React components (globe, world map, analytics provider), one subpath each
+- `logger` — structured logging shared by the services
+- `storage` — blob storage (S3-compatible). Two targets: the pipeline's bucket, and a public one holding everything under `viz/`
 
 ## Infra
 
@@ -65,7 +73,10 @@ The `@mapart/db` tests are integration tests that wipe `tiles` + `projects` betw
 - `OPENAI_API_KEY` — required by `@mapart/models` (gpt-image-1.5 / gpt-image-2)
 - `OXEN_API_KEY` — for the planned oxen.ai LoRA training/hosting workflow
 - `DATABASE_URL` — preset to local docker Postgres
-- `S3_*` — blob storage, preset to local MinIO
+- `S3_*` — the pipeline's blob storage, preset to local MinIO
+- `VIZ_S3_*` — the bucket holding published pyramids (`viz/`), the only objects served publicly. Leave empty locally and everything shares one bucket
+- `VIZ_PUBLIC_BASE_URL` — origin serving those pyramids directly, CDN in front. Empty falls back to the visualizer's own proxy route
+- `RAILWAY_API_TOKEN` — lets the admin's Publish step start an export. Empty and the button points at the CLI instead
 
 ## CLI
 
@@ -78,12 +89,27 @@ pnpm mapart db migrate             # apply pending migrations
 pnpm mapart storage list           # list keys in current backend
 pnpm mapart tiles for-point --lat 40.7 --lng -74 --zoom 18
 pnpm mapart models generate --input … --prompt …  --out …
+pnpm mapart export dzi --project <id>   # build a project's deep-zoom pyramid
+pnpm mapart export run-queued           # claim the oldest queued export and run it
+pnpm mapart export pins --project <id> --file pins.json
 ```
+
+### Publishing a map
+
+Editing tiles changes a project's *source* images; the public map is a pyramid
+stitched from them, so it only changes when that pyramid is rebuilt. Do it from
+the admin's **Publish** step, which queues an export and shows how it went, or
+from a terminal with `mapart export dzi`.
+
+Each export publishes under its own version (`viz/{project}/v/{version}/`) and
+the descriptor at `viz/{project}/metadata.json` names the current one. That is
+what lets tiles be cached forever: a rebuild writes URLs nobody holds, rather
+than new bytes at addresses browsers and CDNs were told never to revalidate.
 
 ### Render service (`apps/worker-render`)
 
 Single Node process on `:9999`. Embeds Vite as middleware to serve the
-render-page (mounts `<Scene>` from `@mapart/scene`), launches a persistent
+render-page (mounts `<Scene>` from `@mapart/renderer`), launches a persistent
 Puppeteer/Chromium, and exposes `POST /render` returning PNG bytes.
 
 The same internal `renderTile()` is what the eventual pg-boss queue consumer
