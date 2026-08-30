@@ -1,4 +1,4 @@
-import { getStorage } from '@mapart/storage';
+import { getVizStorage } from '@mapart/storage';
 
 /**
  * Tile proxy: streams a project's pyramid objects out of blob storage.
@@ -51,7 +51,7 @@ function release(): void {
 // A complete dzsave pyramid has a tile for every (level, col, row) in range, so
 // a 404 under load is spurious — retry it like any other transient failure.
 async function getWithRetry(key: string): Promise<Buffer> {
-  const storage = getStorage();
+  const storage = getVizStorage();
   let lastErr: unknown;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {

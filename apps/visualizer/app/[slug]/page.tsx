@@ -5,7 +5,7 @@ import { repos } from '@mapart/db';
 import { vizMetadataKey, vizTilesPrefix } from '@mapart/export/keys';
 import { getProjectPins } from '@mapart/export/pins';
 import type { VizMetadata } from '@mapart/export/types';
-import { getStorage } from '@mapart/storage';
+import { getVizStorage } from '@mapart/storage';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
@@ -54,7 +54,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   if (project.slug !== slug) redirect(`/${project.slug}`);
 
-  const storage = getStorage();
+  const storage = getVizStorage();
   const metaKey = vizMetadataKey(project.id);
   if (!(await storage.has(metaKey))) {
     return (
