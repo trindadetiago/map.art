@@ -78,7 +78,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   return (
     <Frame
-      tileBaseUrl={vizObjectUrl(vizTilesPrefix(project.id))}
+      tileBaseUrl={vizObjectUrl(vizTilesPrefix(project.id, meta.version))}
       meta={meta}
       pins={pins}
       name={project.name}

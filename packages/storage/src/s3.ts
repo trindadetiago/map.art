@@ -7,7 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { Storage, StorageEntry } from './types';
+import type { PutOptions, Storage, StorageEntry } from './types';
 
 export interface S3Config {
   endpoint?: string;
@@ -39,12 +39,17 @@ export class S3Storage implements Storage {
     return key.replaceAll('\\', '/').replace(/^\/+/, '');
   }
 
-  async put(key: string, data: Buffer): Promise<void> {
+  async put(key: string, data: Buffer, opts: PutOptions = {}): Promise<void> {
+    // Content type and cache policy are stored with the object and returned on
+    // every GET, so anything served straight from the bucket — no app in the
+    // path to add headers — depends on them being set here.
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: this.normalizeKey(key),
         Body: data,
+        ...(opts.contentType ? { ContentType: opts.contentType } : {}),
+        ...(opts.cacheControl ? { CacheControl: opts.cacheControl } : {}),
       }),
     );
   }

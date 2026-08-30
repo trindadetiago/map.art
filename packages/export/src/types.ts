@@ -23,6 +23,12 @@ export interface VizMetadata {
   /** Which tile image fed the stitch. */
   source: VizSource;
   /**
+   * Which export produced the pyramid this descriptor points at. Tiles live
+   * under it, so a rebuild publishes new URLs instead of overwriting cached
+   * ones. Absent on pyramids exported before versioning.
+   */
+  version?: string;
+  /**
    * Linear map from WGS84 to the grid, fitted over the project's tile centres.
    * Lets the visualizer place lat/lng pins in image space without DB access.
    * Absent on pyramids exported before geo anchoring existed.
