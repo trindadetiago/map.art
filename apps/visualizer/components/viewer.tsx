@@ -47,6 +47,9 @@ export function Viewer({
         prefixUrl: '',
         showNavigationControl: false,
         showNavigator: true,
+        // Bottom-right keeps the minimap clear of the Pins/Info controls, which
+        // sit over the top-right corner of the frame.
+        navigatorPosition: 'BOTTOM_RIGHT',
         navigatorSizeRatio: 0.15,
         navigatorBackground: '#16140f',
         // Pixel-art crispness — mirrors the isometric.nyc recipe.
