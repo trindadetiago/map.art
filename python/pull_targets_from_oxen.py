@@ -1,4 +1,4 @@
-"""map.art — re-download stylized targets from oxen.ai.
+"""earthToPixels — re-download stylized targets from oxen.ai.
 
 The 106 kept (source, target) pairs' `target.png` files are not stored
 in this repo to save ~300 MB. They're hosted publicly on the oxen

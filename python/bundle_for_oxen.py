@@ -1,4 +1,4 @@
-"""map.art — bundle the v01 augmented dataset into a self-contained
+"""earthToPixels — bundle the v01 augmented dataset into a self-contained
 folder ready for oxen.ai upload.
 
 Reads python/training/v01/_augmented/manifest.csv, hard-links every

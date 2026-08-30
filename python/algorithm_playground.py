@@ -1,4 +1,4 @@
-"""map.art — Algorithm A playground.
+"""earthToPixels — Algorithm A playground.
 
 Walks a 3×3 grid of raw renders through the v02 LoRA in expanding-radius
 order, building each step's input by combining the tile's raw render
@@ -442,8 +442,8 @@ def call_inference(image_url: str, *, model_id: str, prompt: str, steps: int) ->
 
 # --- streamlit UI --------------------------------------------------------
 
-st.set_page_config(page_title='map.art — Algorithm A', layout='wide')
-st.title('map.art — Algorithm A (expanding-radius infill)')
+st.set_page_config(page_title='earthToPixels — Algorithm A', layout='wide')
+st.title('earthToPixels — Algorithm A (expanding-radius infill)')
 st.markdown(
     'Pick a 3×3 grid of **never-trained** renders. Algorithm A walks them in '
     'expanding-radius order from `(0,0)`, building each step\'s input from the '

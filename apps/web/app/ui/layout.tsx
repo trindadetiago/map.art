@@ -13,7 +13,7 @@ export default function UiLayout({ children }: { children: ReactNode }) {
           href="/ui"
           className="text-[15px] font-medium tracking-tight text-stone-900 no-underline"
         >
-          map.art <span className="text-stone-400">· components</span>
+          earthToPixels <span className="text-stone-400">· components</span>
         </Link>
         <Link
           href="/"

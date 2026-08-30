@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>map.art — architecture</title>
+    <title>earthToPixels — architecture</title>
     <style>
       :root {
         --bg: #f7f5ef;
@@ -279,7 +279,7 @@
     </style>
   </head>
   <body>
-    <h1>map.art — architecture</h1>
+    <h1>earthToPixels — architecture</h1>
     <p class="lede">
       Three services, one Postgres, one blob store. The <code>tiles</code> table is both the data and the
       job queue — workers poll it, claim rows with <code>SKIP LOCKED</code>, and never speak HTTP to anything.
@@ -705,7 +705,7 @@
     </div>
 
     <footer>
-      map.art · architecture
+      earthToPixels · architecture
     </footer>
   </body>
 </html>

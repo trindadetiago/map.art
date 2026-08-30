@@ -1,4 +1,4 @@
-"""map.art — push the v01 oxen-upload bundle to hub.oxen.ai via the
+"""earthToPixels — push the v01 oxen-upload bundle to hub.oxen.ai via the
 oxen Python SDK (no CLI required).
 
 What this script does, in order:

@@ -29,10 +29,10 @@ async function resolveProject(segment: string) {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const project = await resolveProject(slug);
-  if (!project) return { title: 'Not found — map.art' };
+  if (!project) return { title: 'Not found — earthToPixels' };
   const title = project.year !== null ? `${project.name} (${project.year})` : project.name;
   return {
-    title: `${title} — map.art`,
+    title: `${title} — earthToPixels`,
     ...(project.description ? { description: project.description } : {}),
   };
 }

@@ -45,7 +45,7 @@ const LINK =
   'font-semibold text-[#14110c] underline decoration-[#c9c3b5] underline-offset-2 transition-colors hover:decoration-[#14110c]';
 
 /**
- * The "about map.art + the team" content, shared by the home landing (as page
+ * The "about earthToPixels + the team" content, shared by the home landing (as page
  * sections) and the project viewer's Info drawer. `featured` hangs one project's
  * map under the blurb as a framed miniature that opens it.
  */
@@ -56,11 +56,11 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
     <div className="mx-auto max-w-[760px] px-6">
       {curtain}
       <section className="py-24">
-        <h2 className="font-pixel text-[34px] text-[#14110c] leading-tight">map.art</h2>
+        <h2 className="font-pixel text-[34px] text-[#14110c] leading-tight">earthToPixels</h2>
         <div className="mt-6 space-y-4 text-[16px] text-[#4a463e] leading-[1.75]">
           <p>
-            map.art turns aerial map tiles into isometric, SimCity-style pixel-art. It&apos;s a work
-            in progress: an image model we fine-tuned on hand-made pixel cities, wrapped in a
+            earthToPixels turns aerial map tiles into isometric, SimCity-style pixel-art. It&apos;s
+            a work in progress: an image model we fine-tuned on hand-made pixel cities, wrapped in a
             pipeline we engineered to render, stylize and stitch map tiles on its own.
           </p>
           <p>
@@ -83,7 +83,7 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
             <a href={ISOMETRIC_NYC} target="_blank" rel="noreferrer" className={LINK}>
               isometric.nyc
             </a>
-            , which does the same thing for New York. map.art is our run at it, built to go
+            , which does the same thing for New York. earthToPixels is our run at it, built to go
             anywhere.
           </p>
           <p>

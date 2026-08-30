@@ -6,7 +6,9 @@ export function HomeStage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden p-8">
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-8 py-6">
-        <span className="text-[14px] font-medium tracking-tight text-neutral-900">map.art</span>
+        <span className="text-[14px] font-medium tracking-tight text-neutral-900">
+          earthToPixels
+        </span>
         <nav className="flex items-center gap-1">
           <Link
             href="/ui"

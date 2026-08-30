@@ -44,7 +44,7 @@ export default async function LoginPage({
         action={login}
         className="w-full max-w-sm rounded-2xl border border-black/10 bg-white p-8 shadow-sm"
       >
-        <h1 className="text-xl font-semibold tracking-tight text-neutral-900">map.art</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-neutral-900">earthToPixels</h1>
         <p className="mt-1 text-sm text-neutral-500">Enter the password to continue.</p>
 
         <input type="hidden" name="next" value={safeNext(next)} />

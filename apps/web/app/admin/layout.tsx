@@ -9,7 +9,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           href="/admin"
           className="text-[15px] font-medium tracking-tight text-stone-900 no-underline"
         >
-          map.art <span className="text-stone-400">· admin</span>
+          earthToPixels <span className="text-stone-400">· admin</span>
         </Link>
         <Link
           href="/"

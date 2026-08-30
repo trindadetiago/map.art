@@ -16,7 +16,7 @@ export default function ProjectsLayout({ children }: { children: ReactNode }) {
         }}
       >
         <Link href="/" style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
-          map.art
+          earthToPixels
         </Link>
         <span style={{ opacity: 0.3 }}>/</span>
         <Link href="/projects" style={{ textDecoration: 'none', color: '#111' }}>

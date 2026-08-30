@@ -1,4 +1,4 @@
-# map.art
+# earthToPixels
 
 <img width="1600" height="1348" alt="image" src="https://github.com/user-attachments/assets/0e1fad64-bdbd-42f4-9975-c0ca799656f5" />
 

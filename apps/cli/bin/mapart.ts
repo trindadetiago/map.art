@@ -10,7 +10,7 @@ import { registerStorageCommands } from '../src/commands/storage';
 import { registerTilesCommands } from '../src/commands/tiles';
 
 const program = new Command();
-program.name('mapart').description('map.art monorepo CLI');
+program.name('mapart').description('earthToPixels monorepo CLI');
 
 registerDbCommands(
   program.command('db').description('database ops (status, migrate, projects, sql)'),

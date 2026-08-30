@@ -1,4 +1,4 @@
-"""map.art — v01 training pair cull tool.
+"""earthToPixels — v01 training pair cull tool.
 
 Side-by-side reviewer for every complete (source, target) pair under
 python/training/v01/. Click Keep / Drop / Skip to tag and auto-advance.
@@ -81,7 +81,7 @@ def save_state(state: dict) -> None:
 
 # --- session bootstrap ---------------------------------------------------
 
-st.set_page_config(page_title='map.art cull v01', layout='wide')
+st.set_page_config(page_title='earthToPixels cull v01', layout='wide')
 
 if 'pairs' not in st.session_state:
     st.session_state.pairs = discover_complete_pairs()

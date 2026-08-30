@@ -1,6 +1,6 @@
 # Article assets
 
-Curated images for the map.art journey article. Centralised here so the
+Curated images for the earthToPixels journey article. Centralised here so the
 working tree doesn't drag along multiple copies of the same renders.
 
 ## Layout

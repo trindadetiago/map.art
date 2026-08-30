@@ -241,7 +241,7 @@
     <h1>How isometric.nyc renders its viewer</h1>
     <p class="lede">
       A reference teardown of <a href="https://github.com/cannoneyed/isometric-nyc" target="_blank" rel="noopener">cannoneyed/isometric-nyc</a>'s
-      public map viewer, kept here because its shape is the one <span class="mapart">map.art</span> will likely adopt for shipping a
+      public map viewer, kept here because its shape is the one <span class="mapart">earthToPixels</span> will likely adopt for shipping a
       zoomable final map. The punchline: <strong>the runtime viewer is not 3D.</strong> The isometric pixel-art is baked into a
       single enormous flat image ahead of time, sliced into a deep-zoom tile pyramid, and served to a dumb-but-fast 2D pan/zoom widget.
     </p>
@@ -394,7 +394,7 @@ tiles_files/
       <tr><td><strong>R2 + Worker</strong></td><td>Static immutable tiles + edge cache = cheap and fast at scale. The Worker only adds headers; no app logic on the hot path.</td></tr>
     </table>
 
-    <h2>What this means for <span class="mapart">map.art</span></h2>
+    <h2>What this means for <span class="mapart">earthToPixels</span></h2>
     <div class="callout good">
       <p><strong>Their architecture splits exactly like ours.</strong> A build-time Three.js render stage (produce source images) →
       a generative stylize stage → and then a <em>separate</em>, deliberately-dumb 2D pyramid viewer for the final product. The
@@ -422,7 +422,7 @@ tiles_files/
     </table>
 
     <footer>
-      Reference teardown for map.art · source: <a href="https://github.com/cannoneyed/isometric-nyc" target="_blank" rel="noopener">cannoneyed/isometric-nyc</a> · live: <a href="https://isometric.nyc" target="_blank" rel="noopener">isometric.nyc</a>
+      Reference teardown for earthToPixels · source: <a href="https://github.com/cannoneyed/isometric-nyc" target="_blank" rel="noopener">cannoneyed/isometric-nyc</a> · live: <a href="https://isometric.nyc" target="_blank" rel="noopener">isometric.nyc</a>
     </footer>
   </body>
 </html>

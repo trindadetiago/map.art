@@ -1,4 +1,4 @@
-"""map.art — horizontal flip augmentation for the v01 training set.
+"""earthToPixels — horizontal flip augmentation for the v01 training set.
 
 Reads python/training/v01/_augmented/manifest.csv, doubles it by adding
 a horizontally-flipped version of every non-flip row. For each original

@@ -1,4 +1,4 @@
-# map.art — agent orientation
+# earthToPixels — agent orientation
 
 Pixel-art map tool. Turns aerial map tiles into isometric SimCity-style pixel-art. Currently early R&D — collecting `(rendered, stylized)` pairs to fine-tune Qwen Image-Edit. The end goal is a SaaS where users pick an area on a map, get back a stylized pixel-art version they can buy.
 

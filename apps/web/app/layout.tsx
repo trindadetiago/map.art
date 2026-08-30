@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata = {
-  title: 'map.art',
+  title: 'earthToPixels',
   description: 'Pixel-art map tool',
 };
 

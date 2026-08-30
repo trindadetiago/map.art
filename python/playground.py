@@ -1,4 +1,4 @@
-"""map.art — LoRA playground (v01 + v02).
+"""earthToPixels — LoRA playground (v01 + v02).
 
 Two modes:
 
@@ -233,8 +233,8 @@ def call_inference(image_url: str, *, model_id: str, prompt: str, steps: int) ->
 
 # --- streamlit UI --------------------------------------------------------
 
-st.set_page_config(page_title='map.art playground', layout='wide')
-st.title('map.art — LoRA playground')
+st.set_page_config(page_title='earthToPixels playground', layout='wide')
+st.title('earthToPixels — LoRA playground')
 
 with st.sidebar:
     st.header('Model')

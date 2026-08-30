@@ -1,4 +1,4 @@
-"""map.art — mask augmentation for v01/v02 training pairs (Andy Coenen's scheme).
+"""earthToPixels — mask augmentation for v01/v02 training pairs (Andy Coenen's scheme).
 
 For each kept pair (per `_keep.json`), produces 9 hybrid input variants
 that simulate the "infill" scenarios at inference time:
