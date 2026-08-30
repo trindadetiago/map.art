@@ -90,81 +90,91 @@ export function StepPublish({
     !!state && !state.stale && (state.status === 'queued' || state.status === 'running');
 
   return (
-    <div className="max-w-2xl">
-      <h2 className="m-0 text-lg font-medium tracking-tight text-stone-900">Publish</h2>
-      <p className="mt-1 mb-6 text-[13px] leading-relaxed text-stone-500">
-        Edits in Review and Pins change this project&apos;s source tiles. The public map is built
-        from them, so it only changes when you rebuild it here.
-      </p>
-
-      {!configured && (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-900">
-          Publishing isn&apos;t configured on this deployment — <code>RAILWAY_API_TOKEN</code> is
-          unset. Run it from a terminal instead:
-          <pre className="mt-2 mb-0 overflow-x-auto rounded-lg bg-amber-100/60 p-2 font-mono text-[12px]">
-            node scripts/export-on-railway.mjs {projectId}
-          </pre>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={start}
-        disabled={busy || running || !configured}
-        className="h-10 rounded-full bg-stone-900 px-6 text-[13px] text-white transition hover:bg-stone-700 disabled:opacity-40"
-      >
-        {running ? 'Rebuilding…' : busy ? 'Starting…' : 'Rebuild the map'}
-      </button>
-
-      {error && <p className="mt-3 mb-0 text-[12px] text-red-600">{error}</p>}
-
-      {state && (
-        <div className="mt-6 rounded-2xl border border-stone-200/70 bg-white p-5">
-          <div className="flex items-center gap-2">
-            <StatusDot status={state.stale ? 'error' : state.status} />
-            <span className="text-[13px] font-medium text-stone-900">{label(state)}</span>
-            <span className="text-[11px] text-stone-400">{when(state)}</span>
+    <div className="flex h-full flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-stone-200 border-b px-5 py-4">
+        <div>
+          <div className="font-semibold text-[15px] text-stone-900">Publish</div>
+          <div className="text-[12px] text-stone-500">
+            Edits in Review and Pins change this project&apos;s source tiles · the public map is
+            built from them, so it only changes when you rebuild it here
           </div>
-
-          {state.status === 'done' && (
-            <p className="mt-2 mb-0 text-[12px] text-stone-500">
-              {state.placed?.toLocaleString()} tiles stitched · {state.uploaded?.toLocaleString()}{' '}
-              objects uploaded
-              {projectSlug && (
-                <>
-                  {' · '}
-                  <a
-                    href={`https://earthtopixels.com/${projectSlug}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-stone-700 underline underline-offset-4"
-                  >
-                    view it
-                  </a>
-                </>
-              )}
-            </p>
-          )}
-
-          {state.stale && (
-            <p className="mt-2 mb-0 text-[12px] text-stone-500">
-              No result was recorded and the run is too old to still be going — the runner most
-              likely failed to start. Check its logs, then try again.
-            </p>
-          )}
-
-          {state.status === 'error' && state.error && (
-            <p className="mt-2 mb-0 font-mono text-[12px] text-red-600">{state.error}</p>
-          )}
-
-          {running && (
-            <p className="mt-2 mb-0 text-[12px] text-stone-500">
-              This takes several minutes — the whole map is stitched and re-sliced. You can leave
-              this page; progress is picked up when you come back.
-            </p>
-          )}
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={start}
+          disabled={busy || running || !configured}
+          className="h-9 shrink-0 rounded-full bg-stone-900 px-5 text-[13px] text-white transition hover:bg-stone-700 disabled:opacity-40"
+        >
+          {running ? 'Rebuilding…' : busy ? 'Starting…' : 'Rebuild the map'}
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        {!configured && (
+          <div className="mb-4 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-900">
+            Publishing isn&apos;t configured on this deployment — <code>RAILWAY_API_TOKEN</code> is
+            unset. Run it from a terminal instead:
+            <pre className="mt-2 mb-0 overflow-x-auto rounded-lg bg-amber-100/60 p-2 font-mono text-[12px]">
+              node scripts/export-on-railway.mjs {projectId}
+            </pre>
+          </div>
+        )}
+
+        {error && <p className="mt-0 mb-4 text-[12px] text-red-600">{error}</p>}
+
+        {state ? (
+          <div className="max-w-2xl rounded-2xl border border-stone-200/70 bg-white p-5">
+            <div className="flex items-center gap-2">
+              <StatusDot status={state.stale ? 'error' : state.status} />
+              <span className="text-[13px] font-medium text-stone-900">{label(state)}</span>
+              <span className="text-[11px] text-stone-400">{when(state)}</span>
+            </div>
+
+            {state.status === 'done' && (
+              <p className="mt-2 mb-0 text-[12px] text-stone-500">
+                {state.placed?.toLocaleString()} tiles stitched · {state.uploaded?.toLocaleString()}{' '}
+                objects uploaded
+                {projectSlug && (
+                  <>
+                    {' · '}
+                    <a
+                      href={`https://earthtopixels.com/${projectSlug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-stone-700 underline underline-offset-4"
+                    >
+                      view it
+                    </a>
+                  </>
+                )}
+              </p>
+            )}
+
+            {state.stale && (
+              <p className="mt-2 mb-0 text-[12px] text-stone-500">
+                No result was recorded and the run is too old to still be going — the runner most
+                likely failed to start. Check its logs, then try again.
+              </p>
+            )}
+
+            {state.status === 'error' && state.error && (
+              <p className="mt-2 mb-0 font-mono text-[12px] text-red-600">{state.error}</p>
+            )}
+
+            {running && (
+              <p className="mt-2 mb-0 text-[12px] text-stone-500">
+                This takes several minutes — the whole map is stitched and re-sliced. You can leave
+                this page; progress is picked up when you come back.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="m-0 text-[13px] text-stone-400">
+            This project hasn&apos;t been published from here yet.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
