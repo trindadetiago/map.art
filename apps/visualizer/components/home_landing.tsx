@@ -36,9 +36,9 @@ export function HomeLanding({ projects }: { projects: VizProject[] }) {
   const [manual, setManual] = useState(false);
   const manualRef = useRef(false);
 
-  // Scroll only ever pushes the morph forward (map → globe) — scrolling back up
-  // never reverses it, so once the globe is revealed it stays the globe. After a
-  // manual click takes over, scroll no longer drives it at all.
+  // Scroll drives the morph both ways: down collapses the map into the globe, up
+  // expands it back out. A click takes the wheel for good — after one, scroll no
+  // longer drives it, so the state you clicked into is the state that stays.
   useEffect(() => {
     let raf = 0;
     const update = (): void => {
@@ -49,7 +49,7 @@ export function HomeLanding({ projects }: { projects: VizProject[] }) {
       const rect = hero.getBoundingClientRect();
       const span = rect.height - window.innerHeight;
       const prog = span > 0 ? clamp01(-rect.top / span) : 0;
-      setT((cur) => Math.max(cur, prog));
+      setT(prog);
     };
     const onScroll = (): void => {
       if (!raf) raf = requestAnimationFrame(update);
