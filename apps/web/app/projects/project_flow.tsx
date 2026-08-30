@@ -7,6 +7,7 @@ import { StepArea } from './step_area';
 import { StepBuild, type TileLite } from './step_build';
 import { StepCity } from './step_city';
 import { StepPins } from './step_pins';
+import { StepPublish } from './step_publish';
 import { type StepId, StepRail } from './step_rail';
 import { StepReview } from './step_review';
 
@@ -18,6 +19,7 @@ export interface ProjectFlowProps {
   /** view mode only */
   projectId?: string;
   projectName?: string;
+  projectSlug?: string;
   initial?: { center: LatLng; cols: number; rows: number; cityLabel: string };
   initialTiles?: TileLite[];
   /** view mode only: grid↔WGS84 fit, for placing pins on the stitched art. */
@@ -46,12 +48,16 @@ export function ProjectFlow(props: ProjectFlowProps) {
   // Pins are placed on the stitched art via the grid↔WGS84 fit; without it
   // (e.g. a project with no tiles) there's nothing to anchor them to.
   const canPins = isView && !!props.geo;
+  // Publishing rebuilds the pyramid from whatever tiles exist, so it needs a
+  // saved project but nothing else.
+  const canPublish = isView && !!props.projectId;
 
   const go = (s: StepId): void => {
     if (s === 2 && !canArea) return;
     if (s === 3 && !canBuild) return;
     if (s === 4 && !canReview) return;
     if (s === 5 && !canPins) return;
+    if (s === 6 && !canPublish) return;
     setActive(s);
   };
 
@@ -64,6 +70,7 @@ export function ProjectFlow(props: ProjectFlowProps) {
         canBuild={canBuild}
         canReview={canReview}
         canPins={canPins}
+        canPublish={canPublish}
       />
 
       <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-stone-200 bg-white">
@@ -116,6 +123,13 @@ export function ProjectFlow(props: ProjectFlowProps) {
             cols={cols}
             rows={rows}
             initialTiles={props.initialTiles ?? []}
+          />
+        )}
+
+        {active === 6 && props.projectId && (
+          <StepPublish
+            projectId={props.projectId}
+            {...(props.projectSlug ? { projectSlug: props.projectSlug } : {})}
           />
         )}
 

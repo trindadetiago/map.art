@@ -1,6 +1,6 @@
 'use client';
 
-export type StepId = 1 | 2 | 3 | 4 | 5;
+export type StepId = 1 | 2 | 3 | 4 | 5 | 6;
 
 interface StepDef {
   id: StepId;
@@ -14,6 +14,7 @@ const STEPS: StepDef[] = [
   { id: 3, title: 'Build', hint: 'watch it render' },
   { id: 4, title: 'Review', hint: 'edit & post-process' },
   { id: 5, title: 'Pins', hint: 'label the map' },
+  { id: 6, title: 'Publish', hint: 'rebuild the public map' },
 ];
 
 export function StepRail({
@@ -23,6 +24,7 @@ export function StepRail({
   canBuild,
   canReview,
   canPins,
+  canPublish,
 }: {
   active: StepId;
   onSelect: (id: StepId) => void;
@@ -30,12 +32,14 @@ export function StepRail({
   canBuild: boolean;
   canReview: boolean;
   canPins: boolean;
+  canPublish: boolean;
 }) {
   const enabled = (id: StepId): boolean => {
     if (id === 2) return canArea;
     if (id === 3) return canBuild;
     if (id === 4) return canReview;
     if (id === 5) return canPins;
+    if (id === 6) return canPublish;
     return true;
   };
 
