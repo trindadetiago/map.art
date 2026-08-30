@@ -151,7 +151,7 @@ async function main() {
   }
 
   enqueue();
-  console.log(`[runner] waking the runner`);
+  console.log('[runner] waking the runner');
   const up = railway(['up', '--service', SERVICE, '--detach']);
   process.stdout.write(up.stdout ?? '');
   if (up.status !== 0) {
