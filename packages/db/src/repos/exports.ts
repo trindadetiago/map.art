@@ -22,17 +22,22 @@ export async function createExport(projectId: string, source: string): Promise<P
  * rebuilding the same pyramid over each other.
  */
 export async function claimNextExport(): Promise<ProjectExport | undefined> {
-  const rows = await getDb().execute(sql`
-    update exports set status = 'running', started_at = now()
-     where id = (
-       select id from exports
-        where status = 'queued'
-        order by created_at
-        limit 1
-        for update skip locked
-     )
-    returning *`);
-  const row = (rows as unknown as ProjectExport[])[0];
+  // `.returning()` rather than a raw `execute()`: raw rows come back with the
+  // database's snake_case column names, so `projectId` would silently be
+  // undefined and the export would run against nothing.
+  const [row] = await getDb()
+    .update(projectExports)
+    .set({ status: 'running', startedAt: new Date() })
+    .where(
+      sql`${projectExports.id} = (
+        select id from exports
+         where status = 'queued'
+         order by created_at
+         limit 1
+         for update skip locked
+      )`,
+    )
+    .returning();
   return row;
 }
 
