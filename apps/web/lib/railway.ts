@@ -54,36 +54,15 @@ async function findRunnerServiceId(): Promise<string> {
 }
 
 /**
- * Point the runner at one export and redeploy it.
+ * Wake the runner so it picks up whatever is queued.
  *
- * The runner's start command reads these, so they have to land before the
- * redeploy — a redeploy carrying the previous project id would quietly rebuild
- * the wrong pyramid.
+ * Nothing about *which* export to run is passed here — the queued row is the
+ * instruction, and the runner claims it on start. That way a restart for any
+ * other reason (a CI deploy, a crash, a platform migration) finds an empty
+ * queue and exits, instead of replaying the last export it was told about.
  */
-export async function startExportRun(args: {
-  projectId: string;
-  source: string;
-  exportId: string;
-}): Promise<void> {
+export async function wakeExportRunner(): Promise<void> {
   const serviceId = await findRunnerServiceId();
-  const vars: Record<string, string> = {
-    EXPORT_PROJECT_ID: args.projectId,
-    EXPORT_SOURCE: args.source,
-    EXPORT_ID: args.exportId,
-  };
-
-  await gql(
-    'mutation($input: VariableCollectionUpsertInput!) { variableCollectionUpsert(input: $input) }',
-    {
-      input: {
-        projectId: env.railwayProjectId,
-        environmentId: env.railwayEnvironmentId,
-        serviceId,
-        variables: vars,
-      },
-    },
-  );
-
   await gql(
     `mutation($serviceId: String!, $environmentId: String!) {
        serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)

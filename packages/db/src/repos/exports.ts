@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { getDb } from '../client';
 import { type ProjectExport, projectExports } from '../schema/exports';
 
@@ -6,6 +6,33 @@ import { type ProjectExport, projectExports } from '../schema/exports';
 export async function createExport(projectId: string, source: string): Promise<ProjectExport> {
   const [row] = await getDb().insert(projectExports).values({ projectId, source }).returning();
   if (!row) throw new Error('createExport: insert returned no row');
+  return row;
+}
+
+/**
+ * Take the oldest queued export and mark it running, or return undefined when
+ * there is nothing to do.
+ *
+ * The runner claims work rather than being handed it: a deploy carrying its
+ * instructions in environment variables re-runs the last export every time the
+ * service restarts for any other reason — a redeploy from CI, a crash, a
+ * platform migration. Claiming from the queue makes those restarts no-ops.
+ *
+ * `skip locked` so two runners racing take different rows instead of both
+ * rebuilding the same pyramid over each other.
+ */
+export async function claimNextExport(): Promise<ProjectExport | undefined> {
+  const rows = await getDb().execute(sql`
+    update exports set status = 'running', started_at = now()
+     where id = (
+       select id from exports
+        where status = 'queued'
+        order by created_at
+        limit 1
+        for update skip locked
+     )
+    returning *`);
+  const row = (rows as unknown as ProjectExport[])[0];
   return row;
 }
 

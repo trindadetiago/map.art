@@ -4,6 +4,8 @@
 //
 //   node scripts/export-on-railway.mjs <projectId> [stylized|rendered]
 //
+// Prefer the admin's Publish step; this stays for runs from a terminal.
+//
 // Why this exists: `exportProjectDzi` reads a project's tiles from the DB and
 // streams thousands of objects to/from S3. Run from a laptop it stalls — t3
 // throttles/cancels requests over the public internet, and the prod DB is only
@@ -45,9 +47,9 @@ const variables = [
   // build phase so Railpack doesn't run the root `build` script (which would
   // `next build` every app).
   'RAILPACK_BUILD_CMD=true',
-  // --export-id is optional: passing an empty one is the same as not tracking,
-  // which is what a plain CLI run from a laptop wants.
-  'RAILPACK_START_CMD=pnpm mapart export dzi --project $EXPORT_PROJECT_ID --source $EXPORT_SOURCE ${EXPORT_ID:+--export-id $EXPORT_ID}; echo EXPORT_DONE_EXIT=$?',
+  // The runner claims from the queue rather than reading a project id here, so
+  // restarting it for any other reason is a no-op instead of a repeat export.
+  'RAILPACK_START_CMD=pnpm mapart export run-queued; echo EXPORT_DONE_EXIT=$?',
   'PUPPETEER_SKIP_DOWNLOAD=true', // the runner never needs Chromium
   'DATABASE_URL=${{Postgres.DATABASE_URL}}', // private network — no public proxy
   'S3_ENDPOINT=${{web.S3_ENDPOINT}}',
@@ -62,8 +64,6 @@ const variables = [
   'VIZ_S3_ACCESS_KEY_ID=${{web.VIZ_S3_ACCESS_KEY_ID}}',
   'VIZ_S3_SECRET_ACCESS_KEY=${{web.VIZ_S3_SECRET_ACCESS_KEY}}',
   'VIZ_S3_BUCKET=${{web.VIZ_S3_BUCKET}}',
-  `EXPORT_PROJECT_ID=${projectId}`,
-  `EXPORT_SOURCE=${source}`,
 ];
 
 function serviceExists() {
@@ -121,6 +121,28 @@ async function pollUntilDone(deploymentId) {
   return 'timed out waiting for the export';
 }
 
+// The queued row is what the runner acts on, so it has to exist before the
+// deploy. The prod DB is private, so this goes through Railway's TCP proxy.
+function enqueue() {
+  const res = railway(['variables', '--service', 'Postgres', '--kv']);
+  const url = `${res.stdout ?? ''}`
+    .split('\n')
+    .find((l) => l.startsWith('DATABASE_PUBLIC_URL='))
+    ?.slice('DATABASE_PUBLIC_URL='.length);
+  if (!url) {
+    console.error('[runner] could not read DATABASE_PUBLIC_URL from the Postgres service');
+    process.exit(1);
+  }
+  const sqlText = `insert into exports (project_id, source) values ('${projectId}', '${source}')`;
+  const psql = spawnSync('psql', [url, '-c', sqlText], { encoding: 'utf8' });
+  if (psql.status !== 0) {
+    console.error('[runner] could not queue the export (is psql installed?)');
+    console.error(psql.stderr ?? '');
+    process.exit(1);
+  }
+  console.log(`[runner] queued an export of ${projectId} (${source})`);
+}
+
 async function main() {
   const cfg = configure();
   if (cfg.status !== 0) {
@@ -128,7 +150,8 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`[runner] deploying export of ${projectId} (${source})`);
+  enqueue();
+  console.log(`[runner] waking the runner`);
   const up = railway(['up', '--service', SERVICE, '--detach']);
   process.stdout.write(up.stdout ?? '');
   if (up.status !== 0) {
