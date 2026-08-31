@@ -3,10 +3,16 @@ import { getVizStorage } from '@mapart/storage';
 /**
  * Tile proxy: streams a project's pyramid objects out of blob storage.
  *
- * The analog of isometric.nyc's ~60-line Cloudflare Worker — serve `viz/<path>`
- * from storage with immutable cache + CORS, no tile logic. The pyramid is
- * content-addressed by (project, level, col, row), so every object is safe to
- * cache forever.
+ * Not the production path — deployments set `VIZ_PUBLIC_BASE_URL` and the
+ * viewer fetches tiles from the bucket's own origin, with a CDN in front and no
+ * app process touching the bytes. This is what serves them when that is unset,
+ * which is how local development runs: the dev bucket is not public, so there is
+ * no other way to read a locally-built pyramid.
+ *
+ * Caching forever is safe because tiles are addressed by the export that made
+ * them (`viz/{project}/v/{version}/…`), so a given URL's bytes never change.
+ * It was not safe when a rebuild overwrote a fixed key, which left stale tiles
+ * that no reload could displace.
  */
 export const dynamic = 'force-dynamic';
 
