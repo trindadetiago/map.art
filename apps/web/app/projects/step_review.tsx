@@ -89,6 +89,13 @@ export function StepReview({
   const [fitPx, setFitPx] = useState(48);
   const [zoom, setZoom] = useState(1);
   const cellPx = Math.max(4, Math.round(fitPx * zoom));
+  // Ask for a derivative sized to the cell rather than the 1024px source: a
+  // full-size grid is gigabytes of downloads and decodes to paint thumbnails.
+  // Doubled for retina, then snapped server-side so zooming reuses one size.
+  const thumbWidth = useMemo(
+    () => Math.min(512, Math.max(64, 2 ** Math.ceil(Math.log2(Math.max(64, cellPx * 2))))),
+    [cellPx],
+  );
 
   const byCoord = useMemo(() => {
     const m = new Map<string, TileLite>();
@@ -537,13 +544,18 @@ export function StepReview({
             const t = byCoord.get(cellKey(x, y));
             const ov = overrides.get(cellKey(x, y));
             const selected = sel ? inRect(sel, x, y) : false;
-            const rendered = t?.renderedImgPath
-              ? `/api/storage/${t.renderedImgPath}?v=${t.v}`
-              : null;
+            // Only fetch a layer that contributes something. At the default
+            // blend the render sits fully behind an opaque stylized tile, so
+            // requesting it downloads the larger of the two images to show none
+            // of it.
+            const rendered =
+              blend < 1 && t?.renderedImgPath
+                ? `/api/storage/${t.renderedImgPath}?v=${t.v}&w=${thumbWidth}`
+                : null;
             const stylized = ov
               ? ov.url
-              : t?.stylizedImgPath
-                ? `/api/storage/${t.stylizedImgPath}?v=${t.v}`
+              : blend > 0 && t?.stylizedImgPath
+                ? `/api/storage/${t.stylizedImgPath}?v=${t.v}&w=${thumbWidth}`
                 : null;
             return (
               <div
@@ -560,6 +572,8 @@ export function StepReview({
                     src={rendered}
                     alt=""
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 h-full w-full object-cover [image-rendering:pixelated]"
                   />
                 )}
@@ -568,6 +582,8 @@ export function StepReview({
                     src={stylized}
                     alt=""
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                     style={{ opacity: blend }}
                     className="absolute inset-0 h-full w-full object-cover [image-rendering:pixelated]"
                   />
