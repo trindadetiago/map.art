@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { TileLite } from './step_build';
 
 /** Stylized tiles are the canonical 1024² edge; renders are 512². */
@@ -85,6 +85,17 @@ export function StepReview({
   const dragAnchor = useRef<{ x: number; y: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  /**
+   * Where the next zoom should hold still, in client coords. Zooming resizes the
+   * grid from its own origin, so without this the point you were looking at
+   * slides away and you have to chase it.
+   */
+  const anchorRef = useRef<{ x: number; y: number } | null>(null);
+  /** The zoomed point as a fraction of the grid, captured before it resizes. */
+  const anchorFracRef = useRef<{ fx: number; fy: number } | null>(null);
+  /** Last laid-out cell size, so the effect below can tell a resize from a re-render. */
+  const lastCellPxRef = useRef(0);
   // Cell size = the viewport-fit base × a user zoom factor (1 = fit-to-view).
   const [fitPx, setFitPx] = useState(48);
   const [zoom, setZoom] = useState(1);
@@ -135,18 +146,65 @@ export function StepReview({
     return () => ro.disconnect();
   }, [extent.cols, extent.rows]);
 
+  /**
+   * Remember which part of the grid sits under a point, so the layout effect
+   * below can put it back there once the cells have resized. Fractions rather
+   * than pixels because the grid's size is exactly what is about to change.
+   */
+  const anchorAt = useCallback((clientX: number, clientY: number): void => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const r = grid.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return;
+    anchorRef.current = { x: clientX, y: clientY };
+    anchorFracRef.current = { fx: (clientX - r.left) / r.width, fy: (clientY - r.top) / r.height };
+  }, []);
+
+  /** Anchor the middle of the viewport — what the zoom buttons should hold. */
+  const anchorCentre = useCallback((): void => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    anchorAt(r.left + r.width / 2, r.top + r.height / 2);
+  }, [anchorAt]);
+
   // Wheel over the grid zooms (non-passive so we can stop the page from scrolling).
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
+      // Anchor the pointer, not the centre: zooming towards the cursor is what
+      // every map does, and it's how you get to a tile without also panning.
+      anchorAt(e.clientX, e.clientY);
       const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
       setZoom((z) => Math.max(0.2, Math.min(16, z * factor)));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [anchorAt]);
+
+  // Put the anchored point back under the pointer once the new size is laid out
+  // but before the browser paints, so the correction is never visible.
+  useLayoutEffect(() => {
+    const resized = lastCellPxRef.current !== cellPx;
+    lastCellPxRef.current = cellPx;
+
+    const anchor = anchorRef.current;
+    const frac = anchorFracRef.current;
+    // Consume it either way. A zoom step small enough to round to the same cell
+    // width moves nothing, and a leftover anchor would otherwise be applied to
+    // whatever resized next — a window resize, say.
+    anchorRef.current = null;
+    anchorFracRef.current = null;
+
+    const el = viewportRef.current;
+    const grid = gridRef.current;
+    if (!resized || !el || !grid || !anchor || !frac) return;
+    const r = grid.getBoundingClientRect();
+    el.scrollLeft += r.left + frac.fx * r.width - anchor.x;
+    el.scrollTop += r.top + frac.fy * r.height - anchor.y;
+  }, [cellPx]);
 
   // Object URLs are leaked unless revoked; drop the latest set on unmount.
   const overridesRef = useRef(overrides);
@@ -423,7 +481,10 @@ export function StepReview({
           <div className="flex h-8 items-center rounded-full border border-stone-200 bg-white">
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.max(0.2, z / 1.2))}
+              onClick={() => {
+                anchorCentre();
+                setZoom((z) => Math.max(0.2, z / 1.2));
+              }}
               className="px-2.5 text-[14px] text-stone-600 hover:text-stone-900"
               title="Zoom out"
             >
@@ -431,7 +492,10 @@ export function StepReview({
             </button>
             <button
               type="button"
-              onClick={() => setZoom(1)}
+              onClick={() => {
+                anchorCentre();
+                setZoom(1);
+              }}
               className="w-12 text-[11px] text-stone-500 tabular-nums hover:text-stone-900"
               title="Reset to fit"
             >
@@ -439,7 +503,10 @@ export function StepReview({
             </button>
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.min(16, z * 1.2))}
+              onClick={() => {
+                anchorCentre();
+                setZoom((z) => Math.min(16, z * 1.2));
+              }}
               className="px-2.5 text-[14px] text-stone-600 hover:text-stone-900"
               title="Zoom in"
             >
@@ -528,6 +595,7 @@ export function StepReview({
         }}
       >
         <div
+          ref={gridRef}
           className="m-auto grid select-none bg-stone-700"
           style={{
             gridTemplateColumns: `repeat(${extent.cols}, ${cellPx}px)`,
