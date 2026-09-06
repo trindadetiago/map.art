@@ -290,9 +290,17 @@ export function StepReview({
       for (let x = r.x0; x <= r.x1; x++) yield { x, y, col: x - r.x0, row: r.y1 - y };
   }
 
-  // Same-origin (unversioned) fetch keeps the canvas untainted, so toBlob works.
-  async function loadTileImage(path: string): Promise<ImageBitmap> {
-    const res = await fetch(`/api/storage/${path}`, { cache: 'force-cache' });
+  /**
+   * Full-resolution tile bytes for export.
+   *
+   * Versioned, or replacing a tile leaves the export handing back whatever the
+   * browser cached under an address that never changes — the grid would show
+   * the new art while the exported file kept the old. `raw=1` streams from this
+   * origin rather than redirecting to the bucket, which would taint the canvas
+   * and break toBlob().
+   */
+  async function loadTileImage(path: string, version: string | number): Promise<ImageBitmap> {
+    const res = await fetch(`/api/storage/${path}?v=${version}&raw=1`);
     if (!res.ok) throw new Error(`fetch ${path} → ${res.status}`);
     return createImageBitmap(await res.blob());
   }
@@ -318,7 +326,7 @@ export function StepReview({
         } else {
           const t = byCoord.get(cellKey(x, y));
           const path = source === 'stylized' ? t?.stylizedImgPath : t?.renderedImgPath;
-          if (path) img = await loadTileImage(path);
+          if (path && t) img = await loadTileImage(path, t.v);
         }
         if (img) ctx.drawImage(img, col * px, row * px, px, px);
       }

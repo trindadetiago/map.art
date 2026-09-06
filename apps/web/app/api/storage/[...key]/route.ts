@@ -141,6 +141,20 @@ export async function GET(
         headers: { 'cache-control': 'public, max-age=518400' },
       });
     }
+    // `raw=1` streams the bytes instead of redirecting. Callers that draw a
+    // tile into a canvas need that: a redirect to the bucket is cross-origin,
+    // which taints the canvas and makes toBlob() throw. Still keyed by version,
+    // so it caches properly rather than being refetched every time.
+    if (version !== null && req.nextUrl.searchParams.get('raw') === '1') {
+      const buf = await getStorage().get(key);
+      return new NextResponse(new Uint8Array(buf), {
+        status: 200,
+        headers: {
+          'content-type': contentTypeFor(key),
+          'cache-control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
     if (version !== null) {
       const url = await stablePresign(key, version);
       return NextResponse.redirect(url, {
