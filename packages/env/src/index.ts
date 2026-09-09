@@ -78,4 +78,4 @@ export function getEnvStatus(): EnvStatusEntry[] {
 
 export { SCHEMA } from './schema';
 export type { EnvKey } from './schema';
-export { findRepoRoot } from './loader';
+export { findRepoRoot, tryFindRepoRoot } from './loader';

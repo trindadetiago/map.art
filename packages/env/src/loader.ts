@@ -2,8 +2,15 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Walks up from this file to find the monorepo root (marked by pnpm-workspace.yaml). */
-export function findRepoRoot(): string {
+/**
+ * Walks up from this file looking for the monorepo root (marked by
+ * pnpm-workspace.yaml), or undefined when there isn't one to find.
+ *
+ * A bundled deployment traces only the modules it needs, so the workspace
+ * marker is often absent — the code is running from somewhere that has no repo
+ * around it. Callers that merely want the root if it exists use this.
+ */
+export function tryFindRepoRoot(): string | undefined {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 10; i++) {
     if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
@@ -11,9 +18,21 @@ export function findRepoRoot(): string {
     if (parent === dir) break;
     dir = parent;
   }
-  throw new Error(
-    '@mapart/env: could not locate monorepo root (no pnpm-workspace.yaml found walking up)',
-  );
+  return undefined;
+}
+
+/**
+ * The monorepo root, for callers that genuinely need files from it — migrations
+ * read their SQL from the repo, so there is nothing sensible to do without it.
+ */
+export function findRepoRoot(): string {
+  const root = tryFindRepoRoot();
+  if (!root) {
+    throw new Error(
+      '@mapart/env: could not locate monorepo root (no pnpm-workspace.yaml found walking up)',
+    );
+  }
+  return root;
 }
 
 let loaded = false;
@@ -23,7 +42,11 @@ export function loadRootEnv(): void {
   if (loaded) return;
   loaded = true;
 
-  const root = findRepoRoot();
+  // No repo root means no `.env` to read — a deployed app is handed its
+  // configuration by the platform. Treating that as fatal took down every
+  // request on a host that bundles rather than checking the repo out.
+  const root = tryFindRepoRoot();
+  if (!root) return;
   const envPath = resolve(root, '.env');
 
   if (!existsSync(envPath)) return;
