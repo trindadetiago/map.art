@@ -1,8 +1,7 @@
-import { repos } from '@mapart/db';
 import { env } from '@mapart/env';
-import { vizMetadataKey, vizThumbKey } from '@mapart/export/keys';
-import type { VizMetadata } from '@mapart/export/types';
-import { getVizStorage } from '@mapart/storage';
+import { readVizCatalog } from '@mapart/export/catalog';
+import { vizThumbKey } from '@mapart/export/keys';
+import type { VizCatalogEntry } from '@mapart/export/types';
 
 /** A project the landing can point at: located, exported, and thumbnailable. */
 export interface VizProject {
@@ -31,40 +30,34 @@ export function vizObjectUrl(key: string): string {
   return env.vizPublicBaseUrl ? `${env.vizPublicBaseUrl}/viz/${path}` : `/api/viz/${path}`;
 }
 
+/** Shape a catalogue entry into what the landing renders. */
+export function toVizProject(e: VizCatalogEntry): VizProject {
+  return {
+    id: e.id,
+    slug: e.slug,
+    name: e.name,
+    year: e.year,
+    lat: e.lat,
+    lng: e.lng,
+    thumbUrl: vizObjectUrl(vizThumbKey(e.id, e)),
+    aspect: e.width / e.height,
+  };
+}
+
 /**
- * Every project with a location *and* an exported pyramid, newest first. A
- * project can have tiles (so a location) without ever being exported, and a pin
- * for one of those would only ever land on the "no pyramid yet" notice.
+ * Every published map, newest first.
+ *
+ * One object out of storage, and no database: everything the landing needs is
+ * in the catalogue the export writes. That is what lets this site serve while
+ * the pipeline behind it is down.
  */
 export async function listExportedProjects(): Promise<VizProject[]> {
-  const located = await repos.listProjectsWithLocation();
-  const storage = getVizStorage();
-  const metas = await Promise.all(
-    located.map(async (p): Promise<VizMetadata | undefined> => {
-      const key = vizMetadataKey(p.id);
-      if (!(await storage.has(key))) return undefined;
-      try {
-        return JSON.parse((await storage.get(key)).toString('utf8')) as VizMetadata;
-      } catch {
-        return undefined;
-      }
-    }),
-  );
+  const catalog = await readVizCatalog();
+  return catalog.projects.map(toVizProject);
+}
 
-  const out: VizProject[] = [];
-  located.forEach((p, i) => {
-    const meta = metas[i];
-    if (!meta) return;
-    out.push({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      year: p.year,
-      lat: p.lat,
-      lng: p.lng,
-      thumbUrl: vizObjectUrl(vizThumbKey(p.id, meta)),
-      aspect: meta.width / meta.height,
-    });
-  });
-  return out;
+/** Resolve a URL segment to a published map, by slug or by project id. */
+export async function findProject(segment: string): Promise<VizCatalogEntry | undefined> {
+  const { projects } = await readVizCatalog();
+  return projects.find((p) => p.slug === segment) ?? projects.find((p) => p.id === segment);
 }

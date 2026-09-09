@@ -59,9 +59,6 @@ importers:
 
   apps/visualizer:
     dependencies:
-      '@mapart/db':
-        specifier: workspace:*
-        version: link:../../packages/db
       '@mapart/env':
         specifier: workspace:*
         version: link:../../packages/env

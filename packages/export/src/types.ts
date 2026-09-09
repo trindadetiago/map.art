@@ -82,3 +82,40 @@ export interface ExportResult {
   /** Storage prefix the pyramid was written under. */
   prefix: string;
 }
+
+/**
+ * One published map, as the visualizer needs to know it.
+ *
+ * Carries the handful of project fields the viewer shows plus enough of the
+ * pyramid to address a thumbnail and reserve its shape — so the landing needs
+ * one read rather than a descriptor fetch per project.
+ */
+export interface VizCatalogEntry {
+  id: string;
+  slug: string;
+  name: string;
+  year: number | null;
+  /** Mean of the project's tile centres, for placing its pin. */
+  lat: number;
+  lng: number;
+  width: number;
+  height: number;
+  tileSize: number;
+  format: string;
+  /** The export the pyramid belongs to; absent for pre-versioning pyramids. */
+  version?: string;
+}
+
+/**
+ * Every project with a published pyramid, newest first.
+ *
+ * This is what makes the visualizer readable without a database: it answers
+ * "which maps exist" and "what is at this slug" from storage alone, so the
+ * public site keeps serving whether or not the pipeline is up. It is derived
+ * state — rebuilt from the database whenever a project is exported, renamed or
+ * removed — never the source of truth.
+ */
+export interface VizCatalog {
+  projects: VizCatalogEntry[];
+  generatedAt: string;
+}

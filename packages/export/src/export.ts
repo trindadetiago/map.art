@@ -5,6 +5,7 @@ import { repos } from '@mapart/db';
 import { createLogger } from '@mapart/logger';
 import { getStorage, getVizStorage } from '@mapart/storage';
 import sharp from 'sharp';
+import { writeVizCatalog } from './catalog_write';
 import { computeGeoAnchor } from './geo';
 import { vizDziKey, vizMetadataKey, vizPrefix, vizVersionPrefix } from './keys';
 import type { ExportResult, VizMetadata, VizSource } from './types';
@@ -244,6 +245,9 @@ export async function exportProjectDzi(
       dzi: vizDziKey(projectId, version),
     });
     await pruneOldVersions(projectId, version);
+    // The visualizer resolves slugs against this, so a new map is not reachable
+    // until it is listed.
+    await writeVizCatalog();
     return {
       projectId,
       source,
