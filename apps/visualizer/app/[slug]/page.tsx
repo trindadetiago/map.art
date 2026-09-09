@@ -1,7 +1,6 @@
 import { Frame } from '@/components/frame';
 import { CODE, Notice } from '@/components/notice';
-import { listExportedProjects, vizObjectUrl } from '@/lib/project';
-import { repos } from '@mapart/db';
+import { findProject, listExportedProjects, vizObjectUrl } from '@/lib/project';
 import { vizMetadataKey, vizTilesPrefix } from '@mapart/export/keys';
 import { getProjectPins } from '@mapart/export/pins';
 import type { VizMetadata } from '@mapart/export/types';
@@ -13,33 +12,19 @@ export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ slug: string }>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * A URL segment resolves by slug. Ids still resolve too, so links written
- * against a project's uuid keep working; the page then redirects to the slug so
- * one project has one canonical address.
- */
-async function resolveProject(segment: string) {
-  const bySlug = await repos.getProjectBySlug(segment);
-  if (bySlug) return bySlug;
-  return UUID.test(segment) ? repos.getProjectById(segment) : undefined;
-}
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const project = await resolveProject(slug);
+  const project = await findProject(slug);
   if (!project) return { title: 'Not found — earthToPixels' };
   const title = project.year !== null ? `${project.name} (${project.year})` : project.name;
-  return {
-    title: `${title} — earthToPixels`,
-    ...(project.description ? { description: project.description } : {}),
-  };
+  return { title: `${title} — earthToPixels` };
 }
 
 export default async function ProjectPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const project = await resolveProject(slug);
+  // Resolved from the published catalogue, so a URL segment naming a project
+  // that was never exported reads as absent — which, publicly, it is.
+  const project = await findProject(slug);
 
   if (!project) {
     return (

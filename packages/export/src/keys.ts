@@ -23,6 +23,11 @@ export function vizPrefix(projectId: string): string {
   return `viz/${projectId}`;
 }
 
+/** The list of published maps. One object for the whole visualizer. */
+export function vizCatalogKey(): string {
+  return 'viz/index.json';
+}
+
 export function vizMetadataKey(projectId: string): string {
   return `${vizPrefix(projectId)}/metadata.json`;
 }

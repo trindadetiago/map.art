@@ -2,6 +2,7 @@ import { CreateProjectForm } from '@/components/admin/projects/create_project_fo
 import { ProjectCard, type ProjectCardData } from '@/components/admin/projects/project_card';
 import { Section } from '@/components/admin/section';
 import { repos } from '@mapart/db';
+import { writeVizCatalog } from '@mapart/export';
 import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,9 @@ async function updateProjectAction(
       description: description || null,
       year: parseYear(fd.get('year')),
     });
+    // The visualizer reads names and slugs from the catalogue, not the database,
+    // so an edit that isn't republished there simply wouldn't show.
+    await writeVizCatalog();
     revalidatePath('/admin/projects');
     return { ok: true };
   } catch (e) {
@@ -61,6 +65,7 @@ async function updateProjectAction(
 async function deleteProjectAction(id: string): Promise<void> {
   'use server';
   await repos.deleteProject(id);
+  await writeVizCatalog();
   revalidatePath('/admin/projects');
 }
 

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { repos } from '@mapart/db';
-import { exportProjectDzi } from '@mapart/export';
+import { exportProjectDzi, writeVizCatalog } from '@mapart/export';
 import { parsePins, setProjectPins } from '@mapart/export/pins';
 import type { VizSource } from '@mapart/export/types';
 import type { Command } from 'commander';
@@ -96,6 +96,17 @@ export function registerExportCommands(parent: Command): void {
       } catch (e) {
         await repos.markExportError(claimed.id, e instanceof Error ? e.message : String(e));
         throw e;
+      }
+    });
+
+  parent
+    .command('catalog')
+    .description('Rebuild the published-map list the visualizer resolves slugs against')
+    .action(async () => {
+      const catalog = await writeVizCatalog();
+      console.log(`catalogued ${catalog.projects.length} published map(s)`);
+      for (const p of catalog.projects) {
+        console.log(`  /${p.slug}  ${p.name}${p.year !== null ? ` (${p.year})` : ''}`);
       }
     });
 

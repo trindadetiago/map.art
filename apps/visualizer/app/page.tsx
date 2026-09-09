@@ -1,7 +1,6 @@
 import { HomeLanding } from '@/components/home_landing';
 import { CODE, Notice } from '@/components/notice';
-import { listExportedProjects } from '@/lib/project';
-import { repos } from '@mapart/db';
+import { findProject, listExportedProjects } from '@/lib/project';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
 
   // Links written before projects had slugs point here with an id.
   if (projectId) {
-    const project = await repos.getProjectById(projectId);
+    const project = await findProject(projectId);
     if (project) redirect(`/${project.slug}`);
     return (
       <Notice title="Project not found">
