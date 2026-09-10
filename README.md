@@ -12,7 +12,7 @@ See [`CLAUDE.md`](CLAUDE.md) for an agent-friendly orientation; [`docs/architect
 ## Apps
 
 - `apps/web` — Next.js UI on `:3210`. Project workspace (city → area → build → review → pins → publish) plus `/admin` inspector pages
-- `apps/visualizer` — Next.js deep-zoom viewer on `:3220`. OpenSeadragon over a project's pre-built pyramid, reached at `/<slug>`; lat/lng pins are placed as overlays through the pyramid's geo anchor
+- `apps/visualizer` — Next.js deep-zoom viewer on `:3220`. OpenSeadragon over a project's pre-built pyramid, reached at `/<slug>`; lat/lng pins are placed as overlays through the pyramid's geo anchor. Reads only object storage — no database — so it serves independently of the pipeline
 - `apps/worker-render` — server-side render service. Single process on `:9999`: hosts the render-page (Vite middleware), drives Puppeteer/Chromium, exposes `POST /render` returning a PNG
 - `apps/worker-stylize` — claims rendered tiles and runs them through the image-edit model
 - `apps/cli` — `mapart` binary (one entry, subcommands per domain)

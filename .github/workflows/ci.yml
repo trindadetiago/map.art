@@ -68,9 +68,6 @@ jobs:
             web:
               - *shared
               - 'apps/web/**'
-            visualizer:
-              - *shared
-              - 'apps/visualizer/**'
             worker_render:
               - *shared
               - 'apps/worker-render/**'
@@ -88,14 +85,12 @@ jobs:
         id: services
         env:
           WEB: ${{ steps.filter.outputs.web }}
-          VISUALIZER: ${{ steps.filter.outputs.visualizer }}
           WORKER_RENDER: ${{ steps.filter.outputs.worker_render }}
           WORKER_STYLIZE: ${{ steps.filter.outputs.worker_stylize }}
           EXPORT_RUNNER: ${{ steps.filter.outputs.export_runner }}
         run: |
           services=()
           if [ "$WEB" = "true" ]; then services+=('"web"'); fi
-          if [ "$VISUALIZER" = "true" ]; then services+=('"visualizer"'); fi
           if [ "$WORKER_RENDER" = "true" ]; then services+=('"worker-render"'); fi
           if [ "$WORKER_STYLIZE" = "true" ]; then services+=('"worker-stylize"'); fi
           if [ "$EXPORT_RUNNER" = "true" ]; then services+=('"export-runner"'); fi
