@@ -12,7 +12,7 @@ const pixel = Pixelify_Sans({
 });
 
 export const metadata = {
-  title: 'earthToPixels — visualizer',
+  title: 'earthToPixels',
   description: 'Deep-zoom viewer for stylized pixel-art maps',
 };
 
