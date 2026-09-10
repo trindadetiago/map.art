@@ -1,6 +1,7 @@
 'use client';
 
 import type { VizProject } from '@/lib/project';
+import { useAnalytics } from '@mapart/ui/analytics';
 import { useCallback, useState } from 'react';
 import { MiniMap } from './mini_map';
 import { MAP_BG, useCurtainNav } from './transition';
@@ -52,6 +53,7 @@ const LINK =
  */
 export function AboutTeam({ featured }: { featured?: VizProject }) {
   const { go, curtain } = useCurtainNav();
+  const { capture } = useAnalytics();
 
   return (
     <div className="mx-auto max-w-[760px] px-6">
@@ -104,6 +106,7 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
             href={BUY_ME_A_COFFEE}
             target="_blank"
             rel="noreferrer"
+            onClick={() => capture('support_clicked', { target: 'buy_me_a_coffee' })}
             className="inline-flex shrink-0 items-center gap-2.5 px-4 py-2.5 font-pixel text-[15px] text-[#2c2008] transition-transform duration-150 ease-out hover:-translate-y-0.5"
             style={{
               background: '#ffcf4d',
@@ -152,6 +155,7 @@ export function AboutTeam({ featured }: { featured?: VizProject }) {
 }
 
 function TeamCard({ member }: { member: Member }) {
+  const { capture } = useAnalytics();
   // The pixel portrait is the resting state and much the heavier file, so the
   // photo underneath stays hidden until it has decoded — otherwise the card
   // shows the real face first and snaps to pixels once the PNG lands.
@@ -187,12 +191,22 @@ function TeamCard({ member }: { member: Member }) {
       </div>
       <div className="mt-3 flex items-center gap-2">
         {member.linkedin && (
-          <Social href={member.linkedin} label={`${member.name} on LinkedIn`}>
+          <Social
+            href={member.linkedin}
+            label={`${member.name} on LinkedIn`}
+            onClick={() =>
+              capture('team_member_clicked', { member: member.name, network: 'linkedin' })
+            }
+          >
             <LinkedInIcon />
           </Social>
         )}
         {member.twitter && (
-          <Social href={member.twitter} label={`${member.name} on X`}>
+          <Social
+            href={member.twitter}
+            label={`${member.name} on X`}
+            onClick={() => capture('team_member_clicked', { member: member.name, network: 'x' })}
+          >
             <XIcon />
           </Social>
         )}
@@ -204,10 +218,12 @@ function TeamCard({ member }: { member: Member }) {
 function Social({
   href,
   label,
+  onClick,
   children,
 }: {
   href: string;
   label: string;
+  onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -216,6 +232,7 @@ function Social({
       aria-label={label}
       target="_blank"
       rel="noreferrer"
+      onClick={onClick}
       className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 bg-white text-[#4a463e] transition-colors hover:border-black/30 hover:text-[#14110c]"
     >
       {children}

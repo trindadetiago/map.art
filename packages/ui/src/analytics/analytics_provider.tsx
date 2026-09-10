@@ -1,8 +1,8 @@
 'use client';
 
-import { PostHogProvider } from '@posthog/react';
-import type { PostHogConfig } from 'posthog-js';
-import type { ReactNode } from 'react';
+import { PostHogProvider, usePostHog } from '@posthog/react';
+import type { PostHogConfig, Properties } from 'posthog-js';
+import { type ReactNode, createContext, useCallback, useContext, useMemo } from 'react';
 
 const OPTIONS: Partial<PostHogConfig> = {
   // Ingestion goes through the host app's `/ingest` rewrite instead of straight to
@@ -16,6 +16,19 @@ const OPTIONS: Partial<PostHogConfig> = {
   capture_exceptions: true,
   debug: process.env.NODE_ENV === 'development',
 };
+
+export interface Analytics {
+  /** Records a named product event. A no-op while analytics is off. */
+  capture: (event: string, properties?: Properties) => void;
+}
+
+const NOOP: Analytics = { capture: () => {} };
+
+// Components call `useAnalytics()` whether or not a token is configured, so the
+// off state has to be a real value rather than a missing provider: PostHog's own
+// hook falls back to the uninitialised global client, which logs an error on
+// every capture.
+const AnalyticsContext = createContext<Analytics>(NOOP);
 
 export interface AnalyticsProviderProps {
   /** PostHog project token. Analytics stays off entirely while this is empty. */
@@ -35,7 +48,25 @@ export function AnalyticsProvider({ projectToken, children }: AnalyticsProviderP
 
   return (
     <PostHogProvider apiKey={projectToken} options={OPTIONS}>
-      {children}
+      <CaptureBridge>{children}</CaptureBridge>
     </PostHogProvider>
   );
+}
+
+/** Binds the context to the PostHog client that `PostHogProvider` just created. */
+function CaptureBridge({ children }: { children: ReactNode }) {
+  const posthog = usePostHog();
+  const capture = useCallback<Analytics['capture']>(
+    (event, properties) => {
+      posthog.capture(event, properties);
+    },
+    [posthog],
+  );
+  const value = useMemo<Analytics>(() => ({ capture }), [capture]);
+  return <AnalyticsContext.Provider value={value}>{children}</AnalyticsContext.Provider>;
+}
+
+/** Product-event capture for client components. Safe to call with analytics off. */
+export function useAnalytics(): Analytics {
+  return useContext(AnalyticsContext);
 }
