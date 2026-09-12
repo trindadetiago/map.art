@@ -28,6 +28,7 @@ const TEAM: Member[] = [
     name: 'Pedro Ernesto Vogado',
     photo: 4,
     linkedin: 'https://www.linkedin.com/in/pedroernestovogado/',
+    twitter: 'https://x.com/1877px',
   },
   {
     name: 'Gabriel (Harry) Carvalho',
