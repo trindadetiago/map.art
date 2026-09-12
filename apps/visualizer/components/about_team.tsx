@@ -22,7 +22,12 @@ const TEAM: Member[] = [
     linkedin: 'https://www.linkedin.com/in/tiagotrindade03/',
     twitter: 'https://x.com/tiagotrindadeo',
   },
-  { name: 'Guilherme Huther', photo: 2, linkedin: 'https://www.linkedin.com/in/guilhermehuther/' },
+  {
+    name: 'Guilherme Huther',
+    photo: 2,
+    linkedin: 'https://www.linkedin.com/in/guilhermehuther/',
+    twitter: 'https://x.com/guilhermehuther',
+  },
   { name: 'Clara Dantas', photo: 3, linkedin: 'https://www.linkedin.com/in/claradantast/' },
   {
     name: 'Pedro Ernesto Vogado',
